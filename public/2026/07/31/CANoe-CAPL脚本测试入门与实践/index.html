@@ -14,7 +14,7 @@
 <meta property="og:description" content="CANoe CAPL 脚本测试入门与实践在汽车电子开发中，CANoe 是 Vector 公司出品的总线仿真与测试工具，堪称 ECU 开发、集成测试与诊断的”瑞士军刀”。而 CAPL（Communication Access Programming Language）是 CANoe 内置的类 C 脚本语言，用于编写总线仿真、自动测试与报文处理逻辑。本文从零开始，带你掌握 CAPL 脚本测试的核心技能">
 <meta property="og:locale" content="en_US">
 <meta property="article:published_time" content="2026-07-31T10:04:53.000Z">
-<meta property="article:modified_time" content="2026-07-31T10:09:41.387Z">
+<meta property="article:modified_time" content="2026-07-31T10:12:41.301Z">
 <meta property="article:author" content="John Doe">
 <meta property="article:tag" content="汽车电子">
 <meta property="article:tag" content="CANoe">
@@ -441,13 +441,131 @@
 <li>结合诊断测试时，可封装 <code>SendUdsRequest(sid, data, len)</code> + <code>CanTp_ReceptionInd</code> 形成完整的 UDS 收发闭环；</li>
 <li>64 位工程注意选用匹配位数的 DLL（Exec32&#x2F;Exec64 目录）。</li>
 </ul>
-<h2 id="六、CAPL-调试技巧"><a href="#六、CAPL-调试技巧" class="headerlink" title="六、CAPL 调试技巧"></a>六、CAPL 调试技巧</h2><h3 id="6-1-断点与单步"><a href="#6-1-断点与单步" class="headerlink" title="6.1 断点与单步"></a>6.1 断点与单步</h3><p>CAPL Browser 支持设置断点、单步执行和变量监视，适合定位逻辑错误。</p>
-<h3 id="6-2-打印调试信息"><a href="#6-2-打印调试信息" class="headerlink" title="6.2 打印调试信息"></a>6.2 打印调试信息</h3><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">on message <span class="number">0x456</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="comment">// 格式化输出报文数据</span></span><br><span class="line">    write(<span class="string">&quot;ID=0x%x DLC=%d Data=0x%02x 0x%02x 0x%02x 0x%02x&quot;</span>,</span><br><span class="line">          this.id, this.dlc,</span><br><span class="line">          this.byte(<span class="number">0</span>), this.byte(<span class="number">1</span>),</span><br><span class="line">          this.byte(<span class="number">2</span>), this.byte(<span class="number">3</span>));</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h2 id="六、LIN-TP-DLL-库函数调用（LIN-TP-传输层）"><a href="#六、LIN-TP-DLL-库函数调用（LIN-TP-传输层）" class="headerlink" title="六、LIN TP DLL 库函数调用（LIN TP 传输层）"></a>六、LIN TP DLL 库函数调用（LIN TP 传输层）</h2><p>与 CAN 类似，LIN 总线也有一套自己的传输层协议 <strong>LIN TP</strong>（定义于 LIN 2.x 规范，参考 ISO 15765-2 设计），用于在 8 字节的 LIN 帧上传输超过单帧容量的诊断数据。Vector 提供的 <strong>LINtp.dll</strong> 在 CANoe 中封装了 LIN TP 协议，即使不使用 CDD&#x2F;PDX 诊断数据库，也能通过 CAPL 直接实现 LIN 诊断通信。</p>
+<h3 id="6-1-LIN-TP-与-CAN-TP-的差异"><a href="#6-1-LIN-TP-与-CAN-TP-的差异" class="headerlink" title="6.1 LIN TP 与 CAN TP 的差异"></a>6.1 LIN TP 与 CAN TP 的差异</h3><table>
+<thead>
+<tr>
+<th>对比项</th>
+<th>CAN TP（osek_tp.dll）</th>
+<th>LIN TP（LINtp.dll）</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>物理层</td>
+<td>CAN &#x2F; CAN FD</td>
+<td>LIN（单线，12V）</td>
+</tr>
+<tr>
+<td>拓扑</td>
+<td>多主&#x2F;多从，总线仲裁</td>
+<td>主从结构，无仲裁</td>
+</tr>
+<tr>
+<td>诊断寻址</td>
+<td>CAN ID（0x710&#x2F;0x718 等）</td>
+<td><strong>NAD</strong>（节点诊断地址）</td>
+</tr>
+<tr>
+<td>诊断帧</td>
+<td>任意诊断 ID</td>
+<td>固定 0x3C（MasterReq）&#x2F; 0x3D（DiagResp）</td>
+</tr>
+<tr>
+<td>发送时机</td>
+<td>任意时刻主动发送</td>
+<td>由<strong>主机调度表</strong>控制帧时隙</td>
+</tr>
+<tr>
+<td>数据帧格式</td>
+<td>CAN ID + PCI + 数据</td>
+<td>NAD + PCI + 数据</td>
+</tr>
+<tr>
+<td>单帧数据量</td>
+<td>SF ≤ 7 字节</td>
+<td>SF ≤ 6 字节</td>
+</tr>
+</tbody></table>
+<p>LIN 的诊断数据帧格式为 <code>NAD + PCI + Data</code>：</p>
+<ul>
+<li><strong>NAD</strong>：目标从节点的诊断地址（如 0x55）；</li>
+<li><strong>PCI</strong>：协议控制信息，标明帧类型（SF&#x3D;0 &#x2F; FF&#x3D;1 &#x2F; CF&#x3D;2 &#x2F; FC&#x3D;3）与帧序号；</li>
+<li><strong>Data</strong>：有效数据，单帧（SF）最多 6 字节，连续帧（CF）最多 7 字节。</li>
+</ul>
+<h3 id="6-2-加载-LINtp-dll-与工程准备"><a href="#6-2-加载-LINtp-dll-与工程准备" class="headerlink" title="6.2 加载 LINtp.dll 与工程准备"></a>6.2 加载 LINtp.dll 与工程准备</h3><ol>
+<li>LIN 工程需先加载 <strong>LDF 文件</strong>，其中必须包含 0x3C 诊断请求帧、0x3D 诊断响应帧，以及<strong>主机调度表</strong>（调度表中至少要有一条包含诊断帧的表项，如 AppSend &#x2F; MasterReq &#x2F; DiagResp）；</li>
+<li>在 <strong>LIN 主节点</strong>上右键 → Configuration → Components，添加 <code>LINtp.dll</code>（LIN 诊断发送只能由主节点发起）；</li>
+<li>重新打开 CAPL Browser 即可看到 <code>LINtp_*</code> 系列函数。</li>
+</ol>
+<blockquote>
+<p>提示：LIN 从节点可以使用真实 ECU，也可以用 CAPL 仿真从节点接收诊断请求并回复。</p>
+</blockquote>
+<h3 id="6-3-常用-API-一览"><a href="#6-3-常用-API-一览" class="headerlink" title="6.3 常用 API 一览"></a>6.3 常用 API 一览</h3><table>
+<thead>
+<tr>
+<th>分类</th>
+<th>函数</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>数据发送</td>
+<td><code>LINtp_DataReq(data[], count, nad)</code></td>
+<td>发送诊断数据：数据缓冲、字节数、目标 NAD</td>
+</tr>
+<tr>
+<td>数据接收</td>
+<td><code>LINtp_DataInd(count, nad)</code></td>
+<td>回调：收到完整数据（已自动重组）</td>
+</tr>
+<tr>
+<td></td>
+<td><code>LINtp_GetRxData(buffer[], count)</code></td>
+<td>在回调中取出接收数据</td>
+</tr>
+<tr>
+<td>发送确认</td>
+<td><code>LINtp_DataCon(count)</code></td>
+<td>回调：发送完成，可获取已发送字节数</td>
+</tr>
+<tr>
+<td>错误处理</td>
+<td><code>LINtp_ErrorInd(error)</code></td>
+<td>回调：TP 层错误上报</td>
+</tr>
+<tr>
+<td>调度配合</td>
+<td><code>linChangeSchedTable(table)</code></td>
+<td>标准 LIN CAPL 函数，切换调度表</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p><code>linChangeSchedTable()</code> 并非 LINtp.dll 导出，而是 LIN 节点自带的标准函数，但它是 LIN 诊断收发<strong>必不可少</strong>的配合函数——只有调度表运行到 0x3C&#x2F;0x3D 帧的时隙时，诊断帧才会真正出现在总线上。</p>
+</blockquote>
+<h3 id="6-4-发送单帧诊断请求"><a href="#6-4-发送单帧诊断请求" class="headerlink" title="6.4 发送单帧诊断请求"></a>6.4 发送单帧诊断请求</h3><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line">variables</span><br><span class="line">&#123;</span><br><span class="line">    byte req_data[<span class="number">4095</span>];</span><br><span class="line">    byte rxBuffer[<span class="number">4096</span>];</span><br><span class="line">    byte NAD = <span class="number">0x55</span>;             <span class="comment">// 目标从节点诊断地址</span></span><br><span class="line"></span><br><span class="line">    <span class="class"><span class="keyword">enum</span> <span class="title">eSchedTables</span></span></span><br><span class="line"><span class="class">    &#123;</span></span><br><span class="line">        AppSend    = <span class="number">0</span>,          <span class="comment">// 应用调度表</span></span><br><span class="line">        MasterReq  = <span class="number">1</span>,          <span class="comment">// 0x3C 诊断请求调度表</span></span><br><span class="line">        DiagResp   = <span class="number">2</span>           <span class="comment">// 0x3D 诊断响应调度表</span></span><br><span class="line">    &#125;;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">on key <span class="string">&#x27;a&#x27;</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="comment">// 1. 切换到 0x3C 诊断请求调度表</span></span><br><span class="line">    linChangeSchedTable(MasterReq);</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 2. 填充诊断数据（无需自行添加长度，TP 层自动处理）</span></span><br><span class="line">    req_data[<span class="number">0</span>] = <span class="number">0x10</span>;          <span class="comment">// UDS SID：DiagnosticSessionControl</span></span><br><span class="line">    req_data[<span class="number">1</span>] = <span class="number">0x01</span>;          <span class="comment">// SubFunction：DefaultSession</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">// 3. 发送 2 字节请求 → 自动封装为单帧（SF）</span></span><br><span class="line">    LINtp_DataReq(req_data, <span class="number">2</span>, NAD);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 
-<h3 id="6-3-使用系统变量调试"><a href="#6-3-使用系统变量调试" class="headerlink" title="6.3 使用系统变量调试"></a>6.3 使用系统变量调试</h3><p>通过 CANoe 的 <strong>System Variables</strong> 面板可以实时读写系统变量，配合 CAPL 里的 <code>@sysvar</code> 语法，方便在运行中调整参数：</p>
+<h3 id="6-5-发送多帧诊断请求"><a href="#6-5-发送多帧诊断请求" class="headerlink" title="6.5 发送多帧诊断请求"></a>6.5 发送多帧诊断请求</h3><p>发送逻辑与单帧完全相同，<strong>只要数据超过单帧容量（&gt;6 字节），DLL 自动按 FF + CF 分段</strong>：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">on key <span class="string">&#x27;b&#x27;</span></span><br><span class="line">&#123;</span><br><span class="line">    byte i;</span><br><span class="line">    linChangeSchedTable(MasterReq);</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 构造 110 字节的写入请求（UDS 2E 服务：WriteDataByIdentifier）</span></span><br><span class="line">    req_data[<span class="number">0</span>] = <span class="number">0x2E</span>;</span><br><span class="line">    req_data[<span class="number">1</span>] = <span class="number">0xF1</span>;</span><br><span class="line">    req_data[<span class="number">2</span>] = <span class="number">0x90</span>;</span><br><span class="line">    <span class="keyword">for</span> (i = <span class="number">3</span>; i &lt; <span class="number">110</span>; i++)</span><br><span class="line">    &#123;</span><br><span class="line">        req_data[i] = i;         <span class="comment">// 填充业务数据</span></span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    LINtp_DataReq(req_data, <span class="number">110</span>, NAD);   <span class="comment">// 自动多帧发送</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="6-6-接收响应回调（自动重组）"><a href="#6-6-接收响应回调（自动重组）" class="headerlink" title="6.6 接收响应回调（自动重组）"></a>6.6 接收响应回调（自动重组）</h3><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/* 回调：收到从节点响应（DLL 已完成重组） */</span></span><br><span class="line"><span class="type">void</span> <span class="title function_">LINtp_DataInd</span><span class="params">(<span class="type">long</span> count, DWORD nad)</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="type">long</span> i;</span><br><span class="line">    LINtp_GetRxData(rxBuffer, count);    <span class="comment">// 取出完整数据</span></span><br><span class="line"></span><br><span class="line">    write(<span class="string">&quot;从节点 0x%X 收到 %d 字节响应&quot;</span>, nad, count);</span><br><span class="line">    <span class="keyword">for</span> (i = <span class="number">0</span>; i &lt; count; i++)</span><br><span class="line">    &#123;</span><br><span class="line">        write(<span class="string">&quot;  rxBuffer[%d] = 0x%X&quot;</span>, i, rxBuffer[i]);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 响应接收完毕，切回应用调度表</span></span><br><span class="line">    linChangeSchedTable(AppSend);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">/* 回调：发送完成确认 */</span></span><br><span class="line"><span class="type">void</span> <span class="title function_">LINtp_DataCon</span><span class="params">(<span class="type">long</span> count)</span></span><br><span class="line">&#123;</span><br><span class="line">    write(<span class="string">&quot;成功发送 %d 字节，切换到 0x3D 调度表等待响应&quot;</span>, count);</span><br><span class="line">    linChangeSchedTable(DiagResp);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">/* 回调：TP 层错误 */</span></span><br><span class="line"><span class="type">void</span> <span class="title function_">LINtp_ErrorInd</span><span class="params">(<span class="type">int</span> error)</span></span><br><span class="line">&#123;</span><br><span class="line">    write(<span class="string">&quot;LIN TP 错误，错误码 = %d&quot;</span>, error);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="6-7-完整收发时序"><a href="#6-7-完整收发时序" class="headerlink" title="6.7 完整收发时序"></a>6.7 完整收发时序</h3><p>以”主节点发 22 服务读 DID、从节点回数据”为例：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">[主节点]                         [总线]                       [从节点]</span><br><span class="line">  LINtp_DataReq(0x22...)  →  0x3C 帧(SF)      →   收到请求</span><br><span class="line">  linChangeSchedTable      ↕                    处理数据</span><br><span class="line">  LINtp_DataCon(count)                          （0x3D 帧时隙）</span><br><span class="line">  LINtp_DataInd(count)   ←  0x3D 帧(FF+CF…)  ←   响应多帧</span><br><span class="line">  LINtp_GetRxData(buf,count) → 得到完整响应</span><br></pre></td></tr></table></figure>
+
+<h3 id="6-8-使用要点"><a href="#6-8-使用要点" class="headerlink" title="6.8 使用要点"></a>6.8 使用要点</h3><ul>
+<li>LIN 诊断由<strong>主节点</strong>发起，LINtp.dll 加在主节点上；从节点端可用真实 ECU 或 CAPL 仿真；</li>
+<li><strong>NAD 必须与 LDF 中定义的从节点 NAD 一致</strong>，否则从节点不响应；</li>
+<li>发送前先 <code>linChangeSchedTable(MasterReq)</code>，发送完成在 <code>LINtp_DataCon</code> 中切到 <code>DiagResp</code>，接收完毕切回应用表——调度表切换是 LIN 诊断的关键节奏；</li>
+<li>接收数据务必在 <code>LINtp_DataInd</code> 回调中调用 <code>LINtp_GetRxData()</code> 取出，回调外取不到；</li>
+<li>多帧数据由 DLL 自动分段，无需关心 FF&#x2F;CF 的 PCI 细节。</li>
+</ul>
+<h2 id="七、CAPL-调试技巧"><a href="#七、CAPL-调试技巧" class="headerlink" title="七、CAPL 调试技巧"></a>七、CAPL 调试技巧</h2><h3 id="7-1-断点与单步"><a href="#7-1-断点与单步" class="headerlink" title="7.1 断点与单步"></a>7.1 断点与单步</h3><p>CAPL Browser 支持设置断点、单步执行和变量监视，适合定位逻辑错误。</p>
+<h3 id="7-2-打印调试信息"><a href="#7-2-打印调试信息" class="headerlink" title="7.2 打印调试信息"></a>7.2 打印调试信息</h3><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">on message <span class="number">0x456</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="comment">// 格式化输出报文数据</span></span><br><span class="line">    write(<span class="string">&quot;ID=0x%x DLC=%d Data=0x%02x 0x%02x 0x%02x 0x%02x&quot;</span>,</span><br><span class="line">          this.id, this.dlc,</span><br><span class="line">          this.byte(<span class="number">0</span>), this.byte(<span class="number">1</span>),</span><br><span class="line">          this.byte(<span class="number">2</span>), this.byte(<span class="number">3</span>));</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="7-3-使用系统变量调试"><a href="#7-3-使用系统变量调试" class="headerlink" title="7.3 使用系统变量调试"></a>7.3 使用系统变量调试</h3><p>通过 CANoe 的 <strong>System Variables</strong> 面板可以实时读写系统变量，配合 CAPL 里的 <code>@sysvar</code> 语法，方便在运行中调整参数：</p>
 <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">on message <span class="number">0x123</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="comment">// 读取系统变量（可在面板上实时修改）</span></span><br><span class="line">    <span class="type">int</span> limit = @sysvar::Test::SpeedLimit;</span><br><span class="line">    <span class="keyword">if</span> (this.Speed &gt; limit)</span><br><span class="line">    &#123;</span><br><span class="line">        write(<span class="string">&quot;超过限速 %d&quot;</span>, limit);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 
-<h2 id="七、常见问题与避坑指南"><a href="#七、常见问题与避坑指南" class="headerlink" title="七、常见问题与避坑指南"></a>七、常见问题与避坑指南</h2><table>
+<h2 id="八、常见问题与避坑指南"><a href="#八、常见问题与避坑指南" class="headerlink" title="八、常见问题与避坑指南"></a>八、常见问题与避坑指南</h2><table>
 <thead>
 <tr>
 <th>问题</th>
@@ -505,8 +623,28 @@
 <td>收发 CAN ID 或寻址类型配置错误</td>
 <td>核对 <code>CanTpSetTx/RxIdentifier</code> 与物理&#x2F;功能寻址</td>
 </tr>
+<tr>
+<td><code>LINtp_*</code> 函数未定义</td>
+<td>节点未加载 <code>LINtp.dll</code></td>
+<td>在 LIN 主节点 Components 中添加 DLL</td>
+</tr>
+<tr>
+<td>从节点不响应</td>
+<td>NAD 与 LDF 配置不一致</td>
+<td>核对 LDF 中从节点 NAD 与 <code>LINtp_DataReq</code> 第三参数</td>
+</tr>
+<tr>
+<td>诊断帧没上总线</td>
+<td>调度表未包含 0x3C&#x2F;0x3D 或未切换</td>
+<td>LDF 添加诊断调度表，发送前 <code>linChangeSchedTable(MasterReq)</code></td>
+</tr>
+<tr>
+<td>取不到接收数据</td>
+<td>未在 <code>LINtp_DataInd</code> 内取数</td>
+<td>回调内调用 <code>LINtp_GetRxData()</code> 读取</td>
+</tr>
 </tbody></table>
-<h2 id="八、CAPL-进阶方向"><a href="#八、CAPL-进阶方向" class="headerlink" title="八、CAPL 进阶方向"></a>八、CAPL 进阶方向</h2><ul>
+<h2 id="九、CAPL-进阶方向"><a href="#九、CAPL-进阶方向" class="headerlink" title="九、CAPL 进阶方向"></a>九、CAPL 进阶方向</h2><ul>
 <li><strong>诊断测试</strong>：结合 ODX&#x2F;CDD 文件，用 <code>diagRequest</code>&#x2F;<code>diagResponse</code> 事件做 UDS 诊断自动化；</li>
 <li><strong>多总线协同</strong>：CAN + LIN + FlexRay + Ethernet 混合仿真测试；</li>
 <li><strong>ECU 测试自动化</strong>：配合 vTESTstudio 图形化生成测试用例后导出 CAPL；</li>
@@ -524,7 +662,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2026/07/31/CANoe-CAPL%E8%84%9A%E6%9C%AC%E6%B5%8B%E8%AF%95%E5%85%A5%E9%97%A8%E4%B8%8E%E5%AE%9E%E8%B7%B5/" data-id="cms8s6sp30000hzlm6e8be1o3" data-title="CANoe CAPL脚本测试入门与实践" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2026/07/31/CANoe-CAPL%E8%84%9A%E6%9C%AC%E6%B5%8B%E8%AF%95%E5%85%A5%E9%97%A8%E4%B8%8E%E5%AE%9E%E8%B7%B5/" data-id="cms8sano90002g0lmb1koav7t" data-title="CANoe CAPL脚本测试入门与实践" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       

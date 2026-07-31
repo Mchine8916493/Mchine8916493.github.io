@@ -417,13 +417,164 @@ void CanTp_ReceptionInd(long connHandle, byte data[])
 - 结合诊断测试时，可封装 `SendUdsRequest(sid, data, len)` + `CanTp_ReceptionInd` 形成完整的 UDS 收发闭环；
 - 64 位工程注意选用匹配位数的 DLL（Exec32/Exec64 目录）。
 
-## 六、CAPL 调试技巧
+## 六、LIN TP DLL 库函数调用（LIN TP 传输层）
 
-### 6.1 断点与单步
+与 CAN 类似，LIN 总线也有一套自己的传输层协议 **LIN TP**（定义于 LIN 2.x 规范，参考 ISO 15765-2 设计），用于在 8 字节的 LIN 帧上传输超过单帧容量的诊断数据。Vector 提供的 **LINtp.dll** 在 CANoe 中封装了 LIN TP 协议，即使不使用 CDD/PDX 诊断数据库，也能通过 CAPL 直接实现 LIN 诊断通信。
+
+### 6.1 LIN TP 与 CAN TP 的差异
+
+| 对比项 | CAN TP（osek_tp.dll） | LIN TP（LINtp.dll） |
+|---|---|---|
+| 物理层 | CAN / CAN FD | LIN（单线，12V） |
+| 拓扑 | 多主/多从，总线仲裁 | 主从结构，无仲裁 |
+| 诊断寻址 | CAN ID（0x710/0x718 等） | **NAD**（节点诊断地址） |
+| 诊断帧 | 任意诊断 ID | 固定 0x3C（MasterReq）/ 0x3D（DiagResp） |
+| 发送时机 | 任意时刻主动发送 | 由**主机调度表**控制帧时隙 |
+| 数据帧格式 | CAN ID + PCI + 数据 | NAD + PCI + 数据 |
+| 单帧数据量 | SF ≤ 7 字节 | SF ≤ 6 字节 |
+
+LIN 的诊断数据帧格式为 `NAD + PCI + Data`：
+
+- **NAD**：目标从节点的诊断地址（如 0x55）；
+- **PCI**：协议控制信息，标明帧类型（SF=0 / FF=1 / CF=2 / FC=3）与帧序号；
+- **Data**：有效数据，单帧（SF）最多 6 字节，连续帧（CF）最多 7 字节。
+
+### 6.2 加载 LINtp.dll 与工程准备
+
+1. LIN 工程需先加载 **LDF 文件**，其中必须包含 0x3C 诊断请求帧、0x3D 诊断响应帧，以及**主机调度表**（调度表中至少要有一条包含诊断帧的表项，如 AppSend / MasterReq / DiagResp）；
+2. 在 **LIN 主节点**上右键 → Configuration → Components，添加 `LINtp.dll`（LIN 诊断发送只能由主节点发起）；
+3. 重新打开 CAPL Browser 即可看到 `LINtp_*` 系列函数。
+
+> 提示：LIN 从节点可以使用真实 ECU，也可以用 CAPL 仿真从节点接收诊断请求并回复。
+
+### 6.3 常用 API 一览
+
+| 分类 | 函数 | 说明 |
+|---|---|---|
+| 数据发送 | `LINtp_DataReq(data[], count, nad)` | 发送诊断数据：数据缓冲、字节数、目标 NAD |
+| 数据接收 | `LINtp_DataInd(count, nad)` | 回调：收到完整数据（已自动重组） |
+| | `LINtp_GetRxData(buffer[], count)` | 在回调中取出接收数据 |
+| 发送确认 | `LINtp_DataCon(count)` | 回调：发送完成，可获取已发送字节数 |
+| 错误处理 | `LINtp_ErrorInd(error)` | 回调：TP 层错误上报 |
+| 调度配合 | `linChangeSchedTable(table)` | 标准 LIN CAPL 函数，切换调度表 |
+
+> `linChangeSchedTable()` 并非 LINtp.dll 导出，而是 LIN 节点自带的标准函数，但它是 LIN 诊断收发**必不可少**的配合函数——只有调度表运行到 0x3C/0x3D 帧的时隙时，诊断帧才会真正出现在总线上。
+
+### 6.4 发送单帧诊断请求
+
+```c
+variables
+{
+    byte req_data[4095];
+    byte rxBuffer[4096];
+    byte NAD = 0x55;             // 目标从节点诊断地址
+
+    enum eSchedTables
+    {
+        AppSend    = 0,          // 应用调度表
+        MasterReq  = 1,          // 0x3C 诊断请求调度表
+        DiagResp   = 2           // 0x3D 诊断响应调度表
+    };
+}
+
+on key 'a'
+{
+    // 1. 切换到 0x3C 诊断请求调度表
+    linChangeSchedTable(MasterReq);
+
+    // 2. 填充诊断数据（无需自行添加长度，TP 层自动处理）
+    req_data[0] = 0x10;          // UDS SID：DiagnosticSessionControl
+    req_data[1] = 0x01;          // SubFunction：DefaultSession
+
+    // 3. 发送 2 字节请求 → 自动封装为单帧（SF）
+    LINtp_DataReq(req_data, 2, NAD);
+}
+```
+
+### 6.5 发送多帧诊断请求
+
+发送逻辑与单帧完全相同，**只要数据超过单帧容量（>6 字节），DLL 自动按 FF + CF 分段**：
+
+```c
+on key 'b'
+{
+    byte i;
+    linChangeSchedTable(MasterReq);
+
+    // 构造 110 字节的写入请求（UDS 2E 服务：WriteDataByIdentifier）
+    req_data[0] = 0x2E;
+    req_data[1] = 0xF1;
+    req_data[2] = 0x90;
+    for (i = 3; i < 110; i++)
+    {
+        req_data[i] = i;         // 填充业务数据
+    }
+
+    LINtp_DataReq(req_data, 110, NAD);   // 自动多帧发送
+}
+```
+
+### 6.6 接收响应回调（自动重组）
+
+```c
+/* 回调：收到从节点响应（DLL 已完成重组） */
+void LINtp_DataInd(long count, DWORD nad)
+{
+    long i;
+    LINtp_GetRxData(rxBuffer, count);    // 取出完整数据
+
+    write("从节点 0x%X 收到 %d 字节响应", nad, count);
+    for (i = 0; i < count; i++)
+    {
+        write("  rxBuffer[%d] = 0x%X", i, rxBuffer[i]);
+    }
+
+    // 响应接收完毕，切回应用调度表
+    linChangeSchedTable(AppSend);
+}
+
+/* 回调：发送完成确认 */
+void LINtp_DataCon(long count)
+{
+    write("成功发送 %d 字节，切换到 0x3D 调度表等待响应", count);
+    linChangeSchedTable(DiagResp);
+}
+
+/* 回调：TP 层错误 */
+void LINtp_ErrorInd(int error)
+{
+    write("LIN TP 错误，错误码 = %d", error);
+}
+```
+
+### 6.7 完整收发时序
+
+以"主节点发 22 服务读 DID、从节点回数据"为例：
+
+```
+[主节点]                         [总线]                       [从节点]
+  LINtp_DataReq(0x22...)  →  0x3C 帧(SF)      →   收到请求
+  linChangeSchedTable      ↕                    处理数据
+  LINtp_DataCon(count)                          （0x3D 帧时隙）
+  LINtp_DataInd(count)   ←  0x3D 帧(FF+CF…)  ←   响应多帧
+  LINtp_GetRxData(buf,count) → 得到完整响应
+```
+
+### 6.8 使用要点
+
+- LIN 诊断由**主节点**发起，LINtp.dll 加在主节点上；从节点端可用真实 ECU 或 CAPL 仿真；
+- **NAD 必须与 LDF 中定义的从节点 NAD 一致**，否则从节点不响应；
+- 发送前先 `linChangeSchedTable(MasterReq)`，发送完成在 `LINtp_DataCon` 中切到 `DiagResp`，接收完毕切回应用表——调度表切换是 LIN 诊断的关键节奏；
+- 接收数据务必在 `LINtp_DataInd` 回调中调用 `LINtp_GetRxData()` 取出，回调外取不到；
+- 多帧数据由 DLL 自动分段，无需关心 FF/CF 的 PCI 细节。
+
+## 七、CAPL 调试技巧
+
+### 7.1 断点与单步
 
 CAPL Browser 支持设置断点、单步执行和变量监视，适合定位逻辑错误。
 
-### 6.2 打印调试信息
+### 7.2 打印调试信息
 
 ```c
 on message 0x456
@@ -436,7 +587,7 @@ on message 0x456
 }
 ```
 
-### 6.3 使用系统变量调试
+### 7.3 使用系统变量调试
 
 通过 CANoe 的 **System Variables** 面板可以实时读写系统变量，配合 CAPL 里的 `@sysvar` 语法，方便在运行中调整参数：
 
@@ -452,7 +603,7 @@ on message 0x123
 }
 ```
 
-## 七、常见问题与避坑指南
+## 八、常见问题与避坑指南
 
 | 问题 | 原因 | 解决方案 |
 |---|---|---|
@@ -466,8 +617,12 @@ on message 0x123
 | `CanTp_*` 函数未定义 | 节点未加载 `osek_tp.dll` | 节点 Components 中添加 DLL 并重开 CAPL Browser |
 | `CanTpSendData` 无响应 | 未先 `CanTpCreateConnection` 或参数未设置 | 按 5.4 节顺序初始化连接后再发送 |
 | 多帧响应收不全 | 收发 CAN ID 或寻址类型配置错误 | 核对 `CanTpSetTx/RxIdentifier` 与物理/功能寻址 |
+| `LINtp_*` 函数未定义 | 节点未加载 `LINtp.dll` | 在 LIN 主节点 Components 中添加 DLL |
+| 从节点不响应 | NAD 与 LDF 配置不一致 | 核对 LDF 中从节点 NAD 与 `LINtp_DataReq` 第三参数 |
+| 诊断帧没上总线 | 调度表未包含 0x3C/0x3D 或未切换 | LDF 添加诊断调度表，发送前 `linChangeSchedTable(MasterReq)` |
+| 取不到接收数据 | 未在 `LINtp_DataInd` 内取数 | 回调内调用 `LINtp_GetRxData()` 读取 |
 
-## 八、CAPL 进阶方向
+## 九、CAPL 进阶方向
 
 - **诊断测试**：结合 ODX/CDD 文件，用 `diagRequest`/`diagResponse` 事件做 UDS 诊断自动化；
 - **多总线协同**：CAN + LIN + FlexRay + Ethernet 混合仿真测试；
