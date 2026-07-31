@@ -281,13 +281,149 @@ testcase TC_Overspeed_Alarm()
 4. 关联 DBC 文件，使信号名可用；
 5. 点击运行，自动执行并生成报告。
 
-## 五、CAPL 调试技巧
+## 五、OSEK TP DLL 库函数调用（CAN TP 传输层）
 
-### 5.1 断点与单步
+CAN 单帧数据只有 8 字节（经典 CAN）或 64 字节（CAN FD），当需要传输超过单帧容量的大块数据（如 UDS 诊断请求/响应、Bootloader 刷写数据）时，必须借助**传输层协议**将数据分段发送、重组接收。Vector 官方提供的 **OSEK TP DLL**（`osek_tp.dll`）在 CANoe 中实现了基于 ISO 15765-2 的 CAN TP 传输层，并封装为一组 CAPL 可直接调用的库函数，是 CANoe 诊断测试与 ECU 刷写仿真的利器。
+
+### 5.1 为什么需要 TP 层
+
+ISO 15765-2 定义了四种帧类型：
+
+| 帧类型 | 缩写 | 作用 |
+|---|---|---|
+| 单帧 | SF | 单帧即可装下的数据（≤7 字节） |
+| 首帧 | FF | 多帧传输的第一帧，声明总数据长度 |
+| 连续帧 | CF | 后续分段数据 |
+| 流控帧 | FC | 接收方告知发送方：块大小（BlockSize）与最小间隔时间（STmin） |
+
+> 以 4096 字节的 UDS 响应为例：若不使用 TP 层，需手动拆成数百帧并自行管理时序、超时与重组，极易出错；使用 `osek_tp.dll` 后只需一行 `CanTpSendData()`，拆包、流控、重组全部自动完成。
+
+### 5.2 加载 osek_tp.dll
+
+1. 在 Simulation Setup 中**右键目标节点**（仿真节点或 Test Module 测试节点）；
+2. 选择 **Configuration → Components**；
+3. 点击 **Add**，选择 `osek_tp.dll`（Vector 安装目录下自带）；
+4. **重新打开 CAPL Browser**，即可在函数列表中找到导出的 `CanTp_*` 系列函数。
+
+> 注意：DLL 是节点级组件，**每个需要 TP 能力的节点都要单独添加**；加载后必须重开 CAPL Browser 才能识别新函数。
+
+### 5.3 常用 API 一览
+
+| 分类 | 函数 | 说明 |
+|---|---|---|
+| 连接管理 | `CanTpCreateConnection(mode)` | 创建 TP 连接并返回句柄（0 = 普通模式） |
+| | `CanTpDeleteConnection(handle)` | 删除连接 |
+| 地址配置 | `CanTpSetTxIdentifier(handle, id)` | 设置发送 CAN ID（如 0x710） |
+| | `CanTpSetRxIdentifier(handle, id)` | 设置接收 CAN ID（如 0x718） |
+| 流控参数 | `CanTpSetBlockSize(handle, n)` | 流控块大小（0 = 不限制） |
+| | `CanTpSetSTmin(handle, ms)` | 连续帧最小间隔（0~127ms） |
+| | `CanTpSetFlowControlDelay(handle, ms)` | 接收方发出流控帧前的延迟 |
+| 超时参数 | `CanTpSetTimeoutAr/As/Bs/Cr(handle, ms)` | AR/AS/BS/CR 各阶段超时 |
+| 填充配置 | `CanTpSetPadding(handle, byte)` | 空闲字节填充值（如 0xAA） |
+| 数据收发 | `CanTpSendData(handle, data[], len)` | 发送大块数据（自动分段） |
+| 回调函数 | `CanTp_ReceptionInd(handle, data[])` | 收到完整消息时回调（自动重组） |
+| | `CanTp_ErrorInd(handle, errCode)` | TP 层错误回调 |
+
+### 5.4 建立 TP 连接
+
+```c
+variables
+{
+    long    g_CanTpHandle = 0;
+    message 0x710 txPhyMsg;      // 物理寻址：诊断请求
+    message 0x718 rxResMsg;      // ECU 诊断响应
+}
+
+/* 初始化 TP 连接（on start 或发送前调用一次） */
+void CanTP_Init(void)
+{
+    g_CanTpHandle = CanTpCreateConnection(0);   // 0 = 普通模式
+
+    CanTpSetTxIdentifier(g_CanTpHandle, 0x710);
+    CanTpSetRxIdentifier(g_CanTpHandle, 0x718);
+
+    // 流控参数：块大小 0（不限制），STmin = 20ms
+    CanTpSetBlockSize(g_CanTpHandle, 0);
+    CanTpSetSTmin(g_CanTpHandle, 20);
+    CanTpSetFlowControlDelay(g_CanTpHandle, 15);
+
+    // 超时参数（单位 ms）
+    CanTpSetTimeoutAr(g_CanTpHandle, 250);
+    CanTpSetTimeoutAs(g_CanTpHandle, 250);
+    CanTpSetTimeoutBs(g_CanTpHandle, 100);
+    CanTpSetTimeoutCr(g_CanTpHandle, 250);
+
+    // 空闲字节填充
+    CanTpSetPadding(g_CanTpHandle, 0xAA);
+
+    write("OSEK TP 连接已建立，Handle=%d", g_CanTpHandle);
+}
+```
+
+### 5.5 发送大数据（自动分段）
+
+```c
+/* 发送 UDS 22 服务：读取 DID 0xF190 */
+void SendUdsReadDataByID(void)
+{
+    byte reqData[8];
+    long  len = 0;
+
+    reqData[len++] = 0x22;       // UDS SID：ReadDataByIdentifier
+    reqData[len++] = 0xF1;       // DID 高字节
+    reqData[len++] = 0x90;       // DID 低字节
+
+    // TP 层自动完成：单帧/多帧判断、FF+CF 分段、等待流控帧
+    CanTpSendData(g_CanTpHandle, reqData, len);
+}
+```
+
+发送 3 字节请求时 TP 层会自动使用单帧（SF）；当数据超过单帧容量时自动切换为首帧（FF）+ 连续帧（CF），并依据接收方的流控帧（FC）管理发送节奏——**拆包与组包逻辑全部由 DLL 完成**。
+
+### 5.6 接收回调（自动重组）
+
+ECU 返回多帧响应时，DLL 会自动重组数据并调用回调函数：
+
+```c
+/* 回调：收到完整 TP 消息（已自动重组，data[] 不含长度字节） */
+void CanTp_ReceptionInd(long connHandle, byte data[])
+{
+    int  len = elcount(data);
+    byte i;
+
+    write("收到 TP 数据，连接=%d，长度=%d", connHandle, len);
+    for (i = 0; i < len; i++)
+    {
+        write("  data[%d] = 0x%02x", i, data[i]);
+    }
+}
+```
+
+### 5.7 其他回调函数
+
+| 回调函数 | 触发时机 | 典型用途 |
+|---|---|---|
+| `CanTp_FirstFrameInd(handle, len)` | 收到对端首帧 | 获知对方即将发送的大块数据长度 |
+| `CanTp_PreSend(handle)` | 每次发送数据前 | 更新数据 / 记录发送时刻 |
+| `CanTp_SendCon(handle)` | 发送完成确认 | 确认发送成功，驱动下一步流程 |
+| `CanTp_ErrorInd(handle, errCode)` | TP 层错误（超时等） | 错误上报与重发策略 |
+| `CanTp_ChannelModeChangeInd(handle)` | 通道模式切换 | 诊断会话切换联动 |
+
+### 5.8 使用要点
+
+- 初始化顺序：**先 `CanTpCreateConnection`，再 Set 各项参数**，最后才能 `CanTpSendData`；
+- 句柄要保存为全局变量，回调函数通过 `connHandle` 区分多路连接；
+- 发送前确认节点 CAN ID 与寻址类型匹配（物理寻址 0x710/0x718，功能寻址 0x7DF）；
+- 结合诊断测试时，可封装 `SendUdsRequest(sid, data, len)` + `CanTp_ReceptionInd` 形成完整的 UDS 收发闭环；
+- 64 位工程注意选用匹配位数的 DLL（Exec32/Exec64 目录）。
+
+## 六、CAPL 调试技巧
+
+### 6.1 断点与单步
 
 CAPL Browser 支持设置断点、单步执行和变量监视，适合定位逻辑错误。
 
-### 5.2 打印调试信息
+### 6.2 打印调试信息
 
 ```c
 on message 0x456
@@ -300,7 +436,7 @@ on message 0x456
 }
 ```
 
-### 5.3 使用系统变量调试
+### 6.3 使用系统变量调试
 
 通过 CANoe 的 **System Variables** 面板可以实时读写系统变量，配合 CAPL 里的 `@sysvar` 语法，方便在运行中调整参数：
 
@@ -316,7 +452,7 @@ on message 0x123
 }
 ```
 
-## 六、常见问题与避坑指南
+## 七、常见问题与避坑指南
 
 | 问题 | 原因 | 解决方案 |
 |---|---|---|
@@ -327,8 +463,11 @@ on message 0x123
 | 字符串比较失败 | 使用 `==` 比较字符数组 | 用 `strcmp()` 比较 |
 | 测试用例没执行 | 未挂到 `MainTest()` | 将用例名写入 MainTest 调用链 |
 | 浮点比较误差 | 直接比较 float 值 | 定义容差范围或取整比较 |
+| `CanTp_*` 函数未定义 | 节点未加载 `osek_tp.dll` | 节点 Components 中添加 DLL 并重开 CAPL Browser |
+| `CanTpSendData` 无响应 | 未先 `CanTpCreateConnection` 或参数未设置 | 按 5.4 节顺序初始化连接后再发送 |
+| 多帧响应收不全 | 收发 CAN ID 或寻址类型配置错误 | 核对 `CanTpSetTx/RxIdentifier` 与物理/功能寻址 |
 
-## 七、CAPL 进阶方向
+## 八、CAPL 进阶方向
 
 - **诊断测试**：结合 ODX/CDD 文件，用 `diagRequest`/`diagResponse` 事件做 UDS 诊断自动化；
 - **多总线协同**：CAN + LIN + FlexRay + Ethernet 混合仿真测试；
