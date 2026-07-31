@@ -568,13 +568,133 @@ void LINtp_ErrorInd(int error)
 - 接收数据务必在 `LINtp_DataInd` 回调中调用 `LINtp_GetRxData()` 取出，回调外取不到；
 - 多帧数据由 DLL 自动分段，无需关心 FF/CF 的 PCI 细节。
 
-## 七、CAPL 调试技巧
+## 七、DoIP DLL 库函数调用（以太网诊断传输层）
 
-### 7.1 断点与单步
+**答案是：有。** 以太网对应的传输层建模库是 **DoIP.dll**（新版 CANoe 中为 **DoIP.vmodule**）。与 CAN/LIN 的 TP 层不同，以太网诊断不需要在数据链路层拆帧——**TCP 协议本身已承担分段与重组**，以太网的"传输层"封装的是更高一层的 **DoIP（Diagnostics over IP，ISO 13400-2）** 协议。
+
+### 7.1 三种 TP DLL 对比
+
+| DLL | 总线 | 协议 | 寻址方式 | 分段方式 |
+|---|---|---|---|---|
+| `osek_tp.dll` | CAN | ISO 15765-2 | CAN ID（0x710/0x718） | TP 层拆包（SF/FF/CF/FC） |
+| `LINtp.dll` | LIN | LIN 2.x TP | NAD（节点诊断地址） | TP 层拆包（0x3C/0x3D） |
+| `DoIP.dll` | Ethernet | ISO 13400-2 | **逻辑地址**（Tester/ECU） | **TCP 协议自动分段** |
+
+### 7.2 DoIP 协议要点
+
+- **双通道**：UDP 端口 13400 用于车辆发现（Vehicle Identification）；TCP 端口 13400 用于路由激活与诊断消息传输；
+- **DoIP 报文头**：`版本号(1B) + 逆版本号(1B) + 负载类型(2B) + 负载长度(4B) + 负载`；
+- **逻辑地址寻址**：诊断消息靠逻辑地址（非 IP）寻址，如 Tester = 0x0E00/0x1000，ECU = 0x0001~0x0DFF；
+- **通信流程**：车辆发现 → 建立 TCP 连接 → 发送**路由激活请求**（响应码 0x10 = 激活成功）→ 传输诊断消息（UDS 负载）→ 关闭连接；
+- **协议变体**：CANoe 还支持 DoSoAd 与 OEM 专用的 HSFZ 协议，可在 Diagnostics/ISO TP 配置中选择。
+
+### 7.3 加载 DoIP.dll / DoIP.vmodule
+
+1. 右键网络节点（或测试节点）→ **Configuration → Components**；
+2. 点击 **Add**，在 CANoe 安装目录的 `Exec32/Exec64` 文件夹中选择 `DoIP.dll`（或新版 `DoIP.vmodule`）；
+3. 重新打开 CAPL Browser，即可看到 `DoIP_*` 系列函数。
+
+> 注意：标准 CANoe 即自带 DoIP.dll（Vector KB0011588）。若需要在 Trace 中解析以太网层/DoIP 层报文，则需要额外的 **CANoe.Ethernet** 选项。
+
+### 7.4 常用 API 一览
+
+| 分类 | 函数 | 说明 |
+|---|---|---|
+| 模式初始化 | `DoIP_InitAsTester()` | DLL 默认按 ECU 仿真模式运行；测试节点需在 `on preStart` 中调用切换为 Tester 模式 |
+| 逻辑地址 | `DoIP_SetTesterLogicalAddress(addr)` | 设置 Tester 逻辑地址（发送时使用） |
+| | `DoIP_SetVehicleLogicalAddress(addr)` | 设置 ECU/车辆逻辑地址 |
+| 连接管理 | `DoIP_ConnectToVehicle()` | 连接配置的车辆（必要时先执行车辆发现） |
+| | `DoIP_CloseConnection()` | 关闭 TCP 连接 |
+| 数据收发 | `DoIP_DataReq(buf[], count, ecuAddr, testerAddr)` | 发送 DoIP 诊断消息 |
+| | `DoIP_DataInd(buf[], count, ecuAddr, testerAddr)` | 接收回调（收到诊断数据） |
+| 超时配置 | `DoIP_GetSetDiagnosticMessageTimeout(ms)` | 诊断消息超时 |
+| | `DoIP_GetSetVehicleDiscoveryTimeout(ms)` | 车辆发现超时 |
+| | `DoIP_GetSetAliveCheckTimeout(ms)` | 在线保持超时 |
+| 回调 | `_DoIP_VehicleIdentificationCompleteInd()` | 车辆识别阶段完成 |
+| | `_DoIP_PeriodicDataInd()` | 收到周期数据（负载类型 0x8004） |
+| | `_DoIP_TransportLayerStatusInd()` | 传输层状态上报（0x9001） |
+
+### 7.5 Tester 端最小示例：发送 UDS 22 服务
+
+```c
+includes
+{
+    /* 若使用 CCI（CAPL 回调接口）需包含参考实现 */
+    /* #include "Diagnostics\\CCI_DoIP.cin" */
+}
+
+variables
+{
+    dword gEcuAddr  = 0x0001;    // ECU 逻辑地址
+    dword gTestAddr = 0x1000;    // Tester 逻辑地址
+    byte  reqData[8];
+}
+
+on preStart
+{
+    // 切换为 Tester 模式（默认是 ECU 仿真模式）
+    DoIP_InitAsTester();
+}
+
+on start
+{
+    // 设置逻辑地址并连接车辆
+    DoIP_SetTesterLogicalAddress(gTestAddr);
+    DoIP_ConnectToVehicle();
+}
+
+on key 'r'
+{
+    // 发送 UDS 22 服务：读取 DID 0xF190
+    reqData[0] = 0x22;
+    reqData[1] = 0xF1;
+    reqData[2] = 0x90;
+
+    DoIP_DataReq(reqData, 3, gEcuAddr, gTestAddr);
+    write("已发送 DoIP 诊断请求");
+}
+```
+
+### 7.6 接收响应回调
+
+```c
+/* 回调：收到 ECU 的 DoIP 诊断响应（UDS 负载，TCP 已自动重组） */
+void DoIP_DataInd(byte buffer[], dword count,
+                  dword ecuAddress, dword testerAddress)
+{
+    long i;
+    write("收到 ECU 0x%X 响应 %d 字节", ecuAddress, count);
+    for (i = 0; i < count; i++)
+    {
+        write("  data[%d] = 0x%02x", i, buffer[i]);
+    }
+}
+```
+
+### 7.7 结合 CCI 做故障注入与网关
+
+内置诊断通道严格遵循诊断规范，无法注入协议级错误。需要**违反 DoIP 协议**的测试（如错误负载类型、网关仿真）时，必须使用 **CCI（CAPL Callback Interface）**：
+
+1. 节点 Components 添加 DoIP.vmodule；
+2. CAPL 中 `#include "Diagnostics\CCI_DoIP.cin"`；
+3. 用 `DoIP_TCPSend()` 发送自定义负载类型的数据，配合 `_DoIP_PeriodicDataInd()` / `_DoIP_TransportLayerStatusInd()` 回调处理 0x8004/0x9001 扩展负载类型；
+4. 可在诊断配置对话框中**取消勾选 "Simulation by"**，改用 CCI 实现 ECU 仿真。
+
+### 7.8 使用要点
+
+- DoIP 数据分段由 **TCP 完成**，无需像 CAN/LIN TP 那样手动关注 FF/CF/FC；
+- **逻辑地址**是 DoIP 寻址核心（而非 IP），发送前务必 `DoIP_SetTesterLogicalAddress` / `DoIP_SetVehicleLogicalAddress`；
+- 测试节点务必在 `on preStart` 调用 `DoIP_InitAsTester()`，否则 DLL 按 ECU 仿真运行；
+- 车辆发现依赖 UDP 广播/组播（A_DoIP_Ctrl 约 2s 超时），连接不上先查防火墙与 TCP 13400 端口；
+- 官方完整函数清单见 CANoe Help 索引中的 **DoIP_** 前缀条目；示例工程在 **Help | Sample Configurations | Diagnostics | Sample Configurations Ethernet**。
+
+## 八、CAPL 调试技巧
+
+### 8.1 断点与单步
 
 CAPL Browser 支持设置断点、单步执行和变量监视，适合定位逻辑错误。
 
-### 7.2 打印调试信息
+### 8.2 打印调试信息
 
 ```c
 on message 0x456
@@ -587,7 +707,7 @@ on message 0x456
 }
 ```
 
-### 7.3 使用系统变量调试
+### 8.3 使用系统变量调试
 
 通过 CANoe 的 **System Variables** 面板可以实时读写系统变量，配合 CAPL 里的 `@sysvar` 语法，方便在运行中调整参数：
 
@@ -603,7 +723,7 @@ on message 0x123
 }
 ```
 
-## 八、常见问题与避坑指南
+## 九、常见问题与避坑指南
 
 | 问题 | 原因 | 解决方案 |
 |---|---|---|
@@ -621,8 +741,11 @@ on message 0x123
 | 从节点不响应 | NAD 与 LDF 配置不一致 | 核对 LDF 中从节点 NAD 与 `LINtp_DataReq` 第三参数 |
 | 诊断帧没上总线 | 调度表未包含 0x3C/0x3D 或未切换 | LDF 添加诊断调度表，发送前 `linChangeSchedTable(MasterReq)` |
 | 取不到接收数据 | 未在 `LINtp_DataInd` 内取数 | 回调内调用 `LINtp_GetRxData()` 读取 |
+| `DoIP_*` 函数不可用 | 节点未添加 DoIP.dll/DoIP.vmodule | 节点 Components 中添加建模库 |
+| 测试节点发不出诊断消息 | 未切换 Tester 模式 | `on preStart` 中调用 `DoIP_InitAsTester()` |
+| 连不上 ECU / 无响应 | 防火墙、TCP 13400 端口、逻辑地址错误 | 核对 IP 连通性、端口与 `DoIP_Set*LogicalAddress` |
 
-## 九、CAPL 进阶方向
+## 十、CAPL 进阶方向
 
 - **诊断测试**：结合 ODX/CDD 文件，用 `diagRequest`/`diagResponse` 事件做 UDS 诊断自动化；
 - **多总线协同**：CAN + LIN + FlexRay + Ethernet 混合仿真测试；

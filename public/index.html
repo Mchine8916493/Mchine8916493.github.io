@@ -553,13 +553,153 @@
 <li>接收数据务必在 <code>LINtp_DataInd</code> 回调中调用 <code>LINtp_GetRxData()</code> 取出，回调外取不到；</li>
 <li>多帧数据由 DLL 自动分段，无需关心 FF&#x2F;CF 的 PCI 细节。</li>
 </ul>
-<h2 id="七、CAPL-调试技巧"><a href="#七、CAPL-调试技巧" class="headerlink" title="七、CAPL 调试技巧"></a>七、CAPL 调试技巧</h2><h3 id="7-1-断点与单步"><a href="#7-1-断点与单步" class="headerlink" title="7.1 断点与单步"></a>7.1 断点与单步</h3><p>CAPL Browser 支持设置断点、单步执行和变量监视，适合定位逻辑错误。</p>
-<h3 id="7-2-打印调试信息"><a href="#7-2-打印调试信息" class="headerlink" title="7.2 打印调试信息"></a>7.2 打印调试信息</h3><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">on message <span class="number">0x456</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="comment">// 格式化输出报文数据</span></span><br><span class="line">    write(<span class="string">&quot;ID=0x%x DLC=%d Data=0x%02x 0x%02x 0x%02x 0x%02x&quot;</span>,</span><br><span class="line">          this.id, this.dlc,</span><br><span class="line">          this.byte(<span class="number">0</span>), this.byte(<span class="number">1</span>),</span><br><span class="line">          this.byte(<span class="number">2</span>), this.byte(<span class="number">3</span>));</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h2 id="七、DoIP-DLL-库函数调用（以太网诊断传输层）"><a href="#七、DoIP-DLL-库函数调用（以太网诊断传输层）" class="headerlink" title="七、DoIP DLL 库函数调用（以太网诊断传输层）"></a>七、DoIP DLL 库函数调用（以太网诊断传输层）</h2><p><strong>答案是：有。</strong> 以太网对应的传输层建模库是 <strong>DoIP.dll</strong>（新版 CANoe 中为 <strong>DoIP.vmodule</strong>）。与 CAN&#x2F;LIN 的 TP 层不同，以太网诊断不需要在数据链路层拆帧——<strong>TCP 协议本身已承担分段与重组</strong>，以太网的”传输层”封装的是更高一层的 <strong>DoIP（Diagnostics over IP，ISO 13400-2）</strong> 协议。</p>
+<h3 id="7-1-三种-TP-DLL-对比"><a href="#7-1-三种-TP-DLL-对比" class="headerlink" title="7.1 三种 TP DLL 对比"></a>7.1 三种 TP DLL 对比</h3><table>
+<thead>
+<tr>
+<th>DLL</th>
+<th>总线</th>
+<th>协议</th>
+<th>寻址方式</th>
+<th>分段方式</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>osek_tp.dll</code></td>
+<td>CAN</td>
+<td>ISO 15765-2</td>
+<td>CAN ID（0x710&#x2F;0x718）</td>
+<td>TP 层拆包（SF&#x2F;FF&#x2F;CF&#x2F;FC）</td>
+</tr>
+<tr>
+<td><code>LINtp.dll</code></td>
+<td>LIN</td>
+<td>LIN 2.x TP</td>
+<td>NAD（节点诊断地址）</td>
+<td>TP 层拆包（0x3C&#x2F;0x3D）</td>
+</tr>
+<tr>
+<td><code>DoIP.dll</code></td>
+<td>Ethernet</td>
+<td>ISO 13400-2</td>
+<td><strong>逻辑地址</strong>（Tester&#x2F;ECU）</td>
+<td><strong>TCP 协议自动分段</strong></td>
+</tr>
+</tbody></table>
+<h3 id="7-2-DoIP-协议要点"><a href="#7-2-DoIP-协议要点" class="headerlink" title="7.2 DoIP 协议要点"></a>7.2 DoIP 协议要点</h3><ul>
+<li><strong>双通道</strong>：UDP 端口 13400 用于车辆发现（Vehicle Identification）；TCP 端口 13400 用于路由激活与诊断消息传输；</li>
+<li><strong>DoIP 报文头</strong>：<code>版本号(1B) + 逆版本号(1B) + 负载类型(2B) + 负载长度(4B) + 负载</code>；</li>
+<li><strong>逻辑地址寻址</strong>：诊断消息靠逻辑地址（非 IP）寻址，如 Tester &#x3D; 0x0E00&#x2F;0x1000，ECU &#x3D; 0x0001~0x0DFF；</li>
+<li><strong>通信流程</strong>：车辆发现 → 建立 TCP 连接 → 发送<strong>路由激活请求</strong>（响应码 0x10 &#x3D; 激活成功）→ 传输诊断消息（UDS 负载）→ 关闭连接；</li>
+<li><strong>协议变体</strong>：CANoe 还支持 DoSoAd 与 OEM 专用的 HSFZ 协议，可在 Diagnostics&#x2F;ISO TP 配置中选择。</li>
+</ul>
+<h3 id="7-3-加载-DoIP-dll-DoIP-vmodule"><a href="#7-3-加载-DoIP-dll-DoIP-vmodule" class="headerlink" title="7.3 加载 DoIP.dll &#x2F; DoIP.vmodule"></a>7.3 加载 DoIP.dll &#x2F; DoIP.vmodule</h3><ol>
+<li>右键网络节点（或测试节点）→ <strong>Configuration → Components</strong>；</li>
+<li>点击 <strong>Add</strong>，在 CANoe 安装目录的 <code>Exec32/Exec64</code> 文件夹中选择 <code>DoIP.dll</code>（或新版 <code>DoIP.vmodule</code>）；</li>
+<li>重新打开 CAPL Browser，即可看到 <code>DoIP_*</code> 系列函数。</li>
+</ol>
+<blockquote>
+<p>注意：标准 CANoe 即自带 DoIP.dll（Vector KB0011588）。若需要在 Trace 中解析以太网层&#x2F;DoIP 层报文，则需要额外的 <strong>CANoe.Ethernet</strong> 选项。</p>
+</blockquote>
+<h3 id="7-4-常用-API-一览"><a href="#7-4-常用-API-一览" class="headerlink" title="7.4 常用 API 一览"></a>7.4 常用 API 一览</h3><table>
+<thead>
+<tr>
+<th>分类</th>
+<th>函数</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>模式初始化</td>
+<td><code>DoIP_InitAsTester()</code></td>
+<td>DLL 默认按 ECU 仿真模式运行；测试节点需在 <code>on preStart</code> 中调用切换为 Tester 模式</td>
+</tr>
+<tr>
+<td>逻辑地址</td>
+<td><code>DoIP_SetTesterLogicalAddress(addr)</code></td>
+<td>设置 Tester 逻辑地址（发送时使用）</td>
+</tr>
+<tr>
+<td></td>
+<td><code>DoIP_SetVehicleLogicalAddress(addr)</code></td>
+<td>设置 ECU&#x2F;车辆逻辑地址</td>
+</tr>
+<tr>
+<td>连接管理</td>
+<td><code>DoIP_ConnectToVehicle()</code></td>
+<td>连接配置的车辆（必要时先执行车辆发现）</td>
+</tr>
+<tr>
+<td></td>
+<td><code>DoIP_CloseConnection()</code></td>
+<td>关闭 TCP 连接</td>
+</tr>
+<tr>
+<td>数据收发</td>
+<td><code>DoIP_DataReq(buf[], count, ecuAddr, testerAddr)</code></td>
+<td>发送 DoIP 诊断消息</td>
+</tr>
+<tr>
+<td></td>
+<td><code>DoIP_DataInd(buf[], count, ecuAddr, testerAddr)</code></td>
+<td>接收回调（收到诊断数据）</td>
+</tr>
+<tr>
+<td>超时配置</td>
+<td><code>DoIP_GetSetDiagnosticMessageTimeout(ms)</code></td>
+<td>诊断消息超时</td>
+</tr>
+<tr>
+<td></td>
+<td><code>DoIP_GetSetVehicleDiscoveryTimeout(ms)</code></td>
+<td>车辆发现超时</td>
+</tr>
+<tr>
+<td></td>
+<td><code>DoIP_GetSetAliveCheckTimeout(ms)</code></td>
+<td>在线保持超时</td>
+</tr>
+<tr>
+<td>回调</td>
+<td><code>_DoIP_VehicleIdentificationCompleteInd()</code></td>
+<td>车辆识别阶段完成</td>
+</tr>
+<tr>
+<td></td>
+<td><code>_DoIP_PeriodicDataInd()</code></td>
+<td>收到周期数据（负载类型 0x8004）</td>
+</tr>
+<tr>
+<td></td>
+<td><code>_DoIP_TransportLayerStatusInd()</code></td>
+<td>传输层状态上报（0x9001）</td>
+</tr>
+</tbody></table>
+<h3 id="7-5-Tester-端最小示例：发送-UDS-22-服务"><a href="#7-5-Tester-端最小示例：发送-UDS-22-服务" class="headerlink" title="7.5 Tester 端最小示例：发送 UDS 22 服务"></a>7.5 Tester 端最小示例：发送 UDS 22 服务</h3><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br></pre></td><td class="code"><pre><span class="line">includes</span><br><span class="line">&#123;</span><br><span class="line">    <span class="comment">/* 若使用 CCI（CAPL 回调接口）需包含参考实现 */</span></span><br><span class="line">    <span class="comment">/* #include &quot;Diagnostics\\CCI_DoIP.cin&quot; */</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">variables</span><br><span class="line">&#123;</span><br><span class="line">    dword gEcuAddr  = <span class="number">0x0001</span>;    <span class="comment">// ECU 逻辑地址</span></span><br><span class="line">    dword gTestAddr = <span class="number">0x1000</span>;    <span class="comment">// Tester 逻辑地址</span></span><br><span class="line">    byte  reqData[<span class="number">8</span>];</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">on preStart</span><br><span class="line">&#123;</span><br><span class="line">    <span class="comment">// 切换为 Tester 模式（默认是 ECU 仿真模式）</span></span><br><span class="line">    DoIP_InitAsTester();</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">on start</span><br><span class="line">&#123;</span><br><span class="line">    <span class="comment">// 设置逻辑地址并连接车辆</span></span><br><span class="line">    DoIP_SetTesterLogicalAddress(gTestAddr);</span><br><span class="line">    DoIP_ConnectToVehicle();</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">on key <span class="string">&#x27;r&#x27;</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="comment">// 发送 UDS 22 服务：读取 DID 0xF190</span></span><br><span class="line">    reqData[<span class="number">0</span>] = <span class="number">0x22</span>;</span><br><span class="line">    reqData[<span class="number">1</span>] = <span class="number">0xF1</span>;</span><br><span class="line">    reqData[<span class="number">2</span>] = <span class="number">0x90</span>;</span><br><span class="line"></span><br><span class="line">    DoIP_DataReq(reqData, <span class="number">3</span>, gEcuAddr, gTestAddr);</span><br><span class="line">    write(<span class="string">&quot;已发送 DoIP 诊断请求&quot;</span>);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 
-<h3 id="7-3-使用系统变量调试"><a href="#7-3-使用系统变量调试" class="headerlink" title="7.3 使用系统变量调试"></a>7.3 使用系统变量调试</h3><p>通过 CANoe 的 <strong>System Variables</strong> 面板可以实时读写系统变量，配合 CAPL 里的 <code>@sysvar</code> 语法，方便在运行中调整参数：</p>
+<h3 id="7-6-接收响应回调"><a href="#7-6-接收响应回调" class="headerlink" title="7.6 接收响应回调"></a>7.6 接收响应回调</h3><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/* 回调：收到 ECU 的 DoIP 诊断响应（UDS 负载，TCP 已自动重组） */</span></span><br><span class="line"><span class="type">void</span> <span class="title function_">DoIP_DataInd</span><span class="params">(byte buffer[], dword count,</span></span><br><span class="line"><span class="params">                  dword ecuAddress, dword testerAddress)</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="type">long</span> i;</span><br><span class="line">    write(<span class="string">&quot;收到 ECU 0x%X 响应 %d 字节&quot;</span>, ecuAddress, count);</span><br><span class="line">    <span class="keyword">for</span> (i = <span class="number">0</span>; i &lt; count; i++)</span><br><span class="line">    &#123;</span><br><span class="line">        write(<span class="string">&quot;  data[%d] = 0x%02x&quot;</span>, i, buffer[i]);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="7-7-结合-CCI-做故障注入与网关"><a href="#7-7-结合-CCI-做故障注入与网关" class="headerlink" title="7.7 结合 CCI 做故障注入与网关"></a>7.7 结合 CCI 做故障注入与网关</h3><p>内置诊断通道严格遵循诊断规范，无法注入协议级错误。需要<strong>违反 DoIP 协议</strong>的测试（如错误负载类型、网关仿真）时，必须使用 <strong>CCI（CAPL Callback Interface）</strong>：</p>
+<ol>
+<li>节点 Components 添加 DoIP.vmodule；</li>
+<li>CAPL 中 <code>#include &quot;Diagnostics\CCI_DoIP.cin&quot;</code>；</li>
+<li>用 <code>DoIP_TCPSend()</code> 发送自定义负载类型的数据，配合 <code>_DoIP_PeriodicDataInd()</code> &#x2F; <code>_DoIP_TransportLayerStatusInd()</code> 回调处理 0x8004&#x2F;0x9001 扩展负载类型；</li>
+<li>可在诊断配置对话框中**取消勾选 “Simulation by”**，改用 CCI 实现 ECU 仿真。</li>
+</ol>
+<h3 id="7-8-使用要点"><a href="#7-8-使用要点" class="headerlink" title="7.8 使用要点"></a>7.8 使用要点</h3><ul>
+<li>DoIP 数据分段由 <strong>TCP 完成</strong>，无需像 CAN&#x2F;LIN TP 那样手动关注 FF&#x2F;CF&#x2F;FC；</li>
+<li><strong>逻辑地址</strong>是 DoIP 寻址核心（而非 IP），发送前务必 <code>DoIP_SetTesterLogicalAddress</code> &#x2F; <code>DoIP_SetVehicleLogicalAddress</code>；</li>
+<li>测试节点务必在 <code>on preStart</code> 调用 <code>DoIP_InitAsTester()</code>，否则 DLL 按 ECU 仿真运行；</li>
+<li>车辆发现依赖 UDP 广播&#x2F;组播（A_DoIP_Ctrl 约 2s 超时），连接不上先查防火墙与 TCP 13400 端口；</li>
+<li>官方完整函数清单见 CANoe Help 索引中的 <strong>DoIP_</strong> 前缀条目；示例工程在 <strong>Help | Sample Configurations | Diagnostics | Sample Configurations Ethernet</strong>。</li>
+</ul>
+<h2 id="八、CAPL-调试技巧"><a href="#八、CAPL-调试技巧" class="headerlink" title="八、CAPL 调试技巧"></a>八、CAPL 调试技巧</h2><h3 id="8-1-断点与单步"><a href="#8-1-断点与单步" class="headerlink" title="8.1 断点与单步"></a>8.1 断点与单步</h3><p>CAPL Browser 支持设置断点、单步执行和变量监视，适合定位逻辑错误。</p>
+<h3 id="8-2-打印调试信息"><a href="#8-2-打印调试信息" class="headerlink" title="8.2 打印调试信息"></a>8.2 打印调试信息</h3><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">on message <span class="number">0x456</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="comment">// 格式化输出报文数据</span></span><br><span class="line">    write(<span class="string">&quot;ID=0x%x DLC=%d Data=0x%02x 0x%02x 0x%02x 0x%02x&quot;</span>,</span><br><span class="line">          this.id, this.dlc,</span><br><span class="line">          this.byte(<span class="number">0</span>), this.byte(<span class="number">1</span>),</span><br><span class="line">          this.byte(<span class="number">2</span>), this.byte(<span class="number">3</span>));</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="8-3-使用系统变量调试"><a href="#8-3-使用系统变量调试" class="headerlink" title="8.3 使用系统变量调试"></a>8.3 使用系统变量调试</h3><p>通过 CANoe 的 <strong>System Variables</strong> 面板可以实时读写系统变量，配合 CAPL 里的 <code>@sysvar</code> 语法，方便在运行中调整参数：</p>
 <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">on message <span class="number">0x123</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="comment">// 读取系统变量（可在面板上实时修改）</span></span><br><span class="line">    <span class="type">int</span> limit = @sysvar::Test::SpeedLimit;</span><br><span class="line">    <span class="keyword">if</span> (this.Speed &gt; limit)</span><br><span class="line">    &#123;</span><br><span class="line">        write(<span class="string">&quot;超过限速 %d&quot;</span>, limit);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 
-<h2 id="八、常见问题与避坑指南"><a href="#八、常见问题与避坑指南" class="headerlink" title="八、常见问题与避坑指南"></a>八、常见问题与避坑指南</h2><table>
+<h2 id="九、常见问题与避坑指南"><a href="#九、常见问题与避坑指南" class="headerlink" title="九、常见问题与避坑指南"></a>九、常见问题与避坑指南</h2><table>
 <thead>
 <tr>
 <th>问题</th>
@@ -637,8 +777,23 @@
 <td>未在 <code>LINtp_DataInd</code> 内取数</td>
 <td>回调内调用 <code>LINtp_GetRxData()</code> 读取</td>
 </tr>
+<tr>
+<td><code>DoIP_*</code> 函数不可用</td>
+<td>节点未添加 DoIP.dll&#x2F;DoIP.vmodule</td>
+<td>节点 Components 中添加建模库</td>
+</tr>
+<tr>
+<td>测试节点发不出诊断消息</td>
+<td>未切换 Tester 模式</td>
+<td><code>on preStart</code> 中调用 <code>DoIP_InitAsTester()</code></td>
+</tr>
+<tr>
+<td>连不上 ECU &#x2F; 无响应</td>
+<td>防火墙、TCP 13400 端口、逻辑地址错误</td>
+<td>核对 IP 连通性、端口与 <code>DoIP_Set*LogicalAddress</code></td>
+</tr>
 </tbody></table>
-<h2 id="九、CAPL-进阶方向"><a href="#九、CAPL-进阶方向" class="headerlink" title="九、CAPL 进阶方向"></a>九、CAPL 进阶方向</h2><ul>
+<h2 id="十、CAPL-进阶方向"><a href="#十、CAPL-进阶方向" class="headerlink" title="十、CAPL 进阶方向"></a>十、CAPL 进阶方向</h2><ul>
 <li><strong>诊断测试</strong>：结合 ODX&#x2F;CDD 文件，用 <code>diagRequest</code>&#x2F;<code>diagResponse</code> 事件做 UDS 诊断自动化；</li>
 <li><strong>多总线协同</strong>：CAN + LIN + FlexRay + Ethernet 混合仿真测试；</li>
 <li><strong>ECU 测试自动化</strong>：配合 vTESTstudio 图形化生成测试用例后导出 CAPL；</li>
@@ -656,7 +811,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2026/07/31/CANoe-CAPL%E8%84%9A%E6%9C%AC%E6%B5%8B%E8%AF%95%E5%85%A5%E9%97%A8%E4%B8%8E%E5%AE%9E%E8%B7%B5/" data-id="cms8sano90002g0lmb1koav7t" data-title="CANoe CAPL脚本测试入门与实践" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2026/07/31/CANoe-CAPL%E8%84%9A%E6%9C%AC%E6%B5%8B%E8%AF%95%E5%85%A5%E9%97%A8%E4%B8%8E%E5%AE%9E%E8%B7%B5/" data-id="cms8shuoj000020lm6hzrc9up" data-title="CANoe CAPL脚本测试入门与实践" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
@@ -1007,7 +1162,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2026/07/31/Linux%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86%E8%AF%A6%E8%A7%A3/" data-id="cms8sano60001g0lmguaz2nr4" data-title="Linux内存管理详解" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2026/07/31/Linux%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86%E8%AF%A6%E8%A7%A3/" data-id="cms8shuoq000120lm3sxnd4sp" data-title="Linux内存管理详解" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
@@ -1053,7 +1208,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2026/07/31/%E6%B5%8B%E8%AF%95%E6%96%87%E7%AB%A0-%E8%87%AA%E5%8A%A8%E9%83%A8%E7%BD%B2%E9%AA%8C%E8%AF%81/" data-id="cms8sanoe0005g0lmheg8f7a4" data-title="测试文章-自动部署验证" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2026/07/31/%E6%B5%8B%E8%AF%95%E6%96%87%E7%AB%A0-%E8%87%AA%E5%8A%A8%E9%83%A8%E7%BD%B2%E9%AA%8C%E8%AF%81/" data-id="cms8shuoy000520lmf9x8at70" data-title="测试文章-自动部署验证" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
@@ -1106,7 +1261,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2026/07/31/hello-world/" data-id="cms8sannz0000g0lmdjfi7uj7" data-title="Hello World" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2026/07/31/hello-world/" data-id="cms8shuow000420lmfjw885fd" data-title="Hello World" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
@@ -1144,7 +1299,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2026/05/01/%E6%B1%BD%E8%BD%A6%E7%94%B5%E5%AD%90%E5%9B%BA%E4%BB%B6%E5%AE%89%E5%85%A8%E5%AD%A6%E4%B9%A0%E8%B7%AF%E7%BA%BF/" data-id="cms8sanoc0004g0lmd6kf4lom" data-title="汽车电子固件安全学习路线" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2026/05/01/%E6%B1%BD%E8%BD%A6%E7%94%B5%E5%AD%90%E5%9B%BA%E4%BB%B6%E5%AE%89%E5%85%A8%E5%AD%A6%E4%B9%A0%E8%B7%AF%E7%BA%BF/" data-id="cms8shuou000320lm4g3m4j73" data-title="汽车电子固件安全学习路线" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
