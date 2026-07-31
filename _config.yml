@@ -102,7 +102,7 @@ theme: landscape
 ## Docs: https://hexo.io/docs/one-command-deployment
 deploy:
   type: git
-  repo: https://ghproxy.com/https://github.com/Mchine8916493/Mchine8916493.github.io.git
-  branch: master
+  repo: git@github.com:mchine8916493/mchine8916493.github.io.git
+  branch: gh-pages
 
 
