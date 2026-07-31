@@ -274,13 +274,174 @@
 <li>关联 DBC 文件，使信号名可用；</li>
 <li>点击运行，自动执行并生成报告。</li>
 </ol>
-<h2 id="五、CAPL-调试技巧"><a href="#五、CAPL-调试技巧" class="headerlink" title="五、CAPL 调试技巧"></a>五、CAPL 调试技巧</h2><h3 id="5-1-断点与单步"><a href="#5-1-断点与单步" class="headerlink" title="5.1 断点与单步"></a>5.1 断点与单步</h3><p>CAPL Browser 支持设置断点、单步执行和变量监视，适合定位逻辑错误。</p>
-<h3 id="5-2-打印调试信息"><a href="#5-2-打印调试信息" class="headerlink" title="5.2 打印调试信息"></a>5.2 打印调试信息</h3><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">on message <span class="number">0x456</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="comment">// 格式化输出报文数据</span></span><br><span class="line">    write(<span class="string">&quot;ID=0x%x DLC=%d Data=0x%02x 0x%02x 0x%02x 0x%02x&quot;</span>,</span><br><span class="line">          this.id, this.dlc,</span><br><span class="line">          this.byte(<span class="number">0</span>), this.byte(<span class="number">1</span>),</span><br><span class="line">          this.byte(<span class="number">2</span>), this.byte(<span class="number">3</span>));</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h2 id="五、OSEK-TP-DLL-库函数调用（CAN-TP-传输层）"><a href="#五、OSEK-TP-DLL-库函数调用（CAN-TP-传输层）" class="headerlink" title="五、OSEK TP DLL 库函数调用（CAN TP 传输层）"></a>五、OSEK TP DLL 库函数调用（CAN TP 传输层）</h2><p>CAN 单帧数据只有 8 字节（经典 CAN）或 64 字节（CAN FD），当需要传输超过单帧容量的大块数据（如 UDS 诊断请求&#x2F;响应、Bootloader 刷写数据）时，必须借助<strong>传输层协议</strong>将数据分段发送、重组接收。Vector 官方提供的 <strong>OSEK TP DLL</strong>（<code>osek_tp.dll</code>）在 CANoe 中实现了基于 ISO 15765-2 的 CAN TP 传输层，并封装为一组 CAPL 可直接调用的库函数，是 CANoe 诊断测试与 ECU 刷写仿真的利器。</p>
+<h3 id="5-1-为什么需要-TP-层"><a href="#5-1-为什么需要-TP-层" class="headerlink" title="5.1 为什么需要 TP 层"></a>5.1 为什么需要 TP 层</h3><p>ISO 15765-2 定义了四种帧类型：</p>
+<table>
+<thead>
+<tr>
+<th>帧类型</th>
+<th>缩写</th>
+<th>作用</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>单帧</td>
+<td>SF</td>
+<td>单帧即可装下的数据（≤7 字节）</td>
+</tr>
+<tr>
+<td>首帧</td>
+<td>FF</td>
+<td>多帧传输的第一帧，声明总数据长度</td>
+</tr>
+<tr>
+<td>连续帧</td>
+<td>CF</td>
+<td>后续分段数据</td>
+</tr>
+<tr>
+<td>流控帧</td>
+<td>FC</td>
+<td>接收方告知发送方：块大小（BlockSize）与最小间隔时间（STmin）</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p>以 4096 字节的 UDS 响应为例：若不使用 TP 层，需手动拆成数百帧并自行管理时序、超时与重组，极易出错；使用 <code>osek_tp.dll</code> 后只需一行 <code>CanTpSendData()</code>，拆包、流控、重组全部自动完成。</p>
+</blockquote>
+<h3 id="5-2-加载-osek-tp-dll"><a href="#5-2-加载-osek-tp-dll" class="headerlink" title="5.2 加载 osek_tp.dll"></a>5.2 加载 osek_tp.dll</h3><ol>
+<li>在 Simulation Setup 中<strong>右键目标节点</strong>（仿真节点或 Test Module 测试节点）；</li>
+<li>选择 <strong>Configuration → Components</strong>；</li>
+<li>点击 <strong>Add</strong>，选择 <code>osek_tp.dll</code>（Vector 安装目录下自带）；</li>
+<li><strong>重新打开 CAPL Browser</strong>，即可在函数列表中找到导出的 <code>CanTp_*</code> 系列函数。</li>
+</ol>
+<blockquote>
+<p>注意：DLL 是节点级组件，<strong>每个需要 TP 能力的节点都要单独添加</strong>；加载后必须重开 CAPL Browser 才能识别新函数。</p>
+</blockquote>
+<h3 id="5-3-常用-API-一览"><a href="#5-3-常用-API-一览" class="headerlink" title="5.3 常用 API 一览"></a>5.3 常用 API 一览</h3><table>
+<thead>
+<tr>
+<th>分类</th>
+<th>函数</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>连接管理</td>
+<td><code>CanTpCreateConnection(mode)</code></td>
+<td>创建 TP 连接并返回句柄（0 &#x3D; 普通模式）</td>
+</tr>
+<tr>
+<td></td>
+<td><code>CanTpDeleteConnection(handle)</code></td>
+<td>删除连接</td>
+</tr>
+<tr>
+<td>地址配置</td>
+<td><code>CanTpSetTxIdentifier(handle, id)</code></td>
+<td>设置发送 CAN ID（如 0x710）</td>
+</tr>
+<tr>
+<td></td>
+<td><code>CanTpSetRxIdentifier(handle, id)</code></td>
+<td>设置接收 CAN ID（如 0x718）</td>
+</tr>
+<tr>
+<td>流控参数</td>
+<td><code>CanTpSetBlockSize(handle, n)</code></td>
+<td>流控块大小（0 &#x3D; 不限制）</td>
+</tr>
+<tr>
+<td></td>
+<td><code>CanTpSetSTmin(handle, ms)</code></td>
+<td>连续帧最小间隔（0~127ms）</td>
+</tr>
+<tr>
+<td></td>
+<td><code>CanTpSetFlowControlDelay(handle, ms)</code></td>
+<td>接收方发出流控帧前的延迟</td>
+</tr>
+<tr>
+<td>超时参数</td>
+<td><code>CanTpSetTimeoutAr/As/Bs/Cr(handle, ms)</code></td>
+<td>AR&#x2F;AS&#x2F;BS&#x2F;CR 各阶段超时</td>
+</tr>
+<tr>
+<td>填充配置</td>
+<td><code>CanTpSetPadding(handle, byte)</code></td>
+<td>空闲字节填充值（如 0xAA）</td>
+</tr>
+<tr>
+<td>数据收发</td>
+<td><code>CanTpSendData(handle, data[], len)</code></td>
+<td>发送大块数据（自动分段）</td>
+</tr>
+<tr>
+<td>回调函数</td>
+<td><code>CanTp_ReceptionInd(handle, data[])</code></td>
+<td>收到完整消息时回调（自动重组）</td>
+</tr>
+<tr>
+<td></td>
+<td><code>CanTp_ErrorInd(handle, errCode)</code></td>
+<td>TP 层错误回调</td>
+</tr>
+</tbody></table>
+<h3 id="5-4-建立-TP-连接"><a href="#5-4-建立-TP-连接" class="headerlink" title="5.4 建立 TP 连接"></a>5.4 建立 TP 连接</h3><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><span class="line">variables</span><br><span class="line">&#123;</span><br><span class="line">    <span class="type">long</span>    g_CanTpHandle = <span class="number">0</span>;</span><br><span class="line">    message <span class="number">0x710</span> txPhyMsg;      <span class="comment">// 物理寻址：诊断请求</span></span><br><span class="line">    message <span class="number">0x718</span> rxResMsg;      <span class="comment">// ECU 诊断响应</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">/* 初始化 TP 连接（on start 或发送前调用一次） */</span></span><br><span class="line"><span class="type">void</span> <span class="title function_">CanTP_Init</span><span class="params">(<span class="type">void</span>)</span></span><br><span class="line">&#123;</span><br><span class="line">    g_CanTpHandle = CanTpCreateConnection(<span class="number">0</span>);   <span class="comment">// 0 = 普通模式</span></span><br><span class="line"></span><br><span class="line">    CanTpSetTxIdentifier(g_CanTpHandle, <span class="number">0x710</span>);</span><br><span class="line">    CanTpSetRxIdentifier(g_CanTpHandle, <span class="number">0x718</span>);</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 流控参数：块大小 0（不限制），STmin = 20ms</span></span><br><span class="line">    CanTpSetBlockSize(g_CanTpHandle, <span class="number">0</span>);</span><br><span class="line">    CanTpSetSTmin(g_CanTpHandle, <span class="number">20</span>);</span><br><span class="line">    CanTpSetFlowControlDelay(g_CanTpHandle, <span class="number">15</span>);</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 超时参数（单位 ms）</span></span><br><span class="line">    CanTpSetTimeoutAr(g_CanTpHandle, <span class="number">250</span>);</span><br><span class="line">    CanTpSetTimeoutAs(g_CanTpHandle, <span class="number">250</span>);</span><br><span class="line">    CanTpSetTimeoutBs(g_CanTpHandle, <span class="number">100</span>);</span><br><span class="line">    CanTpSetTimeoutCr(g_CanTpHandle, <span class="number">250</span>);</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 空闲字节填充</span></span><br><span class="line">    CanTpSetPadding(g_CanTpHandle, <span class="number">0xAA</span>);</span><br><span class="line"></span><br><span class="line">    write(<span class="string">&quot;OSEK TP 连接已建立，Handle=%d&quot;</span>, g_CanTpHandle);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 
-<h3 id="5-3-使用系统变量调试"><a href="#5-3-使用系统变量调试" class="headerlink" title="5.3 使用系统变量调试"></a>5.3 使用系统变量调试</h3><p>通过 CANoe 的 <strong>System Variables</strong> 面板可以实时读写系统变量，配合 CAPL 里的 <code>@sysvar</code> 语法，方便在运行中调整参数：</p>
+<h3 id="5-5-发送大数据（自动分段）"><a href="#5-5-发送大数据（自动分段）" class="headerlink" title="5.5 发送大数据（自动分段）"></a>5.5 发送大数据（自动分段）</h3><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/* 发送 UDS 22 服务：读取 DID 0xF190 */</span></span><br><span class="line"><span class="type">void</span> <span class="title function_">SendUdsReadDataByID</span><span class="params">(<span class="type">void</span>)</span></span><br><span class="line">&#123;</span><br><span class="line">    byte reqData[<span class="number">8</span>];</span><br><span class="line">    <span class="type">long</span>  len = <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">    reqData[len++] = <span class="number">0x22</span>;       <span class="comment">// UDS SID：ReadDataByIdentifier</span></span><br><span class="line">    reqData[len++] = <span class="number">0xF1</span>;       <span class="comment">// DID 高字节</span></span><br><span class="line">    reqData[len++] = <span class="number">0x90</span>;       <span class="comment">// DID 低字节</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">// TP 层自动完成：单帧/多帧判断、FF+CF 分段、等待流控帧</span></span><br><span class="line">    CanTpSendData(g_CanTpHandle, reqData, len);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>发送 3 字节请求时 TP 层会自动使用单帧（SF）；当数据超过单帧容量时自动切换为首帧（FF）+ 连续帧（CF），并依据接收方的流控帧（FC）管理发送节奏——<strong>拆包与组包逻辑全部由 DLL 完成</strong>。</p>
+<h3 id="5-6-接收回调（自动重组）"><a href="#5-6-接收回调（自动重组）" class="headerlink" title="5.6 接收回调（自动重组）"></a>5.6 接收回调（自动重组）</h3><p>ECU 返回多帧响应时，DLL 会自动重组数据并调用回调函数：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/* 回调：收到完整 TP 消息（已自动重组，data[] 不含长度字节） */</span></span><br><span class="line"><span class="type">void</span> <span class="title function_">CanTp_ReceptionInd</span><span class="params">(<span class="type">long</span> connHandle, byte data[])</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="type">int</span>  len = elcount(data);</span><br><span class="line">    byte i;</span><br><span class="line"></span><br><span class="line">    write(<span class="string">&quot;收到 TP 数据，连接=%d，长度=%d&quot;</span>, connHandle, len);</span><br><span class="line">    <span class="keyword">for</span> (i = <span class="number">0</span>; i &lt; len; i++)</span><br><span class="line">    &#123;</span><br><span class="line">        write(<span class="string">&quot;  data[%d] = 0x%02x&quot;</span>, i, data[i]);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="5-7-其他回调函数"><a href="#5-7-其他回调函数" class="headerlink" title="5.7 其他回调函数"></a>5.7 其他回调函数</h3><table>
+<thead>
+<tr>
+<th>回调函数</th>
+<th>触发时机</th>
+<th>典型用途</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>CanTp_FirstFrameInd(handle, len)</code></td>
+<td>收到对端首帧</td>
+<td>获知对方即将发送的大块数据长度</td>
+</tr>
+<tr>
+<td><code>CanTp_PreSend(handle)</code></td>
+<td>每次发送数据前</td>
+<td>更新数据 &#x2F; 记录发送时刻</td>
+</tr>
+<tr>
+<td><code>CanTp_SendCon(handle)</code></td>
+<td>发送完成确认</td>
+<td>确认发送成功，驱动下一步流程</td>
+</tr>
+<tr>
+<td><code>CanTp_ErrorInd(handle, errCode)</code></td>
+<td>TP 层错误（超时等）</td>
+<td>错误上报与重发策略</td>
+</tr>
+<tr>
+<td><code>CanTp_ChannelModeChangeInd(handle)</code></td>
+<td>通道模式切换</td>
+<td>诊断会话切换联动</td>
+</tr>
+</tbody></table>
+<h3 id="5-8-使用要点"><a href="#5-8-使用要点" class="headerlink" title="5.8 使用要点"></a>5.8 使用要点</h3><ul>
+<li>初始化顺序：<strong>先 <code>CanTpCreateConnection</code>，再 Set 各项参数</strong>，最后才能 <code>CanTpSendData</code>；</li>
+<li>句柄要保存为全局变量，回调函数通过 <code>connHandle</code> 区分多路连接；</li>
+<li>发送前确认节点 CAN ID 与寻址类型匹配（物理寻址 0x710&#x2F;0x718，功能寻址 0x7DF）；</li>
+<li>结合诊断测试时，可封装 <code>SendUdsRequest(sid, data, len)</code> + <code>CanTp_ReceptionInd</code> 形成完整的 UDS 收发闭环；</li>
+<li>64 位工程注意选用匹配位数的 DLL（Exec32&#x2F;Exec64 目录）。</li>
+</ul>
+<h2 id="六、CAPL-调试技巧"><a href="#六、CAPL-调试技巧" class="headerlink" title="六、CAPL 调试技巧"></a>六、CAPL 调试技巧</h2><h3 id="6-1-断点与单步"><a href="#6-1-断点与单步" class="headerlink" title="6.1 断点与单步"></a>6.1 断点与单步</h3><p>CAPL Browser 支持设置断点、单步执行和变量监视，适合定位逻辑错误。</p>
+<h3 id="6-2-打印调试信息"><a href="#6-2-打印调试信息" class="headerlink" title="6.2 打印调试信息"></a>6.2 打印调试信息</h3><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">on message <span class="number">0x456</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="comment">// 格式化输出报文数据</span></span><br><span class="line">    write(<span class="string">&quot;ID=0x%x DLC=%d Data=0x%02x 0x%02x 0x%02x 0x%02x&quot;</span>,</span><br><span class="line">          this.id, this.dlc,</span><br><span class="line">          this.byte(<span class="number">0</span>), this.byte(<span class="number">1</span>),</span><br><span class="line">          this.byte(<span class="number">2</span>), this.byte(<span class="number">3</span>));</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="6-3-使用系统变量调试"><a href="#6-3-使用系统变量调试" class="headerlink" title="6.3 使用系统变量调试"></a>6.3 使用系统变量调试</h3><p>通过 CANoe 的 <strong>System Variables</strong> 面板可以实时读写系统变量，配合 CAPL 里的 <code>@sysvar</code> 语法，方便在运行中调整参数：</p>
 <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">on message <span class="number">0x123</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="comment">// 读取系统变量（可在面板上实时修改）</span></span><br><span class="line">    <span class="type">int</span> limit = @sysvar::Test::SpeedLimit;</span><br><span class="line">    <span class="keyword">if</span> (this.Speed &gt; limit)</span><br><span class="line">    &#123;</span><br><span class="line">        write(<span class="string">&quot;超过限速 %d&quot;</span>, limit);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 
-<h2 id="六、常见问题与避坑指南"><a href="#六、常见问题与避坑指南" class="headerlink" title="六、常见问题与避坑指南"></a>六、常见问题与避坑指南</h2><table>
+<h2 id="七、常见问题与避坑指南"><a href="#七、常见问题与避坑指南" class="headerlink" title="七、常见问题与避坑指南"></a>七、常见问题与避坑指南</h2><table>
 <thead>
 <tr>
 <th>问题</th>
@@ -323,8 +484,23 @@
 <td>直接比较 float 值</td>
 <td>定义容差范围或取整比较</td>
 </tr>
+<tr>
+<td><code>CanTp_*</code> 函数未定义</td>
+<td>节点未加载 <code>osek_tp.dll</code></td>
+<td>节点 Components 中添加 DLL 并重开 CAPL Browser</td>
+</tr>
+<tr>
+<td><code>CanTpSendData</code> 无响应</td>
+<td>未先 <code>CanTpCreateConnection</code> 或参数未设置</td>
+<td>按 5.4 节顺序初始化连接后再发送</td>
+</tr>
+<tr>
+<td>多帧响应收不全</td>
+<td>收发 CAN ID 或寻址类型配置错误</td>
+<td>核对 <code>CanTpSetTx/RxIdentifier</code> 与物理&#x2F;功能寻址</td>
+</tr>
 </tbody></table>
-<h2 id="七、CAPL-进阶方向"><a href="#七、CAPL-进阶方向" class="headerlink" title="七、CAPL 进阶方向"></a>七、CAPL 进阶方向</h2><ul>
+<h2 id="八、CAPL-进阶方向"><a href="#八、CAPL-进阶方向" class="headerlink" title="八、CAPL 进阶方向"></a>八、CAPL 进阶方向</h2><ul>
 <li><strong>诊断测试</strong>：结合 ODX&#x2F;CDD 文件，用 <code>diagRequest</code>&#x2F;<code>diagResponse</code> 事件做 UDS 诊断自动化；</li>
 <li><strong>多总线协同</strong>：CAN + LIN + FlexRay + Ethernet 混合仿真测试；</li>
 <li><strong>ECU 测试自动化</strong>：配合 vTESTstudio 图形化生成测试用例后导出 CAPL；</li>
@@ -342,7 +518,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2026/07/31/CANoe-CAPL%E8%84%9A%E6%9C%AC%E6%B5%8B%E8%AF%95%E5%85%A5%E9%97%A8%E4%B8%8E%E5%AE%9E%E8%B7%B5/" data-id="cms8s18b900008ilm5f3uex25" data-title="CANoe CAPL脚本测试入门与实践" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2026/07/31/CANoe-CAPL%E8%84%9A%E6%9C%AC%E6%B5%8B%E8%AF%95%E5%85%A5%E9%97%A8%E4%B8%8E%E5%AE%9E%E8%B7%B5/" data-id="cms8s6sp30000hzlm6e8be1o3" data-title="CANoe CAPL脚本测试入门与实践" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
@@ -693,7 +869,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2026/07/31/Linux%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86%E8%AF%A6%E8%A7%A3/" data-id="cms8s18bg00018ilm07fb23ng" data-title="Linux内存管理详解" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2026/07/31/Linux%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86%E8%AF%A6%E8%A7%A3/" data-id="cms8s6spa0001hzlmbj6pb99x" data-title="Linux内存管理详解" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
@@ -739,7 +915,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2026/07/31/%E6%B5%8B%E8%AF%95%E6%96%87%E7%AB%A0-%E8%87%AA%E5%8A%A8%E9%83%A8%E7%BD%B2%E9%AA%8C%E8%AF%81/" data-id="cms8s18bn00058ilm86o066gb" data-title="测试文章-自动部署验证" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2026/07/31/%E6%B5%8B%E8%AF%95%E6%96%87%E7%AB%A0-%E8%87%AA%E5%8A%A8%E9%83%A8%E7%BD%B2%E9%AA%8C%E8%AF%81/" data-id="cms8s6sph0005hzlm9bh8go02" data-title="测试文章-自动部署验证" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
@@ -792,7 +968,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2026/07/31/hello-world/" data-id="cms8s18bl00038ilmaksqalbk" data-title="Hello World" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2026/07/31/hello-world/" data-id="cms8s6spe0003hzlm6wsc9bpw" data-title="Hello World" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
@@ -830,7 +1006,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2026/05/01/%E6%B1%BD%E8%BD%A6%E7%94%B5%E5%AD%90%E5%9B%BA%E4%BB%B6%E5%AE%89%E5%85%A8%E5%AD%A6%E4%B9%A0%E8%B7%AF%E7%BA%BF/" data-id="cms8s18bm00048ilm1cy370js" data-title="汽车电子固件安全学习路线" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2026/05/01/%E6%B1%BD%E8%BD%A6%E7%94%B5%E5%AD%90%E5%9B%BA%E4%BB%B6%E5%AE%89%E5%85%A8%E5%AD%A6%E4%B9%A0%E8%B7%AF%E7%BA%BF/" data-id="cms8s6spg0004hzlma0hi2v1d" data-title="汽车电子固件安全学习路线" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
