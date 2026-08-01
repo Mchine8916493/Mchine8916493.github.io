@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  
+  
+  <title>嵌入式链接脚本详解：从零理解Linker Script | Hexo</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <meta name="description" content="在嵌入式开发中，我们编译完 C&#x2F;汇编代码后，得到的 .o 目标文件并不能直接烧录到单片机里。把它们”拼装”成最终可执行文件、并决定每一段代码和数据放在芯片哪个地址的任务，就由链接器（Linker）完成，而它的”施工图纸”就是链接脚本（Linker Script）。 很多初学者把链接脚本当成一个”复制粘贴即可”的黑盒，一旦出现 section .isr_vector will not fi">
+<meta property="og:type" content="article">
+<meta property="og:title" content="嵌入式链接脚本详解：从零理解Linker Script">
+<meta property="og:url" content="http://example.com/2026/08/01/%E5%B5%8C%E5%85%A5%E5%BC%8F%E9%93%BE%E6%8E%A5%E8%84%9A%E6%9C%AC%E8%AF%A6%E8%A7%A3%EF%BC%9A%E4%BB%8E%E9%9B%B6%E7%90%86%E8%A7%A3Linker-Script/index.html">
+<meta property="og:site_name" content="Hexo">
+<meta property="og:description" content="在嵌入式开发中，我们编译完 C&#x2F;汇编代码后，得到的 .o 目标文件并不能直接烧录到单片机里。把它们”拼装”成最终可执行文件、并决定每一段代码和数据放在芯片哪个地址的任务，就由链接器（Linker）完成，而它的”施工图纸”就是链接脚本（Linker Script）。 很多初学者把链接脚本当成一个”复制粘贴即可”的黑盒，一旦出现 section .isr_vector will not fi">
+<meta property="og:locale" content="en_US">
+<meta property="article:published_time" content="2026-08-01T07:17:43.000Z">
+<meta property="article:modified_time" content="2026-08-01T07:18:44.834Z">
+<meta property="article:author" content="John Doe">
+<meta property="article:tag" content="汇编">
+<meta property="article:tag" content="嵌入式">
+<meta property="article:tag" content="链接脚本">
+<meta property="article:tag" content="Linker Script">
+<meta property="article:tag" content="GCC">
+<meta property="article:tag" content="STM32">
+<meta name="twitter:card" content="summary">
+  
+    <link rel="alternate" href="/atom.xml" title="Hexo" type="application/atom+xml">
+  
+  
+    <link rel="shortcut icon" href="/favicon.png">
+  
+  
+  
+<link rel="stylesheet" href="/css/style.css">
+
+  
+    
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.min.css">
+
+  
+  
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fork-awesome@1.2.0/css/fork-awesome.min.css">
+
+<meta name="generator" content="Hexo 7.3.0"></head>
+
+<body>
+  <div id="container">
+    <div id="wrap">
+      <header id="header">
+  <div id="banner"></div>
+  <div id="header-outer" class="outer">
+    <div id="header-title" class="inner">
+      <h1 id="logo-wrap">
+        <a href="/" id="logo">Hexo</a>
+      </h1>
+      
+    </div>
+    <div id="header-inner" class="inner">
+      <nav id="main-nav">
+        <a id="main-nav-toggle" class="nav-icon"><span class="fa fa-bars"></span></a>
+        
+          <a class="main-nav-link" href="/">Home</a>
+        
+          <a class="main-nav-link" href="/archives">Archives</a>
+        
+      </nav>
+      <nav id="sub-nav">
+        
+        
+          <a class="nav-icon" href="/atom.xml" title="RSS Feed"><span class="fa fa-rss"></span></a>
+        
+        <a class="nav-icon nav-search-btn" title="Search"><span class="fa fa-search"></span></a>
+      </nav>
+      <div id="search-form-wrap">
+        <form action="//google.com/search" method="get" accept-charset="UTF-8" class="search-form"><input type="search" name="q" class="search-form-input" placeholder="Search"><button type="submit" class="search-form-submit">&#xF002;</button><input type="hidden" name="sitesearch" value="http://example.com"></form>
+      </div>
+    </div>
+  </div>
+</header>
+
+      <div class="outer">
+        <section id="main"><article id="post-嵌入式链接脚本详解：从零理解Linker-Script" class="h-entry article article-type-post" itemprop="blogPost" itemscope itemtype="https://schema.org/BlogPosting">
+  <div class="article-meta">
+    <a href="/2026/08/01/%E5%B5%8C%E5%85%A5%E5%BC%8F%E9%93%BE%E6%8E%A5%E8%84%9A%E6%9C%AC%E8%AF%A6%E8%A7%A3%EF%BC%9A%E4%BB%8E%E9%9B%B6%E7%90%86%E8%A7%A3Linker-Script/" class="article-date">
+  <time class="dt-published" datetime="2026-08-01T07:17:43.000Z" itemprop="datePublished">2026-08-01</time>
+</a>
+    
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 class="p-name article-title" itemprop="headline name">
+      嵌入式链接脚本详解：从零理解Linker Script
+    </h1>
+  
+
+      </header>
+    
+    <div class="e-content article-entry" itemprop="articleBody">
+      
+        <p>在嵌入式开发中，我们编译完 C&#x2F;汇编代码后，得到的 <code>.o</code> 目标文件并不能直接烧录到单片机里。把它们”拼装”成最终可执行文件、并决定每一段代码和数据放在芯片哪个地址的任务，就由<strong>链接器</strong>（Linker）完成，而它的”施工图纸”就是<strong>链接脚本</strong>（Linker Script）。</p>
+<p>很多初学者把链接脚本当成一个”复制粘贴即可”的黑盒，一旦出现 <code>section .isr_vector will not fit in region FLASH</code> 之类的报错就束手无策。本文将从零开始，把链接脚本的语法、概念、实战与调试技巧一次讲透。</p>
+<span id="more"></span>
+
+<h2 id="1-为什么嵌入式需要链接脚本？"><a href="#1-为什么嵌入式需要链接脚本？" class="headerlink" title="1. 为什么嵌入式需要链接脚本？"></a>1. 为什么嵌入式需要链接脚本？</h2><h3 id="1-1-链接器在干什么"><a href="#1-1-链接器在干什么" class="headerlink" title="1.1 链接器在干什么"></a>1.1 链接器在干什么</h3><p>以 GCC 工具链为例，从源码到固件的完整链路是：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">.c/.s 文件 --编译器--&gt; .o 目标文件 --链接器(ld)--&gt; .elf --objcopy--&gt; .hex/.bin</span><br></pre></td></tr></table></figure>
+
+<p>编译器负责<strong>翻译</strong>，链接器负责<strong>拼装</strong>：</p>
+<ol>
+<li><strong>符号解析（Symbol Resolution）</strong>：把各个 <code>.o</code> 中互相引用的符号（函数、全局变量）联系起来；</li>
+<li><strong>重定位（Relocation）</strong>：计算每个符号的最终内存地址，回填到代码中的跳转指令、变量引用处；</li>
+<li><strong>段合并（Section Merging）</strong>：把所有 <code>.o</code> 中相同性质的段合并成可执行文件中的段。</li>
+</ol>
+<blockquote>
+<p>PC 端程序通常无需关心链接脚本，因为标准库和操作系统已经定义了默认布局。但裸机（bare-metal）嵌入式程序没有 OS 兜底，芯片的 Flash&#x2F;RAM 地址范围必须由我们自己指定——这正是链接脚本存在的根本原因。</p>
+</blockquote>
+<h3 id="1-2-两个关键概念：VMA-与-LMA"><a href="#1-2-两个关键概念：VMA-与-LMA" class="headerlink" title="1.2 两个关键概念：VMA 与 LMA"></a>1.2 两个关键概念：VMA 与 LMA</h3><p>链接脚本中反复出现两个地址，务必先分清：</p>
+<table>
+<thead>
+<tr>
+<th>概念</th>
+<th>全称</th>
+<th>含义</th>
+<th>例子</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>VMA</strong></td>
+<td>Virtual Memory Address</td>
+<td><strong>运行地址</strong>，程序执行时符号所在的地址</td>
+<td><code>.text</code> 在运行时位于 0x08000000（Flash）</td>
+</tr>
+<tr>
+<td><strong>LMA</strong></td>
+<td>Load Memory Address</td>
+<td><strong>加载地址</strong>，程序烧录&#x2F;存放的地址</td>
+<td>初始化数据 <code>init_data</code> 烧录在 Flash，运行时复制到 RAM</td>
+</tr>
+</tbody></table>
+<p>对于不搬移的段（如代码段），<code>VMA == LMA</code>；而对于需要从 Flash 拷到 RAM 的段（如全局变量初始化值），两者不同。这也是”启动时为什么要拷贝 .data、清 .bss”的根源。</p>
+<hr>
+<h2 id="2-链接脚本的语法基础"><a href="#2-链接脚本的语法基础" class="headerlink" title="2. 链接脚本的语法基础"></a>2. 链接脚本的语法基础</h2><p>链接脚本由<strong>命令</strong>和<strong>表达式</strong>组成，行尾用 <code>;</code> 结尾，<code>/* */</code> 是注释。</p>
+<h3 id="2-1-一个最简脚本"><a href="#2-1-一个最简脚本" class="headerlink" title="2.1 一个最简脚本"></a>2.1 一个最简脚本</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br></pre></td><td class="code"><pre><span class="line">/* 最小可用的链接脚本 */</span><br><span class="line">ENTRY(Reset_Handler)          /* 指定入口点 */</span><br><span class="line"></span><br><span class="line">MEMORY</span><br><span class="line">&#123;</span><br><span class="line">    FLASH (rx)  : ORIGIN = 0x08000000, LENGTH = 512K</span><br><span class="line">    RAM   (rwx) : ORIGIN = 0x20000000, LENGTH = 128K</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">SECTIONS</span><br><span class="line">&#123;</span><br><span class="line">    .text :</span><br><span class="line">    &#123;</span><br><span class="line">        *(.isr_vector)</span><br><span class="line">        *(.text*)</span><br><span class="line">        *(.rodata*)</span><br><span class="line">        _etext = .;</span><br><span class="line">    &#125; &gt; FLASH</span><br><span class="line"></span><br><span class="line">    .data :</span><br><span class="line">    &#123;</span><br><span class="line">        _sdata = .;</span><br><span class="line">        *(.data*)</span><br><span class="line">        _edata = .;</span><br><span class="line">    &#125; &gt; RAM AT&gt; FLASH</span><br><span class="line"></span><br><span class="line">    .bss :</span><br><span class="line">    &#123;</span><br><span class="line">        _sbss = .;</span><br><span class="line">        *(.bss*)</span><br><span class="line">        _ebss = .;</span><br><span class="line">    &#125; &gt; RAM</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>这个脚本包含了链接脚本的三大核心命令：<code>ENTRY</code>、<code>MEMORY</code>、<code>SECTIONS</code>。下面逐一拆解。</p>
+<hr>
+<h2 id="3-MEMORY：定义芯片内存布局"><a href="#3-MEMORY：定义芯片内存布局" class="headerlink" title="3. MEMORY：定义芯片内存布局"></a>3. <code>MEMORY</code>：定义芯片内存布局</h2><p><code>MEMORY</code> 命令告诉链接器目标芯片上有哪些可用的内存区域及其属性：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">MEMORY</span><br><span class="line">&#123;</span><br><span class="line">    区域名 (属性) : ORIGIN = 起始地址, LENGTH = 长度</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="3-1-属性字符"><a href="#3-1-属性字符" class="headerlink" title="3.1 属性字符"></a>3.1 属性字符</h3><table>
+<thead>
+<tr>
+<th>属性</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>r</code></td>
+<td>只读（Read-only）</td>
+</tr>
+<tr>
+<td><code>w</code></td>
+<td>可写（Writable）</td>
+</tr>
+<tr>
+<td><code>x</code></td>
+<td>可执行（Executable）</td>
+</tr>
+<tr>
+<td><code>a</code></td>
+<td>已分配（Allocatable）</td>
+</tr>
+<tr>
+<td><code>!</code></td>
+<td>取反，如 <code>!x</code> 表示不可执行</td>
+</tr>
+</tbody></table>
+<p>常用组合：</p>
+<ul>
+<li><code>FLASH (rx)</code> —— 可读可执行，存放代码和只读数据</li>
+<li><code>RAM (rwx)</code> 或 <code>RAM (rw)</code> —— 可读可写，存放变量</li>
+<li>有些芯片还有 CCM RAM、TCM、SDRAM 等，各自定义区域即可</li>
+</ul>
+<blockquote>
+<p>提示：内存区域名可以任意起，但建议语义化。<code>ORIGIN</code> 和 <code>LENGTH</code> 必须和芯片手册的存储器映射严格一致，填错会导致程序”跑飞”或烧录失败。</p>
+</blockquote>
+<h3 id="3-2-常见芯片内存映射示例"><a href="#3-2-常见芯片内存映射示例" class="headerlink" title="3.2 常见芯片内存映射示例"></a>3.2 常见芯片内存映射示例</h3><p>以 STM32F103 系列为例：</p>
+<ul>
+<li><strong>Flash</strong>：0x08000000 ~ 0x0807FFFF（512KB）</li>
+<li><strong>SRAM</strong>：0x20000000 ~ 0x2000FFFF（64KB）</li>
+<li><strong>系统存储器</strong>：0x1FFFF000（Bootloader 区，一般不放进脚本）</li>
+<li><strong>外设寄存器</strong>：0x40000000 起（由芯片头文件定义，不占链接脚本的 MEMORY）</li>
+</ul>
+<hr>
+<h2 id="4-SECTIONS：核心中的核心"><a href="#4-SECTIONS：核心中的核心" class="headerlink" title="4. SECTIONS：核心中的核心"></a>4. <code>SECTIONS</code>：核心中的核心</h2><p><code>SECTIONS</code> 命令描述<strong>输出段</strong>（output section）如何由<strong>输入段</strong>（input section）构成，以及各输出段放在哪块内存。语法：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">SECTIONS</span><br><span class="line">&#123;</span><br><span class="line">    输出段名 [地址] : [AT(加载地址)] [ALIGN(...)]</span><br><span class="line">    &#123;</span><br><span class="line">        子命令（输入段描述、符号赋值等）</span><br><span class="line">    &#125; [&gt; 内存区域] [AT&gt; 内存区域] [PHDRS ...]</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="4-1-输出段与输入段"><a href="#4-1-输出段与输入段" class="headerlink" title="4.1 输出段与输入段"></a>4.1 输出段与输入段</h3><ul>
+<li><strong>输入段</strong>：每个 <code>.o</code> 文件内部的段，由编译器产生。常见的有：<ul>
+<li><code>.text</code> —— 代码</li>
+<li><code>.rodata</code> —— 只读数据（字符串、const 常量）</li>
+<li><code>.data</code> —— 已初始化全局&#x2F;静态变量</li>
+<li><code>.bss</code> —— 未初始化全局&#x2F;静态变量（不占文件空间，运行时清零）</li>
+<li><code>.isr_vector</code> —— 中断向量表（STM32 从 0x08000000 起始）</li>
+<li>自定义段（<code>__attribute__((section(&quot;.my_section&quot;)))</code>）</li>
+</ul>
+</li>
+<li><strong>输出段</strong>：链接脚本中定义的段，合并多个输入段后放入指定内存。</li>
+</ul>
+<p><strong>输入段的通配符写法</strong>：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">*(.text)       /* 所有目标文件的 .text 段 */</span><br><span class="line">*(.text*)      /* 所有以 .text 开头的段（含 .text.funcname 等） */</span><br><span class="line">lib*.o(.data)  /* 只取 lib 前缀的目标文件的 .data 段 */</span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p><code>*(.text*)</code> 比 <code>*(.text)</code> 更常用，因为现代编译器（特别是 <code>-ffunction-sections</code>）会为每个函数生成独立段，如 <code>.text.main</code>、<code>.text.uart_init</code>。</p>
+</blockquote>
+<h3 id="4-2-位置计数器-与符号赋值"><a href="#4-2-位置计数器-与符号赋值" class="headerlink" title="4.2 位置计数器 . 与符号赋值"></a>4.2 位置计数器 <code>.</code> 与符号赋值</h3><p><code>.</code>（点号）是<strong>位置计数器</strong>（location counter），代表当前输出段内已经占用的字节数，始终跟随放置内容自动增长。</p>
+<p>通过在脚本中给符号赋值，我们可以”导出”当前地址给 C 代码使用：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">.data :</span><br><span class="line">&#123;</span><br><span class="line">    _sdata = .;        /* 记录 .data 起始地址 */</span><br><span class="line">    *(.data*)</span><br><span class="line">    _edata = .;        /* 记录 .data 结束地址 */</span><br><span class="line">&#125; &gt; RAM AT&gt; FLASH</span><br></pre></td></tr></table></figure>
+
+<p>然后在启动文件或 C 代码中声明并取地址：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">extern</span> <span class="type">uint32_t</span> _sdata, _edata, _sbss, _ebss, _etext;</span><br><span class="line"><span class="type">uint32_t</span> *src = &amp;_etext;              <span class="comment">/* 数据在 Flash 中的源地址 */</span></span><br><span class="line"><span class="type">uint32_t</span> *dst = &amp;_sdata;</span><br><span class="line"><span class="keyword">while</span> (dst &lt; &amp;_edata) &#123;</span><br><span class="line">    *dst++ = *src++;                  <span class="comment">/* 拷贝 .data 到 RAM */</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>符号赋值时若符号是”纯地址”，建议用 <code>. = 定义</code> 或直接 <code>符号 = .</code> 形式，并在 <code>.h</code> 中用 <code>extern</code> 声明。注意链接脚本中的符号是”地址值”，在 C 里要用 <code>&amp;符号</code> 取用。</p>
+<h3 id="4-3-常用段：-text-data-bss-的作用"><a href="#4-3-常用段：-text-data-bss-的作用" class="headerlink" title="4.3 常用段：.text &#x2F; .data &#x2F; .bss 的作用"></a>4.3 常用段：.text &#x2F; .data &#x2F; .bss 的作用</h3><table>
+<thead>
+<tr>
+<th>段</th>
+<th>内容</th>
+<th>运行时位置</th>
+<th>烧录位置</th>
+<th>特点</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>.isr_vector</code></td>
+<td>中断向量表</td>
+<td>Flash</td>
+<td>Flash</td>
+<td>必须放 Flash 起始地址</td>
+</tr>
+<tr>
+<td><code>.text</code></td>
+<td>代码 + 立即数</td>
+<td>Flash</td>
+<td>Flash</td>
+<td>只读、可执行</td>
+</tr>
+<tr>
+<td><code>.rodata</code></td>
+<td>只读常量</td>
+<td>Flash</td>
+<td>Flash</td>
+<td>只读</td>
+</tr>
+<tr>
+<td><code>.data</code></td>
+<td>已初始化变量</td>
+<td>RAM</td>
+<td><strong>Flash</strong></td>
+<td>需启动时拷 RAM</td>
+</tr>
+<tr>
+<td><code>.bss</code></td>
+<td>未初始化变量</td>
+<td>RAM</td>
+<td><strong>不烧录</strong></td>
+<td>需启动时清零</td>
+</tr>
+<tr>
+<td><code>.heap</code></td>
+<td>堆</td>
+<td>RAM</td>
+<td>—</td>
+<td>动态内存</td>
+</tr>
+<tr>
+<td><code>.stack</code></td>
+<td>栈</td>
+<td>RAM</td>
+<td>—</td>
+<td>函数调用栈</td>
+</tr>
+</tbody></table>
+<hr>
+<h2 id="5-区域-与-AT-区域：VMA-与-LMA-分离"><a href="#5-区域-与-AT-区域：VMA-与-LMA-分离" class="headerlink" title="5. &gt; 区域 与 AT&gt; 区域：VMA 与 LMA 分离"></a>5. <code>&gt; 区域</code> 与 <code>AT&gt; 区域</code>：VMA 与 LMA 分离</h2><p><code>&gt; RAM AT&gt; FLASH</code> 是链接脚本中最优雅也最容易被忽略的语法：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">.data : &#123; ... &#125; &gt; RAM AT&gt; FLASH</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li><code>&gt; RAM</code> 指定<strong>VMA</strong>（运行地址）在 RAM 中；</li>
+<li><code>AT&gt; FLASH</code> 指定 <strong>LMA</strong>（加载地址）在 Flash 中。</li>
+</ul>
+<p>这意味着：<code>.data</code> 段初始值的<strong>文件映像</strong>被烧录进 Flash，但程序访问它时用的是 RAM 地址。所以启动代码必须把它从 Flash 拷贝到 RAM。</p>
+<h3 id="5-1-如何知道-LMA-地址？"><a href="#5-1-如何知道-LMA-地址？" class="headerlink" title="5.1 如何知道 LMA 地址？"></a>5.1 如何知道 LMA 地址？</h3><p>链接脚本会导出 <code>LOADADDR(.data)</code>，也可以直接在 C 里用 <code>__etext</code>（紧接 <code>.text</code> 结尾的符号）定位数据在 Flash 中的源位置。启动汇编代码中通常这样写：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">; STM32 启动代码片段（拷贝 .data）</span><br><span class="line">ldr r0, =_etext        ; Flash 中的源</span><br><span class="line">ldr r1, =_sdata        ; RAM 中的目的</span><br><span class="line">ldr r2, =_edata</span><br><span class="line">copy_data:</span><br><span class="line">    cmp r1, r2</span><br><span class="line">    bge data_done</span><br><span class="line">    ldr r3, [r0], #4</span><br><span class="line">    str r3, [r1], #4</span><br><span class="line">    b copy_data</span><br><span class="line">data_done:</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="6-位置计数器的高级操作"><a href="#6-位置计数器的高级操作" class="headerlink" title="6. 位置计数器的高级操作"></a>6. 位置计数器的高级操作</h2><h3 id="6-1-ALIGN-对齐"><a href="#6-1-ALIGN-对齐" class="headerlink" title="6.1 ALIGN() 对齐"></a>6.1 <code>ALIGN()</code> 对齐</h3><p>为了性能和 CPU 对齐要求，段和符号通常需要对齐：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">. = ALIGN(4);          /* 当前位置对齐到 4 字节边界 */</span><br><span class="line">_sdata = .;</span><br></pre></td></tr></table></figure>
+
+<p><code>ALIGN(n)</code> 返回把当前位置向上取整到 n 的倍数后的值。常用 4、8、16。若不显式对齐，编译器产生的数据可能错位，导致某些平台（如 Cortex-M 的未对齐访问）进入 HardFault。</p>
+<h3 id="6-2-KEEP-：防止被垃圾回收"><a href="#6-2-KEEP-：防止被垃圾回收" class="headerlink" title="6.2 KEEP()：防止被垃圾回收"></a>6.2 <code>KEEP()</code>：防止被垃圾回收</h3><p>当开启 <code>--gc-sections</code>（丢弃未引用段以减小固件体积）时，即使脚本里写了的输入段也可能被丢弃。用 <code>KEEP()</code> 包裹可强制保留：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">.isr_vector :</span><br><span class="line">&#123;</span><br><span class="line">    KEEP(*(.isr_vector))   /* 向量表必须保留！ */</span><br><span class="line">&#125; &gt; FLASH</span><br></pre></td></tr></table></figure>
+
+<p>典型应用：中断向量表、构造函数表（<code>__init_array_start</code>）、看门狗复位入口等。</p>
+<h3 id="6-3-自定义段"><a href="#6-3-自定义段" class="headerlink" title="6.3 自定义段"></a>6.3 自定义段</h3><p>想把自己的变量固定到某地址，可定义一个专属段：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">__attribute__((section(<span class="string">&quot;.backup_ram&quot;</span>), aligned(<span class="number">4</span>)))</span><br><span class="line"><span class="type">uint32_t</span> backup_flag;         <span class="comment">/* 声明放到 .backup_ram 段 */</span></span><br></pre></td></tr></table></figure>
+
+<p>链接脚本：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">.backup_ram (NOLOAD) :   /* NOLOAD: 不烧录，只保留 RAM 空间 */</span><br><span class="line">&#123;</span><br><span class="line">    *(.backup_ram*)</span><br><span class="line">&#125; &gt; RAM</span><br></pre></td></tr></table></figure>
+
+<p><code>NOLOAD</code> 关键字告诉链接器：该段只分配空间、不生成烧录数据，非常适合”掉电保持区”。</p>
+<hr>
+<h2 id="7-ENTRY-与启动流程配合"><a href="#7-ENTRY-与启动流程配合" class="headerlink" title="7. ENTRY 与启动流程配合"></a>7. <code>ENTRY</code> 与启动流程配合</h2><p><code>ENTRY(Reset_Handler)</code> 指定可执行文件的入口点，即 CPU 复位后跳转的第一条指令。虽然对 Cortex-M 来说，真正的入口是<strong>向量表首元素（初始 SP）和第二元素（Reset_Handler 地址）</strong>，但 <code>ENTRY</code> 仍然是调试器和静态分析工具识别的关键信息。</p>
+<p>一份完整的 STM32 启动流程与链接脚本的配合关系：</p>
+<ol>
+<li><strong>上电</strong>：CPU 从 Flash 起始地址取初始栈指针（向量表第 1 项）；</li>
+<li><strong>跳转</strong>：跳转到 Reset_Handler（向量表第 2 项）；</li>
+<li><strong>拷贝 .data</strong>：<code>_etext</code> → <code>_sdata</code>，长度到 <code>_edata</code>；</li>
+<li><strong>清零 .bss</strong>：从 <code>_sbss</code> 到 <code>_ebss</code>；</li>
+<li><strong>初始化堆栈指针</strong>（如有 <code>__stack</code> 符号）；</li>
+<li>**调用 <code>SystemInit</code>、<code>main</code>**。</li>
+</ol>
+<p>可见，启动代码里那些”魔法符号”（<code>_sdata</code>、<code>_etext</code>、<code>_sbss</code>…）全部来自链接脚本。<strong>启动文件和链接脚本必须成对维护</strong>，这是嵌入式移植中最高频的 bug 来源之一。</p>
+<hr>
+<h2 id="8-完整实战：以-STM32-为例的链接脚本精讲"><a href="#8-完整实战：以-STM32-为例的链接脚本精讲" class="headerlink" title="8. 完整实战：以 STM32 为例的链接脚本精讲"></a>8. 完整实战：以 STM32 为例的链接脚本精讲</h2><p>下面是一份带注释的、可直接用于 STM32F103C8T6（64KB Flash &#x2F; 20KB RAM）的完整脚本：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br></pre></td><td class="code"><pre><span class="line">/* memory.x —— STM32F103C8T6 链接脚本 */</span><br><span class="line">ENTRY(Reset_Handler)</span><br><span class="line"></span><br><span class="line">MEMORY</span><br><span class="line">&#123;</span><br><span class="line">    FLASH (rx)  : ORIGIN = 0x08000000, LENGTH = 64K</span><br><span class="line">    RAM   (rwx) : ORIGIN = 0x20000000, LENGTH = 20K</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">/* 栈顶：指向 RAM 顶端，向下增长 */</span><br><span class="line">_estack = ORIGIN(RAM) + LENGTH(RAM);</span><br><span class="line"></span><br><span class="line">SECTIONS</span><br><span class="line">&#123;</span><br><span class="line">    /* 1. 中断向量表：必须在 Flash 起始，且不能被 gc-sections 删掉 */</span><br><span class="line">    .isr_vector :</span><br><span class="line">    &#123;</span><br><span class="line">        . = ALIGN(4);</span><br><span class="line">        KEEP(*(.isr_vector))</span><br><span class="line">        . = ALIGN(4);</span><br><span class="line">    &#125; &gt; FLASH</span><br><span class="line"></span><br><span class="line">    /* 2. 代码段 */</span><br><span class="line">    .text :</span><br><span class="line">    &#123;</span><br><span class="line">        . = ALIGN(4);</span><br><span class="line">        *(.text*)</span><br><span class="line">        *(.rodata*)</span><br><span class="line">        _etext = .;          /* .data 在 Flash 中的源地址 */</span><br><span class="line">        . = ALIGN(4);</span><br><span class="line">    &#125; &gt; FLASH</span><br><span class="line"></span><br><span class="line">    /* 3. 已初始化数据：VMA 在 RAM，LMA 在 Flash */</span><br><span class="line">    .data :</span><br><span class="line">    &#123;</span><br><span class="line">        _sdata = .;</span><br><span class="line">        *(.data*)</span><br><span class="line">        _edata = .;</span><br><span class="line">        . = ALIGN(4);</span><br><span class="line">    &#125; &gt; RAM AT&gt; FLASH</span><br><span class="line"></span><br><span class="line">    /* 4. 未初始化数据：只占 RAM，启动时清零 */</span><br><span class="line">    .bss :</span><br><span class="line">    &#123;</span><br><span class="line">        _sbss = .;</span><br><span class="line">        *(.bss*)</span><br><span class="line">        *(COMMON)            /* 合并编译器公共块 */</span><br><span class="line">        _ebss = .;</span><br><span class="line">        . = ALIGN(4);</span><br><span class="line">    &#125; &gt; RAM</span><br><span class="line"></span><br><span class="line">    /* 5. 堆（可选） */</span><br><span class="line">    .heap :</span><br><span class="line">    &#123;</span><br><span class="line">        __heap_start = .;</span><br><span class="line">        . = . + 2K;          /* 预留 2KB */</span><br><span class="line">        __heap_end = .;</span><br><span class="line">    &#125; &gt; RAM</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>几个值得注意的细节</strong>：</p>
+<ul>
+<li><code>_estack = ORIGIN(RAM) + LENGTH(RAM);</code> 直接由 MEMORY 计算栈顶，无需硬编码；</li>
+<li><code>.data</code> 段刻意放在 <code>.text</code> 之后，保证 <code>_etext</code> 紧邻 Flash 中数据的源头；</li>
+<li><code>*(COMMON)</code> 合并未初始化的公共符号，避免遗漏；</li>
+<li>用 <code>ALIGN(4)</code> 保证 Cortex-M 的 4 字节对齐。</li>
+</ul>
+<hr>
+<h2 id="9-常用链接脚本命令速查"><a href="#9-常用链接脚本命令速查" class="headerlink" title="9. 常用链接脚本命令速查"></a>9. 常用链接脚本命令速查</h2><table>
+<thead>
+<tr>
+<th>命令&#x2F;关键字</th>
+<th>作用</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>ENTRY(sym)</code></td>
+<td>指定入口点</td>
+</tr>
+<tr>
+<td><code>MEMORY &#123;...&#125;</code></td>
+<td>定义可用内存区域</td>
+</tr>
+<tr>
+<td><code>SECTIONS &#123;...&#125;</code></td>
+<td>定义输出段布局</td>
+</tr>
+<tr>
+<td><code>AT(addr)</code> &#x2F; <code>AT&gt; 区域</code></td>
+<td>指定 LMA</td>
+</tr>
+<tr>
+<td><code>&gt; 区域</code></td>
+<td>指定 VMA</td>
+</tr>
+<tr>
+<td><code>ALIGN(n)</code></td>
+<td>对齐到 n 的倍数</td>
+</tr>
+<tr>
+<td><code>KEEP(sec)</code></td>
+<td>阻止 gc-sections 丢弃</td>
+</tr>
+<tr>
+<td><code>NOLOAD</code></td>
+<td>只分配空间不烧录</td>
+</tr>
+<tr>
+<td><code>ORIGIN(region)</code> &#x2F; <code>LENGTH(region)</code></td>
+<td>查询区域信息</td>
+</tr>
+<tr>
+<td><code>.</code></td>
+<td>位置计数器</td>
+</tr>
+<tr>
+<td><code>LOADADDR(sec)</code></td>
+<td>某段的 LMA</td>
+</tr>
+<tr>
+<td><code>PROVIDE(sym = exp)</code></td>
+<td>符号缺省定义（弱定义）</td>
+</tr>
+<tr>
+<td><code>ASSERT(cond, msg)</code></td>
+<td>链接期断言，条件不满足报错</td>
+</tr>
+</tbody></table>
+<h3 id="9-1-PROVIDE-的妙用"><a href="#9-1-PROVIDE-的妙用" class="headerlink" title="9.1 PROVIDE 的妙用"></a>9.1 <code>PROVIDE</code> 的妙用</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">PROVIDE(__stack = _estack);</span><br></pre></td></tr></table></figure>
+
+<p>如果目标文件中没有定义 <code>__stack</code>，链接器就提供它；如果用户代码已定义则跳过。这给第三方库（如某些 RTOS 启动文件）提供了”缺省但不覆盖”的友好接口。</p>
+<h3 id="9-2-ASSERT：把错误挡在烧录之前"><a href="#9-2-ASSERT：把错误挡在烧录之前" class="headerlink" title="9.2 ASSERT：把错误挡在烧录之前"></a>9.2 <code>ASSERT</code>：把错误挡在烧录之前</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">ASSERT(_ebss &lt;= ORIGIN(RAM) + LENGTH(RAM),</span><br><span class="line">       &quot;RAM 溢出：.bss 超出 RAM 范围！&quot;)</span><br></pre></td></tr></table></figure>
+
+<p>链接时报错比运行时死机好排查一万倍，善用 <code>ASSERT</code>。</p>
+<hr>
+<h2 id="10-常见报错与调试技巧"><a href="#10-常见报错与调试技巧" class="headerlink" title="10. 常见报错与调试技巧"></a>10. 常见报错与调试技巧</h2><h3 id="10-1-经典报错对照表"><a href="#10-1-经典报错对照表" class="headerlink" title="10.1 经典报错对照表"></a>10.1 经典报错对照表</h3><table>
+<thead>
+<tr>
+<th>报错信息</th>
+<th>原因</th>
+<th>解决办法</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>section .text will not fit in region FLASH</code></td>
+<td>代码超出 Flash</td>
+<td>优化代码&#x2F;开启 <code>-Os</code>，检查有无死代码</td>
+</tr>
+<tr>
+<td><code>region RAM overflowed by N bytes</code></td>
+<td>RAM 超限</td>
+<td>查数组、全局变量；<code>.bss</code> 过大</td>
+</tr>
+<tr>
+<td><code>undefined reference to _sdata</code></td>
+<td>启动文件与脚本符号不一致</td>
+<td>对照启动文件逐一核对符号名</td>
+</tr>
+<tr>
+<td><code>relocation truncated to fit: R_ARM_PREL31 ...</code></td>
+<td>跳转超出范围&#x2F;段地址不对</td>
+<td>检查 Flash 起始地址、向量表位置</td>
+</tr>
+<tr>
+<td><code>cannot find entry symbol Reset_Handler</code></td>
+<td><code>ENTRY</code> 写错&#x2F;函数名拼写不一致</td>
+<td>确认 <code>ENTRY</code> 与启动文件函数名一致</td>
+</tr>
+<tr>
+<td><code>multiple definition of xxx</code></td>
+<td>全局变量重复定义</td>
+<td>检查 <code>-fno-common</code> 与头文件定义</td>
+</tr>
+</tbody></table>
+<h3 id="10-2-调试工具：nm、objdump、size"><a href="#10-2-调试工具：nm、objdump、size" class="headerlink" title="10.2 调试工具：nm、objdump、size"></a>10.2 调试工具：<code>nm</code>、<code>objdump</code>、<code>size</code></h3><p>排查链接脚本最有效的三板斧：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 1. 查看符号最终地址</span></span><br><span class="line">arm-none-eabi-nm -n firmware.elf</span><br><span class="line"></span><br><span class="line"><span class="comment"># 2. 反汇编，检查跳转目标是否合理</span></span><br><span class="line">arm-none-eabi-objdump -d firmware.elf</span><br><span class="line"></span><br><span class="line"><span class="comment"># 3. 查看各段占用</span></span><br><span class="line">arm-none-eabi-size -A firmware.elf</span><br><span class="line"></span><br><span class="line"><span class="comment"># 4. 完整段布局与 VMA/LMA（最有价值）</span></span><br><span class="line">arm-none-eabi-objdump -h firmware.elf</span><br></pre></td></tr></table></figure>
+
+<p><code>objdump -h</code> 会列出每个段的 <strong>VMA 和 LMA</strong>，一眼就能看出 <code>.data</code> 是否正确地”住在 RAM、源于 Flash”：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">Sections:</span><br><span class="line">Idx Name      Size    VMA       LMA       File off  Algn</span><br><span class="line">  0 .isr_vector 000000c0 08000000 08000000  00010000  2**2</span><br><span class="line">  1 .text     000023c8 080000c0 080000c0  000100c0  2**2</span><br><span class="line">  2 .data     00000010 20000000 08002488   ...</span><br><span class="line">  3 .bss      00000230 20000010 20000010   ...</span><br></pre></td></tr></table></figure>
+
+<h3 id="10-3-打印链接-Map-文件"><a href="#10-3-打印链接-Map-文件" class="headerlink" title="10.3 打印链接 Map 文件"></a>10.3 打印链接 Map 文件</h3><p>编译时加 <code>-Wl,-Map=output.map</code> 生成 Map 文件，这是排查内存布局的”说明书”，包含所有符号地址、段归属、废弃段等完整信息：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">arm-none-eabi-gcc ... -Wl,-Map=firmware.map</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="11-进阶：-ffunction-sections-fdata-sections-–gc-sections"><a href="#11-进阶：-ffunction-sections-fdata-sections-–gc-sections" class="headerlink" title="11. 进阶：-ffunction-sections &#x2F; -fdata-sections &#x2F; –gc-sections"></a>11. 进阶：-ffunction-sections &#x2F; -fdata-sections &#x2F; –gc-sections</h2><p>为了裁剪固件体积，GCC 提供了”每函数&#x2F;每变量独立段 + 垃圾回收”的组合拳：</p>
+<figure class="highlight makefile"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">CFLAGS  += -ffunction-sections -fdata-sections</span><br><span class="line">LDFLAGS += -Wl,--gc-sections</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li><code>-ffunction-sections</code>：每个函数单独成段（<code>.text.uart_init</code>）；</li>
+<li><code>-fdata-sections</code>：每个数据对象单独成段（<code>.data.g_value</code>）；</li>
+<li><code>--gc-sections</code>：链接时删除没有被引用到的段。</li>
+</ul>
+<p>配合 <code>KEEP()</code> 保留必须的段（向量表、构造函数表），可以在不牺牲功能的情况下显著减小固件。</p>
+<blockquote>
+<p>⚠️ 注意：用了 <code>-ffunction-sections</code> 后，脚本中应使用 <code>*(.text*)</code> 而非 <code>*(.text)</code>，否则段匹配不上，会得到”空段”。</p>
+</blockquote>
+<hr>
+<h2 id="12-与其他工具链的异同"><a href="#12-与其他工具链的异同" class="headerlink" title="12. 与其他工具链的异同"></a>12. 与其他工具链的异同</h2><p>虽然本文以 GCC <code>ld</code> 为主线，但链接脚本思想是通用的：</p>
+<table>
+<thead>
+<tr>
+<th>工具链</th>
+<th>链接脚本机制</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>GCC (arm-none-eabi)</strong></td>
+<td><code>.ld</code> &#x2F; <code>.x</code> 文件，<code>ld</code> 语法（本文内容）</td>
+</tr>
+<tr>
+<td><strong>IAR</strong></td>
+<td><code>.icf</code> 文件，<code>place in</code> 等关键字</td>
+</tr>
+<tr>
+<td><strong>Keil MDK</strong></td>
+<td><code>.sct</code> 文件，<code>LR_</code> &#x2F; <code>ER_</code> 加载区与执行区</td>
+</tr>
+<tr>
+<td><strong>GNU ld with LLD</strong></td>
+<td>兼容 <code>ld</code> 语法的子集</td>
+</tr>
+</tbody></table>
+<p>IAR 的 <code>.icf</code>：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">define memory FLASH with size = 512K, start = 0x08000000;</span><br><span class="line">define memory RAM   with size = 128K, start = 0x20000000;</span><br><span class="line">place in FLASH &#123; readonly section .text &#125;;</span><br><span class="line">place in RAM   &#123; readwrite section .data &#125;;</span><br></pre></td></tr></table></figure>
+
+<p>Keil 的 <code>.sct</code>：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">LR_IROM1 0x08000000 0x00080000 &#123;</span><br><span class="line">  ER_IROM1 0x08000000 0x00080000 &#123;</span><br><span class="line">    *.o (RESET, +First)</span><br><span class="line">    *(InRoot$$Sections)</span><br><span class="line">    .ANY (+RO)</span><br><span class="line">  &#125;</span><br><span class="line">  RW_IRAM1 0x20000000 0x00020000 &#123;</span><br><span class="line">    .ANY (+RW +ZI)</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>换了 IDE 就换一套链接描述语言，但”VMA &#x2F; LMA &#x2F; 段 &#x2F; 位置计数器”这些概念完全相通</strong>——理解 GCC 脚本后，切换到 IAR&#x2F;Keil 只是换语法而已。</p>
+<hr>
+<h2 id="13-总结"><a href="#13-总结" class="headerlink" title="13. 总结"></a>13. 总结</h2><p>链接脚本是嵌入式工程师从”会写 C”走向”懂底层”的分水岭。回顾本文核心要点：</p>
+<ol>
+<li><strong>链接器</strong>负责符号解析与重定位，裸机程序必须用链接脚本定义内存布局；</li>
+<li><strong>MEMORY</strong> 定义芯片可用的内存区域与属性；</li>
+<li><strong>SECTIONS</strong> 定义输出段如何由输入段组成、放在哪块区域；</li>
+<li><strong>VMA 与 LMA</strong> 是理解 <code>.data</code> 拷贝、启动代码的钥匙；</li>
+<li><strong><code>.</code>（位置计数器）、<code>ALIGN</code>、<code>KEEP</code>、<code>NOLOAD</code></strong> 是日常最常用的控制手段；</li>
+<li><strong>启动文件与链接脚本是一体两面</strong>，符号必须严格对应；</li>
+<li>善用 <code>ASSERT</code>、<code>Map 文件</code>、<code>objdump -h</code> 把内存问题扼杀在链接阶段。</li>
+</ol>
+<p>理解链接脚本之后，你会发现自己对”程序到底怎么跑起来的”有了更清晰的画面：从 Flash 读取向量表 → 进 Reset_Handler → 搬数据 → 清 BSS → 跳转 main……而这一切的幕后导演，正是这份被无数人”复制粘贴”却鲜有人真正读懂的 <strong>Linker Script</strong>。</p>
+<hr>
+<p><em>参考文档：GNU ld 手册（<code>info ld</code>）、STM32 启动文件源码、Cortex-M3 权威指南 存储器映射章节。</em></p>
+
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="http://example.com/2026/08/01/%E5%B5%8C%E5%85%A5%E5%BC%8F%E9%93%BE%E6%8E%A5%E8%84%9A%E6%9C%AC%E8%AF%A6%E8%A7%A3%EF%BC%9A%E4%BB%8E%E9%9B%B6%E7%90%86%E8%A7%A3Linker-Script/" data-id="cmsa1llw2000798lmg7kv5ych" data-title="嵌入式链接脚本详解：从零理解Linker Script" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      
+      
+      
+  <ul class="article-tag-list" itemprop="keywords"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/GCC/" rel="tag">GCC</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Linker-Script/" rel="tag">Linker Script</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/STM32/" rel="tag">STM32</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/%E5%B5%8C%E5%85%A5%E5%BC%8F/" rel="tag">嵌入式</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/%E6%B1%87%E7%BC%96/" rel="tag">汇编</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/%E9%93%BE%E6%8E%A5%E8%84%9A%E6%9C%AC/" rel="tag">链接脚本</a></li></ul>
+
+    </footer>
+  </div>
+  
+    
+<nav id="article-nav">
+  
+  
+    <a href="/2026/08/01/Linux%E8%BD%AF%E4%BB%B6%E5%90%AF%E5%8A%A8%E8%BF%87%E7%A8%8B%E8%AF%A6%E8%A7%A3/" id="article-nav-older" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">Older</strong>
+      <div class="article-nav-title">Linux软件启动过程详解</div>
+    </a>
+  
+</nav>
+
+  
+</article>
+
+
+</section>
+        
+          <aside id="sidebar">
+  
+    
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Tags</h3>
+    <div class="widget">
+      <ul class="tag-list" itemprop="keywords"><li class="tag-list-item"><a class="tag-list-link" href="/tags/AI-Agent/" rel="tag">AI Agent</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/AUTOSAR/" rel="tag">AUTOSAR</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/CANoe/" rel="tag">CANoe</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/CAPL/" rel="tag">CAPL</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/FOC/" rel="tag">FOC</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/GCC/" rel="tag">GCC</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Linker-Script/" rel="tag">Linker Script</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Linux/" rel="tag">Linux</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/STM32/" rel="tag">STM32</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/U%E7%9B%98%E5%90%AF%E5%8A%A8%E7%9B%98/" rel="tag">U盘启动盘</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Ventoy/" rel="tag">Ventoy</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/opencode/" rel="tag">opencode</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86/" rel="tag">内存管理</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%86%85%E6%A0%B8/" rel="tag">内核</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%90%AF%E5%8A%A8%E8%BF%87%E7%A8%8B/" rel="tag">启动过程</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/" rel="tag">学习笔记</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%B5%8C%E5%85%A5%E5%BC%8F/" rel="tag">嵌入式</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%BC%80%E5%8F%91/" rel="tag">开发</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%BC%95%E5%AF%BC/" rel="tag">引导</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E6%95%88%E7%8E%87%E5%B7%A5%E5%85%B7/" rel="tag">效率工具</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E6%B1%87%E7%BC%96/" rel="tag">汇编</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E6%B1%BD%E8%BD%A6%E7%94%B5%E5%AD%90/" rel="tag">汽车电子</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E6%B5%8B%E8%AF%95/" rel="tag">测试</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E7%94%B5%E5%8A%9B%E7%94%B5%E5%AD%90/" rel="tag">电力电子</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E7%94%B5%E6%9C%BA%E6%8E%A7%E5%88%B6/" rel="tag">电机控制</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E7%B3%BB%E7%BB%9F%E5%AE%89%E8%A3%85/" rel="tag">系统安装</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E8%A3%85%E6%9C%BA%E5%B7%A5%E5%85%B7/" rel="tag">装机工具</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E9%83%A8%E7%BD%B2/" rel="tag">部署</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E9%93%BE%E6%8E%A5%E8%84%9A%E6%9C%AC/" rel="tag">链接脚本</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E9%A3%9E%E4%B9%A6/" rel="tag">飞书</a></li></ul>
+    </div>
+  </div>
+
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Tag Cloud</h3>
+    <div class="widget tagcloud">
+      <a href="/tags/AI-Agent/" style="font-size: 15px;">AI Agent</a> <a href="/tags/AUTOSAR/" style="font-size: 15px;">AUTOSAR</a> <a href="/tags/CANoe/" style="font-size: 10px;">CANoe</a> <a href="/tags/CAPL/" style="font-size: 10px;">CAPL</a> <a href="/tags/FOC/" style="font-size: 10px;">FOC</a> <a href="/tags/GCC/" style="font-size: 10px;">GCC</a> <a href="/tags/Linker-Script/" style="font-size: 10px;">Linker Script</a> <a href="/tags/Linux/" style="font-size: 20px;">Linux</a> <a href="/tags/STM32/" style="font-size: 10px;">STM32</a> <a href="/tags/U%E7%9B%98%E5%90%AF%E5%8A%A8%E7%9B%98/" style="font-size: 10px;">U盘启动盘</a> <a href="/tags/Ventoy/" style="font-size: 10px;">Ventoy</a> <a href="/tags/opencode/" style="font-size: 15px;">opencode</a> <a href="/tags/%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86/" style="font-size: 10px;">内存管理</a> <a href="/tags/%E5%86%85%E6%A0%B8/" style="font-size: 15px;">内核</a> <a href="/tags/%E5%90%AF%E5%8A%A8%E8%BF%87%E7%A8%8B/" style="font-size: 10px;">启动过程</a> <a href="/tags/%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/" style="font-size: 10px;">学习笔记</a> <a href="/tags/%E5%B5%8C%E5%85%A5%E5%BC%8F/" style="font-size: 15px;">嵌入式</a> <a href="/tags/%E5%BC%80%E5%8F%91/" style="font-size: 10px;">开发</a> <a href="/tags/%E5%BC%95%E5%AF%BC/" style="font-size: 10px;">引导</a> <a href="/tags/%E6%95%88%E7%8E%87%E5%B7%A5%E5%85%B7/" style="font-size: 15px;">效率工具</a> <a href="/tags/%E6%B1%87%E7%BC%96/" style="font-size: 15px;">汇编</a> <a href="/tags/%E6%B1%BD%E8%BD%A6%E7%94%B5%E5%AD%90/" style="font-size: 10px;">汽车电子</a> <a href="/tags/%E6%B5%8B%E8%AF%95/" style="font-size: 15px;">测试</a> <a href="/tags/%E7%94%B5%E5%8A%9B%E7%94%B5%E5%AD%90/" style="font-size: 10px;">电力电子</a> <a href="/tags/%E7%94%B5%E6%9C%BA%E6%8E%A7%E5%88%B6/" style="font-size: 10px;">电机控制</a> <a href="/tags/%E7%B3%BB%E7%BB%9F%E5%AE%89%E8%A3%85/" style="font-size: 10px;">系统安装</a> <a href="/tags/%E8%A3%85%E6%9C%BA%E5%B7%A5%E5%85%B7/" style="font-size: 10px;">装机工具</a> <a href="/tags/%E9%83%A8%E7%BD%B2/" style="font-size: 10px;">部署</a> <a href="/tags/%E9%93%BE%E6%8E%A5%E8%84%9A%E6%9C%AC/" style="font-size: 10px;">链接脚本</a> <a href="/tags/%E9%A3%9E%E4%B9%A6/" style="font-size: 10px;">飞书</a>
+    </div>
+  </div>
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Archives</h3>
+    <div class="widget">
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2026/08/">August 2026</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2026/07/">July 2026</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2026/05/">May 2026</a></li></ul>
+    </div>
+  </div>
+
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Recent Posts</h3>
+    <div class="widget">
+      <ul>
+        
+          <li>
+            <a href="/2026/08/01/%E5%B5%8C%E5%85%A5%E5%BC%8F%E9%93%BE%E6%8E%A5%E8%84%9A%E6%9C%AC%E8%AF%A6%E8%A7%A3%EF%BC%9A%E4%BB%8E%E9%9B%B6%E7%90%86%E8%A7%A3Linker-Script/">嵌入式链接脚本详解：从零理解Linker Script</a>
+          </li>
+        
+          <li>
+            <a href="/2026/08/01/Linux%E8%BD%AF%E4%BB%B6%E5%90%AF%E5%8A%A8%E8%BF%87%E7%A8%8B%E8%AF%A6%E8%A7%A3/">Linux软件启动过程详解</a>
+          </li>
+        
+          <li>
+            <a href="/2026/08/01/%E5%A6%82%E4%BD%95%E5%BC%80%E5%8F%91%E9%83%A8%E7%BD%B2AUTOSAR-Agent/">如何开发部署AUTOSAR-Agent</a>
+          </li>
+        
+          <li>
+            <a href="/2026/08/01/%E7%94%B5%E6%9C%BA%E6%8E%A7%E5%88%B6%E7%9F%A5%E8%AF%86%E4%BD%93%E7%B3%BB%E5%85%A5%E9%97%A8%EF%BC%9A%E4%BB%8E%E7%94%B5%E6%9C%BA%E5%8E%9F%E7%90%86%E5%88%B0FOC%E5%AE%9E%E6%88%98/">电机控制知识体系入门：从电机原理到FOC实战</a>
+          </li>
+        
+          <li>
+            <a href="/2026/08/01/%E4%BD%BF%E7%94%A8-Ventoy-%E5%88%B6%E4%BD%9C-U-%E7%9B%98%E5%90%AF%E5%8A%A8%E7%9B%98%E5%AE%8C%E5%85%A8%E6%8C%87%E5%8D%97/">使用 Ventoy 制作 U 盘启动盘完全指南</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+
+  
+</aside>
+        
+      </div>
+      <footer id="footer">
+  
+  <div class="outer">
+    <div id="footer-info" class="inner">
+      
+      &copy; 2026 John Doe<br>
+      Powered by <a href="https://hexo.io/" target="_blank">Hexo</a>
+    </div>
+  </div>
+</footer>
+
+    </div>
+    <nav id="mobile-nav">
+  
+    <a href="/" class="mobile-nav-link">Home</a>
+  
+    <a href="/archives" class="mobile-nav-link">Archives</a>
+  
+</nav>
+    
+
+
+<script src="/js/jquery-3.6.4.min.js"></script>
+
+
+
+  
+<script src="/fancybox/jquery.fancybox.min.js"></script>
+
+
+
+
+<script src="/js/script.js"></script>
+
+
+
+
+
+  </div>
+</body>
+</html>
