@@ -14,7 +14,7 @@
 <meta property="og:description" content="在嵌入式开发中，我们编译完 C&#x2F;汇编代码后，得到的 .o 目标文件并不能直接烧录到芯片里。把它们”拼装”成最终可执行文件、并决定每一段代码和数据放在芯片哪个地址的任务，就由链接器（Linker）完成，而它的”施工图纸”就是链接脚本（Linker Script）。 很多初学者把链接脚本当成一个”复制粘贴即可”的黑盒，一旦出现 section .text will not fit in re">
 <meta property="og:locale" content="en_US">
 <meta property="article:published_time" content="2026-08-01T07:17:43.000Z">
-<meta property="article:modified_time" content="2026-08-01T07:29:11.716Z">
+<meta property="article:modified_time" content="2026-08-01T07:45:06.243Z">
 <meta property="article:author" content="John Doe">
 <meta property="article:tag" content="汇编">
 <meta property="article:tag" content="嵌入式">
@@ -197,7 +197,7 @@
 <blockquote>
 <p>提示：内存区域名可以任意起，但建议语义化。<code>ORIGIN</code> 和 <code>LENGTH</code> 必须和芯片手册的存储器映射严格一致，填错会导致程序”跑飞”或烧录失败。</p>
 </blockquote>
-<h3 id="3-2-TC375-的多核内存映射（核心重点）"><a href="#3-2-TC375-的多核内存映射（核心重点）" class="headerlink" title="3.2 TC375 的多核内存映射（核心重点）"></a>3.2 TC375 的多核内存映射（核心重点）</h3><p>TC375 是 <strong>3 核 TriCore 1.6.2P</strong> 架构，总 SRAM <strong>992KB</strong>、PFLASH <strong>6MB</strong>。它的内存映射比单核 MCU 复杂得多——每个核都有自己的私有 RAM，还有共享 RAM 与多组 Flash。下表是英飞凌官方 TC375 内存映射（来自 <code>Lcf_Gnuc_Tricore_Tc.lsl</code> &#x2F; 用户手册）：</p>
+<h3 id="3-2-TC375-的多核内存映射（核心重点）"><a href="#3-2-TC375-的多核内存映射（核心重点）" class="headerlink" title="3.2 TC375 的多核内存映射（核心重点）"></a>3.2 TC375 的多核内存映射（核心重点）</h3><p>TC375 是 <strong>3 核 TriCore 1.6.2P</strong> 架构，PFLASH <strong>6MB</strong>、DFLASH <strong>384KB</strong>（DF0 256KB + DF1 128KB）、总 SRAM <strong>992KB</strong>。它的内存映射比单核 MCU 复杂得多——每个核都有自己的私有 RAM，还有共享 RAM 与多组 Flash。下表是依据<strong>英飞凌官方 <code>AURIX TC37x 用户手册 Appendix</code> 第2章（MEMMAP）</strong>核对的内存映射（与 <code>Lcf_Gnuc_Tricore_Tc.lsl</code> 链接脚本一致）：</p>
 <table>
 <thead>
 <tr>
@@ -212,7 +212,7 @@
 <td><code>pfls0</code></td>
 <td>0x8000_0000</td>
 <td>3MB</td>
-<td>程序 Flash0（代码&#x2F;只读数据）</td>
+<td>程序 Flash0（PFI0，代码&#x2F;只读数据）</td>
 <td>可缓存</td>
 </tr>
 <tr>
@@ -226,7 +226,7 @@
 <td><code>pfls1</code></td>
 <td>0x8030_0000</td>
 <td>3MB</td>
-<td>程序 Flash1（第二块代码区）</td>
+<td>程序 Flash1（PFI1，第二块代码区）</td>
 <td>可缓存</td>
 </tr>
 <tr>
@@ -240,63 +240,77 @@
 <td><code>dfls0</code></td>
 <td>0xAF00_0000</td>
 <td>256KB</td>
-<td>数据 Flash（EEPROM 模拟）</td>
+<td>数据 Flash0（EEPROM 模拟）</td>
 <td>非缓存</td>
 </tr>
 <tr>
 <td><code>ucb</code></td>
 <td>0xAF40_0000</td>
 <td>24KB</td>
-<td>用户配置块（BMHD 引导头）</td>
+<td>用户配置块 UCB（含 BMHD0-3 引导头）</td>
 <td>非缓存</td>
+</tr>
+<tr>
+<td><code>dfls1</code></td>
+<td>0xAFC0_0000</td>
+<td>128KB</td>
+<td>数据 Flash1（HSM EEPROM）</td>
+<td>非缓存</td>
+</tr>
+<tr>
+<td><code>brom</code></td>
+<td>0x8FFF_0000</td>
+<td>64KB</td>
+<td>Boot ROM（DMU，SSW 启动软件）</td>
+<td>可缓存</td>
 </tr>
 <tr>
 <td><code>dsram0</code></td>
 <td>0x7000_0000</td>
 <td>240KB</td>
-<td><strong>CPU0</strong> 本地数据 RAM（DSPR0）</td>
+<td><strong>CPU0</strong> 数据 ScratchPad RAM（DSPR0）</td>
 <td>—</td>
 </tr>
 <tr>
 <td><code>psram0</code></td>
 <td>0x7010_0000</td>
 <td>64KB</td>
-<td><strong>CPU0</strong> 程序 RAM（PSPR0）</td>
+<td><strong>CPU0</strong> 程序 ScratchPad RAM（PSPR0）</td>
 <td>—</td>
 </tr>
 <tr>
 <td><code>dsram1</code></td>
 <td>0x6000_0000</td>
 <td>240KB</td>
-<td><strong>CPU1</strong> 本地数据 RAM（DSPR1）</td>
+<td><strong>CPU1</strong> 数据 ScratchPad RAM（DSPR1）</td>
 <td>—</td>
 </tr>
 <tr>
 <td><code>psram1</code></td>
 <td>0x6010_0000</td>
 <td>64KB</td>
-<td><strong>CPU1</strong> 程序 RAM（PSPR1）</td>
+<td><strong>CPU1</strong> 程序 ScratchPad RAM（PSPR1）</td>
 <td>—</td>
 </tr>
 <tr>
 <td><code>dsram2</code></td>
 <td>0x5000_0000</td>
 <td>96KB</td>
-<td><strong>CPU2</strong> 本地数据 RAM（DSPR2）</td>
+<td><strong>CPU2</strong> 数据 ScratchPad RAM（DSPR2，注意只有 96KB）</td>
 <td>—</td>
 </tr>
 <tr>
 <td><code>psram2</code></td>
 <td>0x5010_0000</td>
 <td>64KB</td>
-<td><strong>CPU2</strong> 程序 RAM（PSPR2）</td>
+<td><strong>CPU2</strong> 程序 ScratchPad RAM（PSPR2）</td>
 <td>—</td>
 </tr>
 <tr>
 <td><code>cpu0_dlmu</code></td>
 <td>0x9000_0000</td>
 <td>64KB</td>
-<td>全局共享 RAM（LMU 低段，DLMU0）</td>
+<td>全局共享 RAM（DLMU0，LMU 低段）</td>
 <td>可缓存</td>
 </tr>
 <tr>
@@ -321,17 +335,39 @@
 <td>非缓存</td>
 </tr>
 <tr>
-<td>…</td>
-<td>…</td>
-<td>…</td>
-<td>…</td>
-<td>…</td>
+<td><code>cpu1_dlmu_nc</code></td>
+<td>0xB001_0000</td>
+<td>64KB</td>
+<td>DLMU1 非缓存镜像</td>
+<td>非缓存</td>
+</tr>
+<tr>
+<td><code>cpu2_dlmu_nc</code></td>
+<td>0xB002_0000</td>
+<td>64KB</td>
+<td>DLMU2 非缓存镜像</td>
+<td>非缓存</td>
+</tr>
+<tr>
+<td><code>dam_ram</code></td>
+<td>0x9040_0000</td>
+<td>32KB</td>
+<td>DAM SRAM（全局直接访问内存）</td>
+<td>可缓存</td>
+</tr>
+<tr>
+<td><code>olda</code></td>
+<td>0x8FE0_0000</td>
+<td>512KB</td>
+<td>Online Data Acquisition（调试用）</td>
+<td>—</td>
 </tr>
 </tbody></table>
 <p><strong>AURIX 独有的地址映射机制</strong>：</p>
 <ul>
 <li><strong>全局地址 vs 本地地址</strong>：每个核的 DSPR 除了全局地址（0x7000_0000 &#x2F; 0x6000_0000 &#x2F; 0x5000_0000），还有一个<strong>本地地址 0xD000_0000</strong>。本地地址是指令效率最高的访问方式（单周期、无需 SRI 总线仲裁），因为它是与核直接耦合的 Scratchpad RAM。链接脚本通过 <code>REGION_MAP</code> 把二者映射起来：<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">REGION_MAP(CPU0, ORIGIN(dsram0_local), LENGTH(dsram0_local), ORIGIN(dsram0))</span><br><span class="line">REGION_MAP(CPU1, ORIGIN(dsram1_local), LENGTH(dsram1_local), ORIGIN(dsram1))</span><br></pre></td></tr></table></figure></li>
 <li><strong>缓存&#x2F;非缓存镜像</strong>：同一物理 Flash&#x2F;RAM 有可缓存地址（如 0x8000_0000）和非缓存地址（0xA000_0000）两个别名。涉及 DMA、多核共享数据时要放到非缓存区，避免 cache 一致性问题。链接脚本用 <code>REGION_MIRROR</code> 处理：<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">REGION_MIRROR(&quot;pfls0&quot;, &quot;pfls0_nc&quot;)</span><br><span class="line">REGION_MIRROR(&quot;cpu0_dlmu&quot;, &quot;cpu0_dlmu_nc&quot;)</span><br></pre></td></tr></table></figure></li>
+<li><strong>16 个 256MB 段</strong>：TriCore 4GB 地址空间按 <code>A[31:28]</code> 分为 16 段（Segment 0~15）。TC375 中：<strong>段 1&#x2F;3-7</strong> 放 PSPR&#x2F;DSPR&#x2F;PCACHE&#x2F;DCACHE，<strong>段 8</strong> 缓存访问 PFLASH&#x2F;BROM，<strong>段 9</strong> 缓存访问 LMU，<strong>段 10</strong> 非缓存访问 PFLASH&#x2F;DFLASH&#x2F;BROM，<strong>段 11</strong> 非缓存访问 LMU，<strong>段 15</strong> 是 SPB&#x2F;SRI 外设寄存器空间（如 F880_0000 起是 CPU 内核特殊功能寄存器）。链接脚本中 <code>pfls0</code>（0x8…）、<code>pfls0_nc</code>（0xA…）、<code>cpu0_dlmu</code>（0x9…）、<code>cpu0_dlmu_nc</code>（0xB…）正好落在这些段上。</li>
 </ul>
 <hr>
 <h2 id="4-SECTIONS：核心中的核心"><a href="#4-SECTIONS：核心中的核心" class="headerlink" title="4. SECTIONS：核心中的核心"></a>4. <code>SECTIONS</code>：核心中的核心</h2><p><code>SECTIONS</code> 命令描述<strong>输出段</strong>（output section）如何由<strong>输入段</strong>（input section）构成，以及各输出段放在哪块内存。语法：</p>
@@ -473,8 +509,8 @@
 <h2 id="7-ENTRY-与-AURIX-多核启动流程"><a href="#7-ENTRY-与-AURIX-多核启动流程" class="headerlink" title="7. ENTRY 与 AURIX 多核启动流程"></a>7. <code>ENTRY</code> 与 AURIX 多核启动流程</h2><p><code>ENTRY(_start)</code> 指定可执行文件的入口点，即 CPU 复位后跳转的第一条指令。</p>
 <h3 id="7-1-AURIX-的三级启动链"><a href="#7-1-AURIX-的三级启动链" class="headerlink" title="7.1 AURIX 的三级启动链"></a>7.1 AURIX 的三级启动链</h3><p>TC375 的上电启动比普通 MCU 复杂，分成多级：</p>
 <ol>
-<li><strong>硬件复位</strong>：CPU0 复位后先运行芯片内置的 <strong>BootROM</strong>（不可修改的固件）；</li>
-<li><strong>BootROM 引导</strong>：BootROM 读取 UCB 区（0xAF40_0000）中的 <strong>BMHD（Boot Mode Header）</strong>，校验后根据 BMHD 中的地址跳转到用户的 <code>_start</code>（CPU0 复位入口）；</li>
+<li><strong>硬件复位</strong>：CPU0 复位后先运行芯片内置的 <strong>Boot ROM（BROM）</strong>（不可修改的固件，位于 0x8FFF_0000，64KB）；</li>
+<li><strong>BootROM 引导</strong>：BootROM 读取 UCB 区（0xAF40_0000，24KB）中的 <strong>BMHD（Boot Mode Header）</strong>，校验后根据 BMHD 中的地址跳转到用户的 <code>_start</code>（CPU0 复位入口）；</li>
 <li><strong>CPU0 用户启动</strong>：执行链接脚本中的 <code>.start_tc0</code> 段代码（<code>_start</code>），完成：<ul>
 <li>设置栈指针（<code>__USTACK0</code>）和 CSA 基址（<code>__CSA0</code>）；</li>
 <li>拷贝 <code>.data</code>（<code>_etext</code> → <code>_sdata</code>）；</li>
@@ -485,7 +521,89 @@
 </li>
 <li><strong>CPU1&#x2F;CPU2 启动</strong>：CPU0 软件释放 CPU1&#x2F;CPU2 的复位，后两者从各自的 <code>.start_tc1</code>&#x2F;<code>.start_tc2</code> 段（<code>_start_cpu1</code>&#x2F;<code>_start_cpu2</code>）开始，<strong>每个核运行一份独立的 C 运行时启动代码</strong>，各自有自己的 DSPR、栈、CSA，然后进入 <code>core1_main</code>&#x2F;<code>core2_main</code>。</li>
 </ol>
-<h3 id="7-2-每个核要独立维护的东西"><a href="#7-2-每个核要独立维护的东西" class="headerlink" title="7.2 每个核要独立维护的东西"></a>7.2 每个核要独立维护的东西</h3><table>
+<h3 id="7-2-BMHD（Boot-Mode-Header）：启动链的”钥匙”"><a href="#7-2-BMHD（Boot-Mode-Header）：启动链的”钥匙”" class="headerlink" title="7.2 BMHD（Boot Mode Header）：启动链的”钥匙”"></a>7.2 BMHD（Boot Mode Header）：启动链的”钥匙”</h3><p>BMHD 是写入 <strong>UCB（User Configuration Block）</strong> 中的信息结构，告诉 BootROM”用户代码在哪、用什么模式启动”。TC375 在 UCB 中定义了 <strong>4 组 BMHD（BMHD0~BMHD3）</strong>，每组包含<strong>原档（ORIG）和副本（COPY）</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>BMHD 位置</th>
+<th>地址</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>UCB_BMHD0_ORIG</code></td>
+<td>0xAF40_0000</td>
+<td>BMHD0 原档</td>
+</tr>
+<tr>
+<td><code>UCB_BMHD1_ORIG</code></td>
+<td>0xAF40_0200</td>
+<td>BMHD1 原档</td>
+</tr>
+<tr>
+<td><code>UCB_BMHD2_ORIG</code></td>
+<td>0xAF40_0400</td>
+<td>BMHD2 原档</td>
+</tr>
+<tr>
+<td><code>UCB_BMHD3_ORIG</code></td>
+<td>0xAF40_0600</td>
+<td>BMHD3 原档</td>
+</tr>
+<tr>
+<td><code>UCB_BMHD0_COPY</code></td>
+<td>0xAF40_1000</td>
+<td>BMHD0 副本</td>
+</tr>
+<tr>
+<td>…</td>
+<td>…</td>
+<td>依次类推</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p>实际烧录工具（如英飞凌 MemTool）会自动生成 BMHD 并写入上述地址，链接脚本中通常无需手动放置，但开发者应了解其结构。</p>
+</blockquote>
+<p><strong>BMHD 结构</strong>（依据 Part1 用户手册 Table 45）：</p>
+<table>
+<thead>
+<tr>
+<th>字段</th>
+<th>大小</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>BMI</strong></td>
+<td>16bit</td>
+<td>Boot Mode Index：<code>HWCFG=111</code> 内部 Flash 启动、<code>011</code> ASC BSL、<code>100</code> 通用 BSL、<code>110</code> 备用启动模式 ABM</td>
+</tr>
+<tr>
+<td><strong>BMHDID</strong></td>
+<td>16bit</td>
+<td>标识符，必须为 <code>B359H</code></td>
+</tr>
+<tr>
+<td><strong>STAD</strong></td>
+<td>32bit</td>
+<td><strong>用户代码起始地址</strong>（必须位于 PFLASH 内、字对齐）——这就是 BootROM 跳转的目标</td>
+</tr>
+<tr>
+<td><strong>CRCBMHD</strong></td>
+<td>32bit</td>
+<td>整个 BMHD 的 CRC 校验值</td>
+</tr>
+<tr>
+<td><strong>CRCBMHD_N</strong></td>
+<td>32bit</td>
+<td>CRC 校验值取反</td>
+</tr>
+</tbody></table>
+<p><strong>SSW 校验流程（17 步）</strong>：BootROM 依次检查 BMHD 状态（CONFIRMED&#x2F;UNLOCKED）→ BMHDID → BMI 合法性 → STAD 是否为 PFLASH 内字对齐地址 → CRC 校验 → 判断是否需要由 HWCFG 引脚选择启动模式 → 最终得到 <code>BOOT_CFG</code> 并跳转到 <code>STAD</code>。</p>
+<blockquote>
+<p><strong>与链接脚本的联系</strong>：<code>STAD</code> 值必须与链接脚本中 <code>.start_tc0</code> 段（<code>_start</code>）的实际地址一致。官方 AURIX 脚本把 <code>.start_tc0</code> 固定在 <code>0xA000_0000</code>（PFLASH0 非缓存镜像起始），因此烧录工具默认把 STAD 写成 <code>0xA0000000</code>。<strong>改动了链接脚本的启动段地址，就必须同步更新 BMHD.STAD</strong>，否则上电后 BootROM 会跳到错误位置。</p>
+</blockquote>
+<h3 id="7-3-每个核要独立维护的东西"><a href="#7-3-每个核要独立维护的东西" class="headerlink" title="7.3 每个核要独立维护的东西"></a>7.3 每个核要独立维护的东西</h3><table>
 <thead>
 <tr>
 <th>项目</th>
@@ -546,7 +664,7 @@
 <p>可见，<strong>AURIX 链接脚本是”多核并行”的</strong>：同样的 <code>.data/.bss/.csa/.stack</code> 结构要为每个核复制一份（通常用宏 <code>CORE_SEC</code> 批量生成）。启动代码里那些”魔法符号”全部来自链接脚本，<strong>启动文件、链接脚本、每核的 CMake&#x2F;链接配置必须成对维护</strong>，这是嵌入式移植中最高频的 bug 来源之一。</p>
 <hr>
 <h2 id="8-完整实战：TC375-多核链接脚本精讲"><a href="#8-完整实战：TC375-多核链接脚本精讲" class="headerlink" title="8. 完整实战：TC375 多核链接脚本精讲"></a>8. 完整实战：TC375 多核链接脚本精讲</h2><p>下面是一份参照英飞凌官方 <code>Lcf_Gnuc_Tricore_Tc.lsl</code> 简化后的 TC375 链接脚本（AURIX GCC 格式），核心是理解<strong>多核段 + 缓存镜像 + 本地&#x2F;全局地址映射</strong>：</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br><span class="line">138</span><br><span class="line">139</span><br><span class="line">140</span><br><span class="line">141</span><br><span class="line">142</span><br><span class="line">143</span><br><span class="line">144</span><br><span class="line">145</span><br><span class="line">146</span><br><span class="line">147</span><br></pre></td><td class="code"><pre><span class="line">/* Lcf_Gnuc_Tricore_Tc.lsl —— TC375 多核链接脚本（简化版） */</span><br><span class="line">OUTPUT_FORMAT(&quot;elf32-tricore&quot;)</span><br><span class="line">OUTPUT_ARCH(tricore)</span><br><span class="line">ENTRY(_start)</span><br><span class="line"></span><br><span class="line">/* ========== 1. 常量定义：各核栈/CSA/堆大小 ========== */</span><br><span class="line">LCF_CSA0_SIZE = 8k;</span><br><span class="line">LCF_USTACK0_SIZE = 2k;</span><br><span class="line">LCF_ISTACK0_SIZE = 1k;</span><br><span class="line">LCF_HEAP_SIZE = 4k;</span><br><span class="line"></span><br><span class="line">LCF_DSPR0_START = 0x70000000;</span><br><span class="line">LCF_DSPR0_SIZE = 240k;</span><br><span class="line">LCF_DSPR1_START = 0x60000000;</span><br><span class="line">LCF_DSPR1_SIZE = 240k;</span><br><span class="line">LCF_DSPR2_START = 0x50000000;</span><br><span class="line">LCF_DSPR2_SIZE = 96k;</span><br><span class="line"></span><br><span class="line">/* ========== 2. MEMORY：定义全部物理内存区域 ========== */</span><br><span class="line">MEMORY</span><br><span class="line">&#123;</span><br><span class="line">    /* ---- 程序 Flash：3MB + 3MB，缓存与非缓存镜像 ---- */</span><br><span class="line">    pfls0    (rx!p) : org = 0x80000000, len = 3M</span><br><span class="line">    pfls0_nc (rx!p) : org = 0xa0000000, len = 3M</span><br><span class="line">    pfls1    (rx!p) : org = 0x80300000, len = 3M</span><br><span class="line">    pfls1_nc (rx!p) : org = 0xa0300000, len = 3M</span><br><span class="line"></span><br><span class="line">    /* ---- 数据 Flash 与用户配置块 ---- */</span><br><span class="line">    dfls0    (rx!p) : org = 0xaf000000, len = 256K</span><br><span class="line">    ucb      (rx!p) : org = 0xaf400000, len = 24K</span><br><span class="line"></span><br><span class="line">    /* ---- CPU0 本地 RAM：DSPR + PSPR ---- */</span><br><span class="line">    dsram0_local (w!xp) : org = 0xd0000000, len = 240K  /* 本地地址 */</span><br><span class="line">    dsram0       (w!xp) : org = 0x70000000, len = 240K  /* 全局地址 */</span><br><span class="line">    psram0       (w!xp) : org = 0x70100000, len = 64K</span><br><span class="line">    psram_local  (w!xp) : org = 0xc0000000, len = 64K</span><br><span class="line"></span><br><span class="line">    /* ---- CPU1 本地 RAM ---- */</span><br><span class="line">    dsram1_local (w!xp) : org = 0xd0000000, len = 240K</span><br><span class="line">    dsram1       (w!xp) : org = 0x60000000, len = 240K</span><br><span class="line">    psram1       (w!xp) : org = 0x60100000, len = 64K</span><br><span class="line"></span><br><span class="line">    /* ---- CPU2 本地 RAM ---- */</span><br><span class="line">    dsram2_local (w!xp) : org = 0xd0000000, len = 96K</span><br><span class="line">    dsram2       (w!xp) : org = 0x50000000, len = 96K</span><br><span class="line">    psram2       (w!xp) : org = 0x50100000, len = 64K</span><br><span class="line"></span><br><span class="line">    /* ---- 全局共享 RAM（LMU/DLMU） ---- */</span><br><span class="line">    cpu0_dlmu    (w!xp) : org = 0x90000000, len = 64K</span><br><span class="line">    cpu0_dlmu_nc (w!xp) : org = 0xb0000000, len = 64K</span><br><span class="line">    cpu1_dlmu    (w!xp) : org = 0x90010000, len = 64K</span><br><span class="line">    cpu1_dlmu_nc (w!xp) : org = 0xb0010000, len = 64K</span><br><span class="line">    cpu2_dlmu    (w!xp) : org = 0x90020000, len = 64K</span><br><span class="line">    cpu2_dlmu_nc (w!xp) : org = 0xb0020000, len = 64K</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">/* ========== 3. 本地↔全局、缓存↔非缓存 地址映射 ========== */</span><br><span class="line">REGION_MAP(CPU0, ORIGIN(dsram0_local), LENGTH(dsram0_local), ORIGIN(dsram0))</span><br><span class="line">REGION_MAP(CPU1, ORIGIN(dsram1_local), LENGTH(dsram1_local), ORIGIN(dsram1))</span><br><span class="line">REGION_MAP(CPU2, ORIGIN(dsram2_local), LENGTH(dsram2_local), ORIGIN(dsram2))</span><br><span class="line"></span><br><span class="line">REGION_MIRROR(&quot;pfls0&quot;, &quot;pfls0_nc&quot;)</span><br><span class="line">REGION_MIRROR(&quot;pfls1&quot;, &quot;pfls1_nc&quot;)</span><br><span class="line">REGION_MIRROR(&quot;cpu0_dlmu&quot;, &quot;cpu0_dlmu_nc&quot;)</span><br><span class="line">REGION_MIRROR(&quot;cpu1_dlmu&quot;, &quot;cpu1_dlmu_nc&quot;)</span><br><span class="line">REGION_MIRROR(&quot;cpu2_dlmu&quot;, &quot;cpu2_dlmu_nc&quot;)</span><br><span class="line"></span><br><span class="line">/* ========== 4. 全局固定地址段 ========== */</span><br><span class="line">SECTIONS</span><br><span class="line">&#123;</span><br><span class="line">    /* CPU0 复位入口段：必须放 PFLASH 起始地址 0xA0000000（非缓存） */</span><br><span class="line">    .start_tc0 (0xA0000000) : FLAGS(rxl)</span><br><span class="line">    &#123;</span><br><span class="line">        KEEP(*(.start))</span><br><span class="line">    &#125; &gt; pfls0_nc</span><br><span class="line"></span><br><span class="line">    /* CPU1/CPU2 复位入口 */</span><br><span class="line">    .start_tc1 (0xA0300200) : FLAGS(rxl) &#123; KEEP(*(.start_cpu1)) &#125; &gt; pfls1_nc</span><br><span class="line">    .start_tc2 (0xA0300220) : FLAGS(rxl) &#123; KEEP(*(.start_cpu2)) &#125; &gt; pfls1_nc</span><br><span class="line"></span><br><span class="line">    /* 陷阱（异常）向量表 */</span><br><span class="line">    .traptab_tc0 (0x80000100) : &#123; KEEP(*(.traptab_cpu0)) &#125; &gt; pfls0</span><br><span class="line">    .traptab_tc1 (0x80300000) : &#123; KEEP(*(.traptab_cpu1)) &#125; &gt; pfls1</span><br><span class="line">    .traptab_tc2 (0x80300100) : &#123; KEEP(*(.traptab_cpu2)) &#125; &gt; pfls1</span><br><span class="line"></span><br><span class="line">    /* CPU0 代码段 */</span><br><span class="line">    .text :</span><br><span class="line">    &#123;</span><br><span class="line">        . = ALIGN(4);</span><br><span class="line">        *(.text*)</span><br><span class="line">        *(.rodata*)</span><br><span class="line">        _etext = .;</span><br><span class="line">        . = ALIGN(4);</span><br><span class="line">    &#125; &gt; pfls0</span><br><span class="line"></span><br><span class="line">    /* CPU0 已初始化数据：VMA 在 DSPR0，LMA 在 PFLASH0 */</span><br><span class="line">    .data :</span><br><span class="line">    &#123;</span><br><span class="line">        . = ALIGN(4);</span><br><span class="line">        _sdata = .;</span><br><span class="line">        *(.data*)</span><br><span class="line">        _edata = .;</span><br><span class="line">        . = ALIGN(4);</span><br><span class="line">    &#125; &gt; dsram0 AT&gt; pfls0</span><br><span class="line"></span><br><span class="line">    /* CPU0 未初始化数据：只占 DSPR0，启动时清零 */</span><br><span class="line">    .bss (NOLOAD) :</span><br><span class="line">    &#123;</span><br><span class="line">        _sbss = .;</span><br><span class="line">        *(.bss*)</span><br><span class="line">        _ebss = .;</span><br><span class="line">        . = ALIGN(4);</span><br><span class="line">    &#125; &gt; dsram0</span><br><span class="line"></span><br><span class="line">    /* CPU0 上下文保存区：64 字节对齐 */</span><br><span class="line">    .csa (NOLOAD) :</span><br><span class="line">    &#123;</span><br><span class="line">        __CSA0 = .;</span><br><span class="line">        . = . + LCF_CSA0_SIZE;</span><br><span class="line">        __CSA0_END = .;</span><br><span class="line">    &#125; &gt; dsram0</span><br><span class="line"></span><br><span class="line">    /* CPU0 用户栈与中断栈：向低地址增长 */</span><br><span class="line">    .ustack (NOLOAD) :</span><br><span class="line">    &#123;</span><br><span class="line">        __USTACK0_END = .;</span><br><span class="line">        . = . + LCF_USTACK0_SIZE;</span><br><span class="line">        __USTACK0 = .;</span><br><span class="line">    &#125; &gt; dsram0</span><br><span class="line"></span><br><span class="line">    .istack (NOLOAD) :</span><br><span class="line">    &#123;</span><br><span class="line">        __ISTACK0_END = .;</span><br><span class="line">        . = . + LCF_ISTACK0_SIZE;</span><br><span class="line">        __ISTACK0 = .;</span><br><span class="line">    &#125; &gt; dsram0</span><br><span class="line"></span><br><span class="line">    /* ======== CPU1、CPU2 的 .data/.bss/.csa/.stack 结构（简化）========</span><br><span class="line">     * 实际脚本会为每个核用 CORE_SEC 宏重复上述整套段，</span><br><span class="line">     * 分别定位到 dsram1/dsram2，避免跨核访问私有 RAM。 */</span><br><span class="line"></span><br><span class="line">    /* ======== 多核共享数据：放 LMU（非缓存区保证一致性）======== */</span><br><span class="line">    .lmu_data (NOLOAD) :</span><br><span class="line">    &#123;</span><br><span class="line">        *(.lmu_data*)</span><br><span class="line">    &#125; &gt; cpu0_dlmu_nc</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br><span class="line">138</span><br><span class="line">139</span><br><span class="line">140</span><br><span class="line">141</span><br><span class="line">142</span><br><span class="line">143</span><br><span class="line">144</span><br><span class="line">145</span><br><span class="line">146</span><br><span class="line">147</span><br></pre></td><td class="code"><pre><span class="line">/* Lcf_Gnuc_Tricore_Tc.lsl —— TC375 多核链接脚本（简化版） */</span><br><span class="line">OUTPUT_FORMAT(&quot;elf32-tricore&quot;)</span><br><span class="line">OUTPUT_ARCH(tricore)</span><br><span class="line">ENTRY(_start)</span><br><span class="line"></span><br><span class="line">/* ========== 1. 常量定义：各核栈/CSA/堆大小 ========== */</span><br><span class="line">LCF_CSA0_SIZE = 8k;</span><br><span class="line">LCF_USTACK0_SIZE = 2k;</span><br><span class="line">LCF_ISTACK0_SIZE = 1k;</span><br><span class="line">LCF_HEAP_SIZE = 4k;</span><br><span class="line"></span><br><span class="line">LCF_DSPR0_START = 0x70000000;</span><br><span class="line">LCF_DSPR0_SIZE = 240k;</span><br><span class="line">LCF_DSPR1_START = 0x60000000;</span><br><span class="line">LCF_DSPR1_SIZE = 240k;</span><br><span class="line">LCF_DSPR2_START = 0x50000000;</span><br><span class="line">LCF_DSPR2_SIZE = 96k;</span><br><span class="line"></span><br><span class="line">/* ========== 2. MEMORY：定义全部物理内存区域 ========== */</span><br><span class="line">MEMORY</span><br><span class="line">&#123;</span><br><span class="line">    /* ---- 程序 Flash：3MB + 3MB，缓存与非缓存镜像 ---- */</span><br><span class="line">    pfls0    (rx!p) : org = 0x80000000, len = 3M</span><br><span class="line">    pfls0_nc (rx!p) : org = 0xa0000000, len = 3M</span><br><span class="line">    pfls1    (rx!p) : org = 0x80300000, len = 3M</span><br><span class="line">    pfls1_nc (rx!p) : org = 0xa0300000, len = 3M</span><br><span class="line"></span><br><span class="line">    /* ---- 数据 Flash 与用户配置块 ---- */</span><br><span class="line">    dfls0    (rx!p) : org = 0xaf000000, len = 256K  /* DF0：EEPROM 模拟 */</span><br><span class="line">    ucb      (rx!p) : org = 0xaf400000, len = 24K   /* UCB：BMHD0-3 + 副本 */</span><br><span class="line"></span><br><span class="line">    /* ---- CPU0 本地 RAM：DSPR + PSPR ---- */</span><br><span class="line">    dsram0_local (w!xp) : org = 0xd0000000, len = 240K  /* 本地地址 */</span><br><span class="line">    dsram0       (w!xp) : org = 0x70000000, len = 240K  /* 全局地址 */</span><br><span class="line">    psram0       (w!xp) : org = 0x70100000, len = 64K</span><br><span class="line">    psram_local  (w!xp) : org = 0xc0000000, len = 64K</span><br><span class="line"></span><br><span class="line">    /* ---- CPU1 本地 RAM ---- */</span><br><span class="line">    dsram1_local (w!xp) : org = 0xd0000000, len = 240K</span><br><span class="line">    dsram1       (w!xp) : org = 0x60000000, len = 240K</span><br><span class="line">    psram1       (w!xp) : org = 0x60100000, len = 64K</span><br><span class="line"></span><br><span class="line">    /* ---- CPU2 本地 RAM ---- */</span><br><span class="line">    dsram2_local (w!xp) : org = 0xd0000000, len = 96K</span><br><span class="line">    dsram2       (w!xp) : org = 0x50000000, len = 96K</span><br><span class="line">    psram2       (w!xp) : org = 0x50100000, len = 64K</span><br><span class="line"></span><br><span class="line">    /* ---- 全局共享 RAM（LMU/DLMU） ---- */</span><br><span class="line">    cpu0_dlmu    (w!xp) : org = 0x90000000, len = 64K</span><br><span class="line">    cpu0_dlmu_nc (w!xp) : org = 0xb0000000, len = 64K</span><br><span class="line">    cpu1_dlmu    (w!xp) : org = 0x90010000, len = 64K</span><br><span class="line">    cpu1_dlmu_nc (w!xp) : org = 0xb0010000, len = 64K</span><br><span class="line">    cpu2_dlmu    (w!xp) : org = 0x90020000, len = 64K</span><br><span class="line">    cpu2_dlmu_nc (w!xp) : org = 0xb0020000, len = 64K</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">/* ========== 3. 本地↔全局、缓存↔非缓存 地址映射 ========== */</span><br><span class="line">REGION_MAP(CPU0, ORIGIN(dsram0_local), LENGTH(dsram0_local), ORIGIN(dsram0))</span><br><span class="line">REGION_MAP(CPU1, ORIGIN(dsram1_local), LENGTH(dsram1_local), ORIGIN(dsram1))</span><br><span class="line">REGION_MAP(CPU2, ORIGIN(dsram2_local), LENGTH(dsram2_local), ORIGIN(dsram2))</span><br><span class="line"></span><br><span class="line">REGION_MIRROR(&quot;pfls0&quot;, &quot;pfls0_nc&quot;)</span><br><span class="line">REGION_MIRROR(&quot;pfls1&quot;, &quot;pfls1_nc&quot;)</span><br><span class="line">REGION_MIRROR(&quot;cpu0_dlmu&quot;, &quot;cpu0_dlmu_nc&quot;)</span><br><span class="line">REGION_MIRROR(&quot;cpu1_dlmu&quot;, &quot;cpu1_dlmu_nc&quot;)</span><br><span class="line">REGION_MIRROR(&quot;cpu2_dlmu&quot;, &quot;cpu2_dlmu_nc&quot;)</span><br><span class="line"></span><br><span class="line">/* ========== 4. 全局固定地址段 ========== */</span><br><span class="line">SECTIONS</span><br><span class="line">&#123;</span><br><span class="line">    /* CPU0 复位入口段：必须放 PFLASH 起始地址 0xA0000000（非缓存） */</span><br><span class="line">    .start_tc0 (0xA0000000) : FLAGS(rxl)</span><br><span class="line">    &#123;</span><br><span class="line">        KEEP(*(.start))</span><br><span class="line">    &#125; &gt; pfls0_nc</span><br><span class="line"></span><br><span class="line">    /* CPU1/CPU2 复位入口 */</span><br><span class="line">    .start_tc1 (0xA0300200) : FLAGS(rxl) &#123; KEEP(*(.start_cpu1)) &#125; &gt; pfls1_nc</span><br><span class="line">    .start_tc2 (0xA0300220) : FLAGS(rxl) &#123; KEEP(*(.start_cpu2)) &#125; &gt; pfls1_nc</span><br><span class="line"></span><br><span class="line">    /* 陷阱（异常）向量表 */</span><br><span class="line">    .traptab_tc0 (0x80000100) : &#123; KEEP(*(.traptab_cpu0)) &#125; &gt; pfls0</span><br><span class="line">    .traptab_tc1 (0x80300000) : &#123; KEEP(*(.traptab_cpu1)) &#125; &gt; pfls1</span><br><span class="line">    .traptab_tc2 (0x80300100) : &#123; KEEP(*(.traptab_cpu2)) &#125; &gt; pfls1</span><br><span class="line"></span><br><span class="line">    /* CPU0 代码段 */</span><br><span class="line">    .text :</span><br><span class="line">    &#123;</span><br><span class="line">        . = ALIGN(4);</span><br><span class="line">        *(.text*)</span><br><span class="line">        *(.rodata*)</span><br><span class="line">        _etext = .;</span><br><span class="line">        . = ALIGN(4);</span><br><span class="line">    &#125; &gt; pfls0</span><br><span class="line"></span><br><span class="line">    /* CPU0 已初始化数据：VMA 在 DSPR0，LMA 在 PFLASH0 */</span><br><span class="line">    .data :</span><br><span class="line">    &#123;</span><br><span class="line">        . = ALIGN(4);</span><br><span class="line">        _sdata = .;</span><br><span class="line">        *(.data*)</span><br><span class="line">        _edata = .;</span><br><span class="line">        . = ALIGN(4);</span><br><span class="line">    &#125; &gt; dsram0 AT&gt; pfls0</span><br><span class="line"></span><br><span class="line">    /* CPU0 未初始化数据：只占 DSPR0，启动时清零 */</span><br><span class="line">    .bss (NOLOAD) :</span><br><span class="line">    &#123;</span><br><span class="line">        _sbss = .;</span><br><span class="line">        *(.bss*)</span><br><span class="line">        _ebss = .;</span><br><span class="line">        . = ALIGN(4);</span><br><span class="line">    &#125; &gt; dsram0</span><br><span class="line"></span><br><span class="line">    /* CPU0 上下文保存区：64 字节对齐 */</span><br><span class="line">    .csa (NOLOAD) :</span><br><span class="line">    &#123;</span><br><span class="line">        __CSA0 = .;</span><br><span class="line">        . = . + LCF_CSA0_SIZE;</span><br><span class="line">        __CSA0_END = .;</span><br><span class="line">    &#125; &gt; dsram0</span><br><span class="line"></span><br><span class="line">    /* CPU0 用户栈与中断栈：向低地址增长 */</span><br><span class="line">    .ustack (NOLOAD) :</span><br><span class="line">    &#123;</span><br><span class="line">        __USTACK0_END = .;</span><br><span class="line">        . = . + LCF_USTACK0_SIZE;</span><br><span class="line">        __USTACK0 = .;</span><br><span class="line">    &#125; &gt; dsram0</span><br><span class="line"></span><br><span class="line">    .istack (NOLOAD) :</span><br><span class="line">    &#123;</span><br><span class="line">        __ISTACK0_END = .;</span><br><span class="line">        . = . + LCF_ISTACK0_SIZE;</span><br><span class="line">        __ISTACK0 = .;</span><br><span class="line">    &#125; &gt; dsram0</span><br><span class="line"></span><br><span class="line">    /* ======== CPU1、CPU2 的 .data/.bss/.csa/.stack 结构（简化）========</span><br><span class="line">     * 实际脚本会为每个核用 CORE_SEC 宏重复上述整套段，</span><br><span class="line">     * 分别定位到 dsram1/dsram2，避免跨核访问私有 RAM。 */</span><br><span class="line"></span><br><span class="line">    /* ======== 多核共享数据：放 LMU（非缓存区保证一致性）======== */</span><br><span class="line">    .lmu_data (NOLOAD) :</span><br><span class="line">    &#123;</span><br><span class="line">        *(.lmu_data*)</span><br><span class="line">    &#125; &gt; cpu0_dlmu_nc</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 
 <p><strong>几个值得注意的细节</strong>：</p>
 <ul>
@@ -688,6 +806,11 @@
 <td>检查 BMHD 结构体是否准确放在 0xAF400000 各槽位</td>
 </tr>
 <tr>
+<td>上电后不进 main、程序停在 BootROM</td>
+<td><strong>BMHD.STAD 与链接脚本启动段地址不一致</strong></td>
+<td>用 MemTool 重新烧录 BMHD，确保 STAD&#x3D;0xA0000000（与 <code>.start_tc0</code> 对齐）</td>
+</tr>
+<tr>
 <td>三核中只有某个核不跑</td>
 <td>该核栈&#x2F;CSA 配置错误或 DSPR 被占用</td>
 <td>检查每核独立的 <code>.csa</code>&#x2F;栈符号与大小</td>
@@ -759,22 +882,23 @@
 <h2 id="13-总结"><a href="#13-总结" class="headerlink" title="13. 总结"></a>13. 总结</h2><p>链接脚本是嵌入式工程师从”会写 C”走向”懂底层”的分水岭。以 TC375 为例回顾本文核心要点：</p>
 <ol>
 <li><strong>链接器</strong>负责符号解析与重定位，裸机程序必须用链接脚本定义内存布局；</li>
-<li><strong>MEMORY</strong> 定义芯片可用的内存区域与属性——TC375 上要分清 PFLASH0&#x2F;1、三组 DSPR&#x2F;PSPR、LMU&#x2F;DLMU、DFLASH、UCB；</li>
+<li><strong>MEMORY</strong> 定义芯片可用的内存区域与属性——TC375 上要分清 PFLASH0&#x2F;1（各 3MB）、三组 DSPR&#x2F;PSPR、LMU&#x2F;DLMU（各 64KB）、DAM（32KB）、DFLASH0&#x2F;1、UCB、BROM；</li>
 <li><strong>SECTIONS</strong> 定义输出段如何由输入段组成、放在哪块区域；</li>
 <li><strong>VMA 与 LMA</strong> 是理解 <code>.data</code> 拷贝、启动代码的钥匙；</li>
-<li><strong>AURIX 多核特性</strong>：<code>REGION_MAP</code>（本地&#x2F;全局地址）、<code>REGION_MIRROR</code>（缓存&#x2F;非缓存）、每核独立的 <code>.csa</code>&#x2F;栈&#x2F;<code>.data</code>&#x2F;<code>.bss</code>；</li>
+<li><strong>AURIX 多核特性</strong>：<code>REGION_MAP</code>（本地&#x2F;全局地址）、<code>REGION_MIRROR</code>（缓存&#x2F;非缓存）、16 个 256MB 段的划分、每核独立的 <code>.csa</code>&#x2F;栈&#x2F;<code>.data</code>&#x2F;<code>.bss</code>；</li>
 <li><strong><code>.</code>（位置计数器）、<code>ALIGN</code>、<code>KEEP</code>、<code>NOLOAD</code></strong> 是日常最常用的控制手段；</li>
+<li><strong>启动链三件套</strong>：BootROM → BMHD（含 BMI&#x2F;BMHDID&#x2F;STAD&#x2F;CRC）→ <code>.start_tc0</code>，其中 <strong>STAD 必须与链接脚本启动段地址一致</strong>；</li>
 <li><strong>启动文件与链接脚本是一体两面</strong>，符号必须严格对应，多核项目更是如此；</li>
 <li>善用 <code>ASSERT</code>、<code>Map 文件</code>、<code>objdump -h</code> 把内存问题扼杀在链接阶段。</li>
 </ol>
 <p>理解链接脚本之后，你会发现自己对”程序到底怎么跑起来的”有了更清晰的画面：BootROM 读 BMHD → CPU0 从 0xA0000000 的 <code>_start</code> 启动 → 初始化栈与 CSA → 搬数据 → 清 BSS → 调 core0_main → 再释放 CPU1&#x2F;CPU2 让它们各自从自己的入口跑起来……而这一切的幕后导演，正是这份被无数人”复制粘贴”却鲜有人真正读懂的 <strong>Linker Script</strong>。</p>
 <hr>
-<p><em>参考文档：GNU ld 手册（<code>info ld</code>）、Infineon AURIX TC3xx 用户手册内存映射章节、英飞凌官方 AURIX Development Studio 例程 <code>Lcf_Gnuc_Tricore_Tc.lsl</code> &#x2F; <code>Lcf_Tasking_Tricore_Tc.lsl</code>。</em></p>
+<p>*参考文档：GNU ld 手册（<code>info ld</code>）、Infineon <strong>AURIX TC3xx 用户手册 Part 1</strong>（V2.0.0, 2021-02，第2章 MEMMAP &#x2F; 第3章 SSW 启动 &#x2F; Table 45 BMHD 结构）、<strong>AURIX TC37x 用户手册 Appendix</strong>（V2.0.0，第2章 MEMMAP 设备级内存映射）、TC37x 数据手册（V1.1）、英飞凌官方 AURIX Development Studio 例程 <code>Lcf_Gnuc_Tricore_Tc.lsl</code> &#x2F; <code>Lcf_Tasking_Tricore_Tc.lsl</code>。*</p>
 
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2026/08/01/%E5%B5%8C%E5%85%A5%E5%BC%8F%E9%93%BE%E6%8E%A5%E8%84%9A%E6%9C%AC%E8%AF%A6%E8%A7%A3%EF%BC%9A%E4%BB%8E%E9%9B%B6%E7%90%86%E8%A7%A3Linker-Script/" data-id="cmsa1whw8000eftlmddjiduxk" data-title="嵌入式链接脚本详解：以英飞凌TC375为例" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2026/08/01/%E5%B5%8C%E5%85%A5%E5%BC%8F%E9%93%BE%E6%8E%A5%E8%84%9A%E6%9C%AC%E8%AF%A6%E8%A7%A3%EF%BC%9A%E4%BB%8E%E9%9B%B6%E7%90%86%E8%A7%A3Linker-Script/" data-id="cmsa2gwya000b8ulm1fb08hxc" data-title="嵌入式链接脚本详解：以英飞凌TC375为例" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
