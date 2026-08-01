@@ -94,17 +94,19 @@ setup 模块承担两个任务：
 
 这里的关键是**临时 GDT/IDT**：在保护模式下，所有内存访问都要经过 GDT 查找段描述符。setup 设置了一个**临时 GDT**（只含内核代码段、数据段两个描述符，基址为 0、限长 8MB）和**临时 IDT**（全部为空），保证 `ljmp` 远跳转后 CPU 能正常工作。
 
-### 3.3 head.s —— 页表、中断、跳转 C 语言
+### 3.3 head.s —— 中断、页表、跳转 C 语言
 
-`head.s` 是引导的最后一棒，运行在保护模式下，做三件大事：
+`head.s` 是引导的最后一棒，运行在保护模式下，按照真实源码顺序依次完成：
 
-1. **建立页目录和页表**：在 `0x0000` 处建立页目录表，用 4 个页表覆盖前 16MB 物理内存，并**开启分页**（设置 `cr0` 的 PG 位）；由于此时段基址为 0，页目录项把线性地址直接映射到相同的物理地址（恒等映射）；
-2. **加载真正的 IDT/GDT**：用 `lidt`/`lgdt` 加载位于本模块数据区的正式中断描述符表和全局描述符表；
-3. **调用 main()**：设置栈指针后，`jmp` 到 C 语言入口 `start_kernel`（0.12 中为 `main.c` 的 `main()`）。
+1. **建立 IDT 与 GDT**：`call setup_idt` 建立包含 256 个中断门的 IDT（初始全部指向 `ignore_int` 处理函数），`call setup_gdt` 建立真正的 GDT（内核代码段 `0x08`、数据段 `0x10`）；随后检查 A20 地址线是否真的打开、检测数学协处理器（`check_x87`）；
+2. **建立页目录和页表**：`setup_paging` 在 `0x0000` 处建立页目录表，用 4 个页表（`pg0~pg3`，位于 `.org 0x1000` 起）覆盖前 16MB 物理内存，页目录项把线性地址恒等映射到相同的物理地址；
+3. **开启分页并跳转 main()**：设置 `cr0` 的 PG 位开启分页，然后通过 `after_page_tables` 把 main 的四个参数压栈、再 `ret` 跳转到 C 语言入口 `main()`（现代内核对应 `start_kernel`）。
 
 ```
 head.s 结束时的 CPU 状态：
   cr0:  PE=1（保护模式）  PG=1（分页开启）
+  IDT:  256 个中断门 → ignore_int
+  GDT:  内核代码段 0x08 / 数据段 0x10
   页表: 恒等映射 0 ~ 16MB
   栈:   已设置为内核栈
   下一条: 进入 C 语言 main()
@@ -112,23 +114,25 @@ head.s 结束时的 CPU 状态：
 
 ### 3.4 main.c —— C 语言环境下的初始化
 
-进入 `main()` 后，内核按依赖顺序初始化各个子系统，0.12 中的顺序大致为：
+进入 `main()` 后，内核按真实源码中的顺序初始化各子系统（`init/main.c`）：
 
 ```c
-main() {
-  // 保存 setup 读到的硬件参数
-  // 1. 内存管理
-  mem_init(mem_start, mem_end);      // 初始化物理内存管理
-  // 2. 缓冲区管理
-  buffer_init(buffer_memory_end);    // 建立高速缓冲
-  // 3. 中断初始化
-  sched_init();                      // 任务 0，时钟中断 0x20
-  hd_init();                         // 硬盘中断 0x2F
-  floppy_init();                     // 软盘中断
-  tty_init();                        // 串行口、控制台
-  // 4. 文件系统
-  // 5. 启动任务 0
-  move_to_user_mode();               // 进入用户态执行任务 0
+void main(void) {
+  ROOT_DEV = ORIG_ROOT_DEV;          // 取 setup 保存的根设备号
+  memory_end = (1<<20) + (EXT_MEM_K<<10);   // 由 setup 读的内存大小计算
+  ...
+  mem_init(main_memory_start, memory_end);  // 1. 内存管理
+  trap_init();                              // 2. 中断向量初始化
+  blk_dev_init();                           //    块设备初始化
+  chr_dev_init();                           //    字符设备初始化
+  tty_init();                               //    终端初始化
+  time_init();                              //    时钟时间初始化
+  sched_init();                             //    调度器（任务 0、时钟中断 0x20）
+  buffer_init(buffer_memory_end);           // 3. 高速缓冲
+  hd_init();                                //    硬盘中断
+  floppy_init();                            //    软盘中断
+  sti();                                    // 4. 打开中断
+  move_to_user_mode();                      // 5. 进入用户态执行任务 0
 }
 ```
 
