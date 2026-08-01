@@ -4,24 +4,27 @@
   <meta charset="utf-8">
   
   
-  <title>嵌入式链接脚本详解：从零理解Linker Script | Hexo</title>
+  <title>嵌入式链接脚本详解：以英飞凌TC375为例 | Hexo</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-  <meta name="description" content="在嵌入式开发中，我们编译完 C&#x2F;汇编代码后，得到的 .o 目标文件并不能直接烧录到单片机里。把它们”拼装”成最终可执行文件、并决定每一段代码和数据放在芯片哪个地址的任务，就由链接器（Linker）完成，而它的”施工图纸”就是链接脚本（Linker Script）。 很多初学者把链接脚本当成一个”复制粘贴即可”的黑盒，一旦出现 section .isr_vector will not fi">
+  <meta name="description" content="在嵌入式开发中，我们编译完 C&#x2F;汇编代码后，得到的 .o 目标文件并不能直接烧录到芯片里。把它们”拼装”成最终可执行文件、并决定每一段代码和数据放在芯片哪个地址的任务，就由链接器（Linker）完成，而它的”施工图纸”就是链接脚本（Linker Script）。 很多初学者把链接脚本当成一个”复制粘贴即可”的黑盒，一旦出现 section .text will not fit in re">
 <meta property="og:type" content="article">
-<meta property="og:title" content="嵌入式链接脚本详解：从零理解Linker Script">
+<meta property="og:title" content="嵌入式链接脚本详解：以英飞凌TC375为例">
 <meta property="og:url" content="http://example.com/2026/08/01/%E5%B5%8C%E5%85%A5%E5%BC%8F%E9%93%BE%E6%8E%A5%E8%84%9A%E6%9C%AC%E8%AF%A6%E8%A7%A3%EF%BC%9A%E4%BB%8E%E9%9B%B6%E7%90%86%E8%A7%A3Linker-Script/index.html">
 <meta property="og:site_name" content="Hexo">
-<meta property="og:description" content="在嵌入式开发中，我们编译完 C&#x2F;汇编代码后，得到的 .o 目标文件并不能直接烧录到单片机里。把它们”拼装”成最终可执行文件、并决定每一段代码和数据放在芯片哪个地址的任务，就由链接器（Linker）完成，而它的”施工图纸”就是链接脚本（Linker Script）。 很多初学者把链接脚本当成一个”复制粘贴即可”的黑盒，一旦出现 section .isr_vector will not fi">
+<meta property="og:description" content="在嵌入式开发中，我们编译完 C&#x2F;汇编代码后，得到的 .o 目标文件并不能直接烧录到芯片里。把它们”拼装”成最终可执行文件、并决定每一段代码和数据放在芯片哪个地址的任务，就由链接器（Linker）完成，而它的”施工图纸”就是链接脚本（Linker Script）。 很多初学者把链接脚本当成一个”复制粘贴即可”的黑盒，一旦出现 section .text will not fit in re">
 <meta property="og:locale" content="en_US">
 <meta property="article:published_time" content="2026-08-01T07:17:43.000Z">
-<meta property="article:modified_time" content="2026-08-01T07:18:44.834Z">
+<meta property="article:modified_time" content="2026-08-01T07:29:11.716Z">
 <meta property="article:author" content="John Doe">
 <meta property="article:tag" content="汇编">
 <meta property="article:tag" content="嵌入式">
 <meta property="article:tag" content="链接脚本">
 <meta property="article:tag" content="Linker Script">
+<meta property="article:tag" content="英飞凌">
+<meta property="article:tag" content="TC375">
+<meta property="article:tag" content="AURIX">
+<meta property="article:tag" content="TriCore">
 <meta property="article:tag" content="GCC">
-<meta property="article:tag" content="STM32">
 <meta name="twitter:card" content="summary">
   
     <link rel="alternate" href="/atom.xml" title="Hexo" type="application/atom+xml">
@@ -93,7 +96,7 @@
         
   
     <h1 class="p-name article-title" itemprop="headline name">
-      嵌入式链接脚本详解：从零理解Linker Script
+      嵌入式链接脚本详解：以英飞凌TC375为例
     </h1>
   
 
@@ -101,8 +104,8 @@
     
     <div class="e-content article-entry" itemprop="articleBody">
       
-        <p>在嵌入式开发中，我们编译完 C&#x2F;汇编代码后，得到的 <code>.o</code> 目标文件并不能直接烧录到单片机里。把它们”拼装”成最终可执行文件、并决定每一段代码和数据放在芯片哪个地址的任务，就由<strong>链接器</strong>（Linker）完成，而它的”施工图纸”就是<strong>链接脚本</strong>（Linker Script）。</p>
-<p>很多初学者把链接脚本当成一个”复制粘贴即可”的黑盒，一旦出现 <code>section .isr_vector will not fit in region FLASH</code> 之类的报错就束手无策。本文将从零开始，把链接脚本的语法、概念、实战与调试技巧一次讲透。</p>
+        <p>在嵌入式开发中，我们编译完 C&#x2F;汇编代码后，得到的 <code>.o</code> 目标文件并不能直接烧录到芯片里。把它们”拼装”成最终可执行文件、并决定每一段代码和数据放在芯片哪个地址的任务，就由<strong>链接器</strong>（Linker）完成，而它的”施工图纸”就是<strong>链接脚本</strong>（Linker Script）。</p>
+<p>很多初学者把链接脚本当成一个”复制粘贴即可”的黑盒，一旦出现 <code>section .text will not fit in region pfls0</code> 之类的报错就束手无策。本文以英飞凌 <strong>TC375</strong>（AURIX TC3xx 系列，三核 TriCore 1.6.2P 架构，300MHz）为具体例子，从零开始，把链接脚本的语法、概念、多核内存布局、实战与调试技巧一次讲透。</p>
 <span id="more"></span>
 
 <h2 id="1-为什么嵌入式需要链接脚本？"><a href="#1-为什么嵌入式需要链接脚本？" class="headerlink" title="1. 为什么嵌入式需要链接脚本？"></a>1. 为什么嵌入式需要链接脚本？</h2><h3 id="1-1-链接器在干什么"><a href="#1-1-链接器在干什么" class="headerlink" title="1.1 链接器在干什么"></a>1.1 链接器在干什么</h3><p>以 GCC 工具链为例，从源码到固件的完整链路是：</p>
@@ -124,28 +127,31 @@
 <th>概念</th>
 <th>全称</th>
 <th>含义</th>
-<th>例子</th>
+<th>例子（TC375）</th>
 </tr>
 </thead>
 <tbody><tr>
 <td><strong>VMA</strong></td>
 <td>Virtual Memory Address</td>
 <td><strong>运行地址</strong>，程序执行时符号所在的地址</td>
-<td><code>.text</code> 在运行时位于 0x08000000（Flash）</td>
+<td><code>.text</code> 在运行时位于 0x80000000（PFLASH0）</td>
 </tr>
 <tr>
 <td><strong>LMA</strong></td>
 <td>Load Memory Address</td>
 <td><strong>加载地址</strong>，程序烧录&#x2F;存放的地址</td>
-<td>初始化数据 <code>init_data</code> 烧录在 Flash，运行时复制到 RAM</td>
+<td>初始化数据 <code>init_data</code> 烧录在 PFLASH，运行时复制到 DSPR&#x2F;LMU</td>
 </tr>
 </tbody></table>
 <p>对于不搬移的段（如代码段），<code>VMA == LMA</code>；而对于需要从 Flash 拷到 RAM 的段（如全局变量初始化值），两者不同。这也是”启动时为什么要拷贝 .data、清 .bss”的根源。</p>
 <hr>
 <h2 id="2-链接脚本的语法基础"><a href="#2-链接脚本的语法基础" class="headerlink" title="2. 链接脚本的语法基础"></a>2. 链接脚本的语法基础</h2><p>链接脚本由<strong>命令</strong>和<strong>表达式</strong>组成，行尾用 <code>;</code> 结尾，<code>/* */</code> 是注释。</p>
-<h3 id="2-1-一个最简脚本"><a href="#2-1-一个最简脚本" class="headerlink" title="2.1 一个最简脚本"></a>2.1 一个最简脚本</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br></pre></td><td class="code"><pre><span class="line">/* 最小可用的链接脚本 */</span><br><span class="line">ENTRY(Reset_Handler)          /* 指定入口点 */</span><br><span class="line"></span><br><span class="line">MEMORY</span><br><span class="line">&#123;</span><br><span class="line">    FLASH (rx)  : ORIGIN = 0x08000000, LENGTH = 512K</span><br><span class="line">    RAM   (rwx) : ORIGIN = 0x20000000, LENGTH = 128K</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">SECTIONS</span><br><span class="line">&#123;</span><br><span class="line">    .text :</span><br><span class="line">    &#123;</span><br><span class="line">        *(.isr_vector)</span><br><span class="line">        *(.text*)</span><br><span class="line">        *(.rodata*)</span><br><span class="line">        _etext = .;</span><br><span class="line">    &#125; &gt; FLASH</span><br><span class="line"></span><br><span class="line">    .data :</span><br><span class="line">    &#123;</span><br><span class="line">        _sdata = .;</span><br><span class="line">        *(.data*)</span><br><span class="line">        _edata = .;</span><br><span class="line">    &#125; &gt; RAM AT&gt; FLASH</span><br><span class="line"></span><br><span class="line">    .bss :</span><br><span class="line">    &#123;</span><br><span class="line">        _sbss = .;</span><br><span class="line">        *(.bss*)</span><br><span class="line">        _ebss = .;</span><br><span class="line">    &#125; &gt; RAM</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="2-1-一个最简脚本"><a href="#2-1-一个最简脚本" class="headerlink" title="2.1 一个最简脚本"></a>2.1 一个最简脚本</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br></pre></td><td class="code"><pre><span class="line">/* 最小可用的链接脚本（TC375 单核示意） */</span><br><span class="line">OUTPUT_FORMAT(&quot;elf32-tricore&quot;)</span><br><span class="line">OUTPUT_ARCH(tricore)</span><br><span class="line">ENTRY(_start)             /* 指定入口点 */</span><br><span class="line"></span><br><span class="line">MEMORY</span><br><span class="line">&#123;</span><br><span class="line">    pfls0 (rx!p) : ORIGIN = 0x80000000, LENGTH = 3M   /* 程序 Flash0 */</span><br><span class="line">    dsram0 (w!xp) : ORIGIN = 0x70000000, LENGTH = 240K /* CPU0 本地数据 RAM */</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">SECTIONS</span><br><span class="line">&#123;</span><br><span class="line">    .text :</span><br><span class="line">    &#123;</span><br><span class="line">        *(.text*)</span><br><span class="line">        *(.rodata*)</span><br><span class="line">        _etext = .;</span><br><span class="line">    &#125; &gt; pfls0</span><br><span class="line"></span><br><span class="line">    .data :</span><br><span class="line">    &#123;</span><br><span class="line">        _sdata = .;</span><br><span class="line">        *(.data*)</span><br><span class="line">        _edata = .;</span><br><span class="line">    &#125; &gt; dsram0 AT&gt; pfls0</span><br><span class="line"></span><br><span class="line">    .bss :</span><br><span class="line">    &#123;</span><br><span class="line">        _sbss = .;</span><br><span class="line">        *(.bss*)</span><br><span class="line">        _ebss = .;</span><br><span class="line">    &#125; &gt; dsram0</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 
 <p>这个脚本包含了链接脚本的三大核心命令：<code>ENTRY</code>、<code>MEMORY</code>、<code>SECTIONS</code>。下面逐一拆解。</p>
+<blockquote>
+<p>注意 <code>pfls0 (rx!p)</code> 中的 <code>p</code> 属性：它是 TriCore 链接脚本中特有的属性，<code>!p</code> 表示”不可分页&#x2F;非物理可寻址”区域（AURIX GCC 扩展），用于区分缓存与非缓存映射。</p>
+</blockquote>
 <hr>
 <h2 id="3-MEMORY：定义芯片内存布局"><a href="#3-MEMORY：定义芯片内存布局" class="headerlink" title="3. MEMORY：定义芯片内存布局"></a>3. <code>MEMORY</code>：定义芯片内存布局</h2><p><code>MEMORY</code> 命令告诉链接器目标芯片上有哪些可用的内存区域及其属性：</p>
 <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">MEMORY</span><br><span class="line">&#123;</span><br><span class="line">    区域名 (属性) : ORIGIN = 起始地址, LENGTH = 长度</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
@@ -177,34 +183,171 @@
 <td><code>!</code></td>
 <td>取反，如 <code>!x</code> 表示不可执行</td>
 </tr>
+<tr>
+<td><code>p</code></td>
+<td>TriCore 扩展：物理&#x2F;可寻址标志（AURIX GCC）</td>
+</tr>
 </tbody></table>
 <p>常用组合：</p>
 <ul>
-<li><code>FLASH (rx)</code> —— 可读可执行，存放代码和只读数据</li>
-<li><code>RAM (rwx)</code> 或 <code>RAM (rw)</code> —— 可读可写，存放变量</li>
+<li><code>pfls0 (rx!p)</code> —— 程序 Flash，可读可执行，非物理可寻址</li>
+<li><code>dsram0 (w!xp)</code> —— CPU 本地数据 RAM，可读可写可执行</li>
 <li>有些芯片还有 CCM RAM、TCM、SDRAM 等，各自定义区域即可</li>
 </ul>
 <blockquote>
 <p>提示：内存区域名可以任意起，但建议语义化。<code>ORIGIN</code> 和 <code>LENGTH</code> 必须和芯片手册的存储器映射严格一致，填错会导致程序”跑飞”或烧录失败。</p>
 </blockquote>
-<h3 id="3-2-常见芯片内存映射示例"><a href="#3-2-常见芯片内存映射示例" class="headerlink" title="3.2 常见芯片内存映射示例"></a>3.2 常见芯片内存映射示例</h3><p>以 STM32F103 系列为例：</p>
+<h3 id="3-2-TC375-的多核内存映射（核心重点）"><a href="#3-2-TC375-的多核内存映射（核心重点）" class="headerlink" title="3.2 TC375 的多核内存映射（核心重点）"></a>3.2 TC375 的多核内存映射（核心重点）</h3><p>TC375 是 <strong>3 核 TriCore 1.6.2P</strong> 架构，总 SRAM <strong>992KB</strong>、PFLASH <strong>6MB</strong>。它的内存映射比单核 MCU 复杂得多——每个核都有自己的私有 RAM，还有共享 RAM 与多组 Flash。下表是英飞凌官方 TC375 内存映射（来自 <code>Lcf_Gnuc_Tricore_Tc.lsl</code> &#x2F; 用户手册）：</p>
+<table>
+<thead>
+<tr>
+<th>区域名</th>
+<th>起始地址</th>
+<th>长度</th>
+<th>用途</th>
+<th>缓存</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>pfls0</code></td>
+<td>0x8000_0000</td>
+<td>3MB</td>
+<td>程序 Flash0（代码&#x2F;只读数据）</td>
+<td>可缓存</td>
+</tr>
+<tr>
+<td><code>pfls0_nc</code></td>
+<td>0xA000_0000</td>
+<td>3MB</td>
+<td>PFLASH0 非缓存镜像</td>
+<td>非缓存</td>
+</tr>
+<tr>
+<td><code>pfls1</code></td>
+<td>0x8030_0000</td>
+<td>3MB</td>
+<td>程序 Flash1（第二块代码区）</td>
+<td>可缓存</td>
+</tr>
+<tr>
+<td><code>pfls1_nc</code></td>
+<td>0xA030_0000</td>
+<td>3MB</td>
+<td>PFLASH1 非缓存镜像</td>
+<td>非缓存</td>
+</tr>
+<tr>
+<td><code>dfls0</code></td>
+<td>0xAF00_0000</td>
+<td>256KB</td>
+<td>数据 Flash（EEPROM 模拟）</td>
+<td>非缓存</td>
+</tr>
+<tr>
+<td><code>ucb</code></td>
+<td>0xAF40_0000</td>
+<td>24KB</td>
+<td>用户配置块（BMHD 引导头）</td>
+<td>非缓存</td>
+</tr>
+<tr>
+<td><code>dsram0</code></td>
+<td>0x7000_0000</td>
+<td>240KB</td>
+<td><strong>CPU0</strong> 本地数据 RAM（DSPR0）</td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>psram0</code></td>
+<td>0x7010_0000</td>
+<td>64KB</td>
+<td><strong>CPU0</strong> 程序 RAM（PSPR0）</td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>dsram1</code></td>
+<td>0x6000_0000</td>
+<td>240KB</td>
+<td><strong>CPU1</strong> 本地数据 RAM（DSPR1）</td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>psram1</code></td>
+<td>0x6010_0000</td>
+<td>64KB</td>
+<td><strong>CPU1</strong> 程序 RAM（PSPR1）</td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>dsram2</code></td>
+<td>0x5000_0000</td>
+<td>96KB</td>
+<td><strong>CPU2</strong> 本地数据 RAM（DSPR2）</td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>psram2</code></td>
+<td>0x5010_0000</td>
+<td>64KB</td>
+<td><strong>CPU2</strong> 程序 RAM（PSPR2）</td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>cpu0_dlmu</code></td>
+<td>0x9000_0000</td>
+<td>64KB</td>
+<td>全局共享 RAM（LMU 低段，DLMU0）</td>
+<td>可缓存</td>
+</tr>
+<tr>
+<td><code>cpu1_dlmu</code></td>
+<td>0x9001_0000</td>
+<td>64KB</td>
+<td>全局共享 RAM（DLMU1）</td>
+<td>可缓存</td>
+</tr>
+<tr>
+<td><code>cpu2_dlmu</code></td>
+<td>0x9002_0000</td>
+<td>64KB</td>
+<td>全局共享 RAM（DLMU2）</td>
+<td>可缓存</td>
+</tr>
+<tr>
+<td><code>cpu0_dlmu_nc</code></td>
+<td>0xB000_0000</td>
+<td>64KB</td>
+<td>DLMU0 非缓存镜像</td>
+<td>非缓存</td>
+</tr>
+<tr>
+<td>…</td>
+<td>…</td>
+<td>…</td>
+<td>…</td>
+<td>…</td>
+</tr>
+</tbody></table>
+<p><strong>AURIX 独有的地址映射机制</strong>：</p>
 <ul>
-<li><strong>Flash</strong>：0x08000000 ~ 0x0807FFFF（512KB）</li>
-<li><strong>SRAM</strong>：0x20000000 ~ 0x2000FFFF（64KB）</li>
-<li><strong>系统存储器</strong>：0x1FFFF000（Bootloader 区，一般不放进脚本）</li>
-<li><strong>外设寄存器</strong>：0x40000000 起（由芯片头文件定义，不占链接脚本的 MEMORY）</li>
+<li><strong>全局地址 vs 本地地址</strong>：每个核的 DSPR 除了全局地址（0x7000_0000 &#x2F; 0x6000_0000 &#x2F; 0x5000_0000），还有一个<strong>本地地址 0xD000_0000</strong>。本地地址是指令效率最高的访问方式（单周期、无需 SRI 总线仲裁），因为它是与核直接耦合的 Scratchpad RAM。链接脚本通过 <code>REGION_MAP</code> 把二者映射起来：<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">REGION_MAP(CPU0, ORIGIN(dsram0_local), LENGTH(dsram0_local), ORIGIN(dsram0))</span><br><span class="line">REGION_MAP(CPU1, ORIGIN(dsram1_local), LENGTH(dsram1_local), ORIGIN(dsram1))</span><br></pre></td></tr></table></figure></li>
+<li><strong>缓存&#x2F;非缓存镜像</strong>：同一物理 Flash&#x2F;RAM 有可缓存地址（如 0x8000_0000）和非缓存地址（0xA000_0000）两个别名。涉及 DMA、多核共享数据时要放到非缓存区，避免 cache 一致性问题。链接脚本用 <code>REGION_MIRROR</code> 处理：<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">REGION_MIRROR(&quot;pfls0&quot;, &quot;pfls0_nc&quot;)</span><br><span class="line">REGION_MIRROR(&quot;cpu0_dlmu&quot;, &quot;cpu0_dlmu_nc&quot;)</span><br></pre></td></tr></table></figure></li>
 </ul>
 <hr>
 <h2 id="4-SECTIONS：核心中的核心"><a href="#4-SECTIONS：核心中的核心" class="headerlink" title="4. SECTIONS：核心中的核心"></a>4. <code>SECTIONS</code>：核心中的核心</h2><p><code>SECTIONS</code> 命令描述<strong>输出段</strong>（output section）如何由<strong>输入段</strong>（input section）构成，以及各输出段放在哪块内存。语法：</p>
 <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">SECTIONS</span><br><span class="line">&#123;</span><br><span class="line">    输出段名 [地址] : [AT(加载地址)] [ALIGN(...)]</span><br><span class="line">    &#123;</span><br><span class="line">        子命令（输入段描述、符号赋值等）</span><br><span class="line">    &#125; [&gt; 内存区域] [AT&gt; 内存区域] [PHDRS ...]</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 
 <h3 id="4-1-输出段与输入段"><a href="#4-1-输出段与输入段" class="headerlink" title="4.1 输出段与输入段"></a>4.1 输出段与输入段</h3><ul>
-<li><strong>输入段</strong>：每个 <code>.o</code> 文件内部的段，由编译器产生。常见的有：<ul>
+<li><strong>输入段</strong>：每个 <code>.o</code> 文件内部的段，由编译器产生。TriCore 工具链常见的有：<ul>
 <li><code>.text</code> —— 代码</li>
 <li><code>.rodata</code> —— 只读数据（字符串、const 常量）</li>
 <li><code>.data</code> —— 已初始化全局&#x2F;静态变量</li>
 <li><code>.bss</code> —— 未初始化全局&#x2F;静态变量（不占文件空间，运行时清零）</li>
-<li><code>.isr_vector</code> —— 中断向量表（STM32 从 0x08000000 起始）</li>
+<li><strong><code>.zdata</code> &#x2F; <code>.zbss</code> &#x2F; <code>.zrodata</code></strong> —— TriCore 特有的”近地址小数据段”，用 18 位绝对寻址（abs18），可被一条指令直接访问，性能极高。链接时需放在低 512KB 地址范围内，且需要导出基址寄存器符号 <code>_SMALL_DATA_</code></li>
+<li><code>.csa</code> —— Context Save Area（上下文保存区），TriCore 中断&#x2F;函数调用切换上下文用，必须按 64 字节对齐</li>
+<li><code>.intvec</code> —— 中断向量（每个 8 字节，跳转到中断服务程序）</li>
+<li><code>.traptab</code> —— 陷阱（异常）向量表</li>
+<li><code>.start_tc0</code> —— CPU0 复位入口段</li>
 <li>自定义段（<code>__attribute__((section(&quot;.my_section&quot;)))</code>）</li>
 </ul>
 </li>
@@ -218,7 +361,7 @@
 </blockquote>
 <h3 id="4-2-位置计数器-与符号赋值"><a href="#4-2-位置计数器-与符号赋值" class="headerlink" title="4.2 位置计数器 . 与符号赋值"></a>4.2 位置计数器 <code>.</code> 与符号赋值</h3><p><code>.</code>（点号）是<strong>位置计数器</strong>（location counter），代表当前输出段内已经占用的字节数，始终跟随放置内容自动增长。</p>
 <p>通过在脚本中给符号赋值，我们可以”导出”当前地址给 C 代码使用：</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">.data :</span><br><span class="line">&#123;</span><br><span class="line">    _sdata = .;        /* 记录 .data 起始地址 */</span><br><span class="line">    *(.data*)</span><br><span class="line">    _edata = .;        /* 记录 .data 结束地址 */</span><br><span class="line">&#125; &gt; RAM AT&gt; FLASH</span><br></pre></td></tr></table></figure>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">.data :</span><br><span class="line">&#123;</span><br><span class="line">    _sdata = .;        /* 记录 .data 起始地址 */</span><br><span class="line">    *(.data*)</span><br><span class="line">    _edata = .;        /* 记录 .data 结束地址 */</span><br><span class="line">&#125; &gt; dsram0 AT&gt; pfls0</span><br></pre></td></tr></table></figure>
 
 <p>然后在启动文件或 C 代码中声明并取地址：</p>
 <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">extern</span> <span class="type">uint32_t</span> _sdata, _edata, _sbss, _ebss, _etext;</span><br><span class="line"><span class="type">uint32_t</span> *src = &amp;_etext;              <span class="comment">/* 数据在 Flash 中的源地址 */</span></span><br><span class="line"><span class="type">uint32_t</span> *dst = &amp;_sdata;</span><br><span class="line"><span class="keyword">while</span> (dst &lt; &amp;_edata) &#123;</span><br><span class="line">    *dst++ = *src++;                  <span class="comment">/* 拷贝 .data 到 RAM */</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
@@ -235,105 +378,184 @@
 </tr>
 </thead>
 <tbody><tr>
-<td><code>.isr_vector</code></td>
-<td>中断向量表</td>
-<td>Flash</td>
-<td>Flash</td>
-<td>必须放 Flash 起始地址</td>
+<td><code>.start_tc0</code></td>
+<td>CPU0 复位入口</td>
+<td>PFLASH</td>
+<td>PFLASH</td>
+<td>必须放 PFLASH 起始附近</td>
 </tr>
 <tr>
 <td><code>.text</code></td>
 <td>代码 + 立即数</td>
-<td>Flash</td>
-<td>Flash</td>
+<td>PFLASH</td>
+<td>PFLASH</td>
 <td>只读、可执行</td>
 </tr>
 <tr>
 <td><code>.rodata</code></td>
 <td>只读常量</td>
-<td>Flash</td>
-<td>Flash</td>
+<td>PFLASH</td>
+<td>PFLASH</td>
 <td>只读</td>
+</tr>
+<tr>
+<td><code>.zrodata/.zdata/.zbss</code></td>
+<td>近地址小数据</td>
+<td>PFLASH&#x2F;RAM</td>
+<td>PFLASH&#x2F;RAM</td>
+<td>abs18 寻址，需导出 <code>_SMALL_DATA_</code></td>
 </tr>
 <tr>
 <td><code>.data</code></td>
 <td>已初始化变量</td>
-<td>RAM</td>
-<td><strong>Flash</strong></td>
+<td>DSPR&#x2F;LMU</td>
+<td><strong>PFLASH</strong></td>
 <td>需启动时拷 RAM</td>
 </tr>
 <tr>
 <td><code>.bss</code></td>
 <td>未初始化变量</td>
-<td>RAM</td>
+<td>DSPR&#x2F;LMU</td>
 <td><strong>不烧录</strong></td>
 <td>需启动时清零</td>
 </tr>
 <tr>
+<td><code>.csa</code></td>
+<td>上下文保存区</td>
+<td>DSPR</td>
+<td>—</td>
+<td>64 字节对齐，每核独占</td>
+</tr>
+<tr>
 <td><code>.heap</code></td>
 <td>堆</td>
-<td>RAM</td>
+<td>DSPR&#x2F;LMU</td>
 <td>—</td>
 <td>动态内存</td>
 </tr>
 <tr>
-<td><code>.stack</code></td>
-<td>栈</td>
-<td>RAM</td>
+<td><code>.ustack/.istack</code></td>
+<td>用户栈&#x2F;中断栈</td>
+<td>DSPR</td>
 <td>—</td>
-<td>函数调用栈</td>
+<td>每个核各一个</td>
 </tr>
 </tbody></table>
 <hr>
-<h2 id="5-区域-与-AT-区域：VMA-与-LMA-分离"><a href="#5-区域-与-AT-区域：VMA-与-LMA-分离" class="headerlink" title="5. &gt; 区域 与 AT&gt; 区域：VMA 与 LMA 分离"></a>5. <code>&gt; 区域</code> 与 <code>AT&gt; 区域</code>：VMA 与 LMA 分离</h2><p><code>&gt; RAM AT&gt; FLASH</code> 是链接脚本中最优雅也最容易被忽略的语法：</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">.data : &#123; ... &#125; &gt; RAM AT&gt; FLASH</span><br></pre></td></tr></table></figure>
+<h2 id="5-区域-与-AT-区域：VMA-与-LMA-分离"><a href="#5-区域-与-AT-区域：VMA-与-LMA-分离" class="headerlink" title="5. &gt; 区域 与 AT&gt; 区域：VMA 与 LMA 分离"></a>5. <code>&gt; 区域</code> 与 <code>AT&gt; 区域</code>：VMA 与 LMA 分离</h2><p><code>&gt; dsram0 AT&gt; pfls0</code> 是链接脚本中最优雅也最容易被忽略的语法：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">.data : &#123; ... &#125; &gt; dsram0 AT&gt; pfls0</span><br></pre></td></tr></table></figure>
 
 <ul>
-<li><code>&gt; RAM</code> 指定<strong>VMA</strong>（运行地址）在 RAM 中；</li>
-<li><code>AT&gt; FLASH</code> 指定 <strong>LMA</strong>（加载地址）在 Flash 中。</li>
+<li><code>&gt; dsram0</code> 指定<strong>VMA</strong>（运行地址）在 CPU0 本地 RAM 中；</li>
+<li><code>AT&gt; pfls0</code> 指定 <strong>LMA</strong>（加载地址）在程序 Flash 中。</li>
 </ul>
-<p>这意味着：<code>.data</code> 段初始值的<strong>文件映像</strong>被烧录进 Flash，但程序访问它时用的是 RAM 地址。所以启动代码必须把它从 Flash 拷贝到 RAM。</p>
-<h3 id="5-1-如何知道-LMA-地址？"><a href="#5-1-如何知道-LMA-地址？" class="headerlink" title="5.1 如何知道 LMA 地址？"></a>5.1 如何知道 LMA 地址？</h3><p>链接脚本会导出 <code>LOADADDR(.data)</code>，也可以直接在 C 里用 <code>__etext</code>（紧接 <code>.text</code> 结尾的符号）定位数据在 Flash 中的源位置。启动汇编代码中通常这样写：</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">; STM32 启动代码片段（拷贝 .data）</span><br><span class="line">ldr r0, =_etext        ; Flash 中的源</span><br><span class="line">ldr r1, =_sdata        ; RAM 中的目的</span><br><span class="line">ldr r2, =_edata</span><br><span class="line">copy_data:</span><br><span class="line">    cmp r1, r2</span><br><span class="line">    bge data_done</span><br><span class="line">    ldr r3, [r0], #4</span><br><span class="line">    str r3, [r1], #4</span><br><span class="line">    b copy_data</span><br><span class="line">data_done:</span><br></pre></td></tr></table></figure>
+<p>这意味着：<code>.data</code> 段初始值的<strong>文件映像</strong>被烧录进 PFLASH，但程序访问它时用的是 DSPR 地址。所以启动代码必须把它从 Flash 拷贝到 RAM。</p>
+<h3 id="5-1-如何知道-LMA-地址？"><a href="#5-1-如何知道-LMA-地址？" class="headerlink" title="5.1 如何知道 LMA 地址？"></a>5.1 如何知道 LMA 地址？</h3><p>链接脚本会导出 <code>LOADADDR(.data)</code>，也可以直接在 C 里用 <code>_etext</code>（紧接 <code>.text</code> 结尾的符号）定位数据在 Flash 中的源位置。AURIX 的启动代码（<code>_start</code>）中通常这样写（TriCore 汇编）：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">; AURIX _start 启动代码片段（拷贝 .data，CPU0）</span><br><span class="line">    movh.a  %a2, hi:_etext      ; Flash 中的源</span><br><span class="line">    lea     %a2, [%a2] lo:_etext</span><br><span class="line">    movh.a  %a3, hi:_sdata      ; DSPR 中的目的</span><br><span class="line">    lea     %a3, [%a3] lo:_sdata</span><br><span class="line">copy_data:</span><br><span class="line">    ld.w    %d0, [%a2+]4        ; 加载 4 字节</span><br><span class="line">    st.w    [%a3+]4, %d0        ; 存储 4 字节</span><br><span class="line">    jlt.u   %a3, _edata, copy_data</span><br></pre></td></tr></table></figure>
 
 <hr>
-<h2 id="6-位置计数器的高级操作"><a href="#6-位置计数器的高级操作" class="headerlink" title="6. 位置计数器的高级操作"></a>6. 位置计数器的高级操作</h2><h3 id="6-1-ALIGN-对齐"><a href="#6-1-ALIGN-对齐" class="headerlink" title="6.1 ALIGN() 对齐"></a>6.1 <code>ALIGN()</code> 对齐</h3><p>为了性能和 CPU 对齐要求，段和符号通常需要对齐：</p>
+<h2 id="6-位置计数器的高级操作"><a href="#6-位置计数器的高级操作" class="headerlink" title="6. 位置计数器的高级操作"></a>6. 位置计数器的高级操作</h2><h3 id="6-1-ALIGN-对齐"><a href="#6-1-ALIGN-对齐" class="headerlink" title="6.1 ALIGN() 对齐"></a>6.1 <code>ALIGN()</code> 对齐</h3><p>为了性能和 CPU 对齐要求，段和符号通常需要对齐。<strong>TriCore 的 CSA 要求 64 字节对齐</strong>，栈要求 8 字节对齐：</p>
 <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">. = ALIGN(4);          /* 当前位置对齐到 4 字节边界 */</span><br><span class="line">_sdata = .;</span><br></pre></td></tr></table></figure>
 
-<p><code>ALIGN(n)</code> 返回把当前位置向上取整到 n 的倍数后的值。常用 4、8、16。若不显式对齐，编译器产生的数据可能错位，导致某些平台（如 Cortex-M 的未对齐访问）进入 HardFault。</p>
+<p><code>ALIGN(n)</code> 返回把当前位置向上取整到 n 的倍数后的值。常用 4、8、64。若不显式对齐，编译器产生的数据可能错位，TriCore 会对未对齐访问触发陷阱（Trap）。</p>
 <h3 id="6-2-KEEP-：防止被垃圾回收"><a href="#6-2-KEEP-：防止被垃圾回收" class="headerlink" title="6.2 KEEP()：防止被垃圾回收"></a>6.2 <code>KEEP()</code>：防止被垃圾回收</h3><p>当开启 <code>--gc-sections</code>（丢弃未引用段以减小固件体积）时，即使脚本里写了的输入段也可能被丢弃。用 <code>KEEP()</code> 包裹可强制保留：</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">.isr_vector :</span><br><span class="line">&#123;</span><br><span class="line">    KEEP(*(.isr_vector))   /* 向量表必须保留！ */</span><br><span class="line">&#125; &gt; FLASH</span><br></pre></td></tr></table></figure>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">.start_tc0 :</span><br><span class="line">&#123;</span><br><span class="line">    KEEP(*(.start))       /* 复位入口必须保留！ */</span><br><span class="line">    KEEP(*(.interface_const))</span><br><span class="line">&#125; &gt; pfls0_nc</span><br></pre></td></tr></table></figure>
 
-<p>典型应用：中断向量表、构造函数表（<code>__init_array_start</code>）、看门狗复位入口等。</p>
-<h3 id="6-3-自定义段"><a href="#6-3-自定义段" class="headerlink" title="6.3 自定义段"></a>6.3 自定义段</h3><p>想把自己的变量固定到某地址，可定义一个专属段：</p>
-<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">__attribute__((section(<span class="string">&quot;.backup_ram&quot;</span>), aligned(<span class="number">4</span>)))</span><br><span class="line"><span class="type">uint32_t</span> backup_flag;         <span class="comment">/* 声明放到 .backup_ram 段 */</span></span><br></pre></td></tr></table></figure>
+<p>典型应用：复位入口、中断向量表、陷阱向量表、BMHD 引导头、构造函数表（<code>__init_array_start</code>）等。</p>
+<h3 id="6-3-自定义段"><a href="#6-3-自定义段" class="headerlink" title="6.3 自定义段"></a>6.3 自定义段</h3><p>想把自己的变量固定到某地址（比如放到 LMU 共享区让多核访问），可定义一个专属段：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">__attribute__((section(<span class="string">&quot;.lmu_data&quot;</span>), aligned(<span class="number">4</span>)))</span><br><span class="line"><span class="type">uint32_t</span> shared_flag;         <span class="comment">/* 声明放到 .lmu_data 段 */</span></span><br></pre></td></tr></table></figure>
 
 <p>链接脚本：</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">.backup_ram (NOLOAD) :   /* NOLOAD: 不烧录，只保留 RAM 空间 */</span><br><span class="line">&#123;</span><br><span class="line">    *(.backup_ram*)</span><br><span class="line">&#125; &gt; RAM</span><br></pre></td></tr></table></figure>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">.lmu_data (NOLOAD) :   /* NOLOAD: 不烧录，只保留 RAM 空间 */</span><br><span class="line">&#123;</span><br><span class="line">    *(.lmu_data*)</span><br><span class="line">&#125; &gt; cpu0_dlmu</span><br></pre></td></tr></table></figure>
 
-<p><code>NOLOAD</code> 关键字告诉链接器：该段只分配空间、不生成烧录数据，非常适合”掉电保持区”。</p>
+<p><code>NOLOAD</code> 关键字告诉链接器：该段只分配空间、不生成烧录数据，非常适合”共享 RAM &#x2F; 掉电保持区”。</p>
 <hr>
-<h2 id="7-ENTRY-与启动流程配合"><a href="#7-ENTRY-与启动流程配合" class="headerlink" title="7. ENTRY 与启动流程配合"></a>7. <code>ENTRY</code> 与启动流程配合</h2><p><code>ENTRY(Reset_Handler)</code> 指定可执行文件的入口点，即 CPU 复位后跳转的第一条指令。虽然对 Cortex-M 来说，真正的入口是<strong>向量表首元素（初始 SP）和第二元素（Reset_Handler 地址）</strong>，但 <code>ENTRY</code> 仍然是调试器和静态分析工具识别的关键信息。</p>
-<p>一份完整的 STM32 启动流程与链接脚本的配合关系：</p>
+<h2 id="7-ENTRY-与-AURIX-多核启动流程"><a href="#7-ENTRY-与-AURIX-多核启动流程" class="headerlink" title="7. ENTRY 与 AURIX 多核启动流程"></a>7. <code>ENTRY</code> 与 AURIX 多核启动流程</h2><p><code>ENTRY(_start)</code> 指定可执行文件的入口点，即 CPU 复位后跳转的第一条指令。</p>
+<h3 id="7-1-AURIX-的三级启动链"><a href="#7-1-AURIX-的三级启动链" class="headerlink" title="7.1 AURIX 的三级启动链"></a>7.1 AURIX 的三级启动链</h3><p>TC375 的上电启动比普通 MCU 复杂，分成多级：</p>
 <ol>
-<li><strong>上电</strong>：CPU 从 Flash 起始地址取初始栈指针（向量表第 1 项）；</li>
-<li><strong>跳转</strong>：跳转到 Reset_Handler（向量表第 2 项）；</li>
-<li><strong>拷贝 .data</strong>：<code>_etext</code> → <code>_sdata</code>，长度到 <code>_edata</code>；</li>
-<li><strong>清零 .bss</strong>：从 <code>_sbss</code> 到 <code>_ebss</code>；</li>
-<li><strong>初始化堆栈指针</strong>（如有 <code>__stack</code> 符号）；</li>
-<li>**调用 <code>SystemInit</code>、<code>main</code>**。</li>
+<li><strong>硬件复位</strong>：CPU0 复位后先运行芯片内置的 <strong>BootROM</strong>（不可修改的固件）；</li>
+<li><strong>BootROM 引导</strong>：BootROM 读取 UCB 区（0xAF40_0000）中的 <strong>BMHD（Boot Mode Header）</strong>，校验后根据 BMHD 中的地址跳转到用户的 <code>_start</code>（CPU0 复位入口）；</li>
+<li><strong>CPU0 用户启动</strong>：执行链接脚本中的 <code>.start_tc0</code> 段代码（<code>_start</code>），完成：<ul>
+<li>设置栈指针（<code>__USTACK0</code>）和 CSA 基址（<code>__CSA0</code>）；</li>
+<li>拷贝 <code>.data</code>（<code>_etext</code> → <code>_sdata</code>）；</li>
+<li>清零 <code>.bss</code>（<code>_sbss</code> → <code>_ebss</code>）；</li>
+<li>初始化 abs18 基址寄存器 A0（<code>_SMALL_DATA_</code>）；</li>
+<li>调用 <code>main</code>（core0_main）；</li>
+</ul>
+</li>
+<li><strong>CPU1&#x2F;CPU2 启动</strong>：CPU0 软件释放 CPU1&#x2F;CPU2 的复位，后两者从各自的 <code>.start_tc1</code>&#x2F;<code>.start_tc2</code> 段（<code>_start_cpu1</code>&#x2F;<code>_start_cpu2</code>）开始，<strong>每个核运行一份独立的 C 运行时启动代码</strong>，各自有自己的 DSPR、栈、CSA，然后进入 <code>core1_main</code>&#x2F;<code>core2_main</code>。</li>
 </ol>
-<p>可见，启动代码里那些”魔法符号”（<code>_sdata</code>、<code>_etext</code>、<code>_sbss</code>…）全部来自链接脚本。<strong>启动文件和链接脚本必须成对维护</strong>，这是嵌入式移植中最高频的 bug 来源之一。</p>
+<h3 id="7-2-每个核要独立维护的东西"><a href="#7-2-每个核要独立维护的东西" class="headerlink" title="7.2 每个核要独立维护的东西"></a>7.2 每个核要独立维护的东西</h3><table>
+<thead>
+<tr>
+<th>项目</th>
+<th>CPU0</th>
+<th>CPU1</th>
+<th>CPU2</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>复位入口段</td>
+<td><code>.start_tc0</code></td>
+<td><code>.start_tc1</code></td>
+<td><code>.start_tc2</code></td>
+</tr>
+<tr>
+<td>陷阱向量表</td>
+<td><code>.traptab_tc0</code></td>
+<td><code>.traptab_tc1</code></td>
+<td><code>.traptab_tc2</code></td>
+</tr>
+<tr>
+<td>中断向量表</td>
+<td><code>.inttab_tc0_xxx</code></td>
+<td><code>.inttab_tc1_xxx</code></td>
+<td><code>.inttab_tc2_xxx</code></td>
+</tr>
+<tr>
+<td>用户栈</td>
+<td><code>__USTACK0</code></td>
+<td><code>__USTACK1</code></td>
+<td><code>__USTACK2</code></td>
+</tr>
+<tr>
+<td>中断栈</td>
+<td><code>__ISTACK0</code></td>
+<td><code>__ISTACK1</code></td>
+<td><code>__ISTACK2</code></td>
+</tr>
+<tr>
+<td>CSA</td>
+<td><code>__CSA0</code></td>
+<td><code>__CSA1</code></td>
+<td><code>__CSA2</code></td>
+</tr>
+<tr>
+<td>私有数据 RAM</td>
+<td>DSPR0 (0x70000000)</td>
+<td>DSPR1 (0x60000000)</td>
+<td>DSPR2 (0x50000000)</td>
+</tr>
+<tr>
+<td>私有程序 RAM</td>
+<td>PSPR0 (0x70100000)</td>
+<td>PSPR1 (0x60100000)</td>
+<td>PSPR2 (0x50100000)</td>
+</tr>
+</tbody></table>
+<p>可见，<strong>AURIX 链接脚本是”多核并行”的</strong>：同样的 <code>.data/.bss/.csa/.stack</code> 结构要为每个核复制一份（通常用宏 <code>CORE_SEC</code> 批量生成）。启动代码里那些”魔法符号”全部来自链接脚本，<strong>启动文件、链接脚本、每核的 CMake&#x2F;链接配置必须成对维护</strong>，这是嵌入式移植中最高频的 bug 来源之一。</p>
 <hr>
-<h2 id="8-完整实战：以-STM32-为例的链接脚本精讲"><a href="#8-完整实战：以-STM32-为例的链接脚本精讲" class="headerlink" title="8. 完整实战：以 STM32 为例的链接脚本精讲"></a>8. 完整实战：以 STM32 为例的链接脚本精讲</h2><p>下面是一份带注释的、可直接用于 STM32F103C8T6（64KB Flash &#x2F; 20KB RAM）的完整脚本：</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br></pre></td><td class="code"><pre><span class="line">/* memory.x —— STM32F103C8T6 链接脚本 */</span><br><span class="line">ENTRY(Reset_Handler)</span><br><span class="line"></span><br><span class="line">MEMORY</span><br><span class="line">&#123;</span><br><span class="line">    FLASH (rx)  : ORIGIN = 0x08000000, LENGTH = 64K</span><br><span class="line">    RAM   (rwx) : ORIGIN = 0x20000000, LENGTH = 20K</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">/* 栈顶：指向 RAM 顶端，向下增长 */</span><br><span class="line">_estack = ORIGIN(RAM) + LENGTH(RAM);</span><br><span class="line"></span><br><span class="line">SECTIONS</span><br><span class="line">&#123;</span><br><span class="line">    /* 1. 中断向量表：必须在 Flash 起始，且不能被 gc-sections 删掉 */</span><br><span class="line">    .isr_vector :</span><br><span class="line">    &#123;</span><br><span class="line">        . = ALIGN(4);</span><br><span class="line">        KEEP(*(.isr_vector))</span><br><span class="line">        . = ALIGN(4);</span><br><span class="line">    &#125; &gt; FLASH</span><br><span class="line"></span><br><span class="line">    /* 2. 代码段 */</span><br><span class="line">    .text :</span><br><span class="line">    &#123;</span><br><span class="line">        . = ALIGN(4);</span><br><span class="line">        *(.text*)</span><br><span class="line">        *(.rodata*)</span><br><span class="line">        _etext = .;          /* .data 在 Flash 中的源地址 */</span><br><span class="line">        . = ALIGN(4);</span><br><span class="line">    &#125; &gt; FLASH</span><br><span class="line"></span><br><span class="line">    /* 3. 已初始化数据：VMA 在 RAM，LMA 在 Flash */</span><br><span class="line">    .data :</span><br><span class="line">    &#123;</span><br><span class="line">        _sdata = .;</span><br><span class="line">        *(.data*)</span><br><span class="line">        _edata = .;</span><br><span class="line">        . = ALIGN(4);</span><br><span class="line">    &#125; &gt; RAM AT&gt; FLASH</span><br><span class="line"></span><br><span class="line">    /* 4. 未初始化数据：只占 RAM，启动时清零 */</span><br><span class="line">    .bss :</span><br><span class="line">    &#123;</span><br><span class="line">        _sbss = .;</span><br><span class="line">        *(.bss*)</span><br><span class="line">        *(COMMON)            /* 合并编译器公共块 */</span><br><span class="line">        _ebss = .;</span><br><span class="line">        . = ALIGN(4);</span><br><span class="line">    &#125; &gt; RAM</span><br><span class="line"></span><br><span class="line">    /* 5. 堆（可选） */</span><br><span class="line">    .heap :</span><br><span class="line">    &#123;</span><br><span class="line">        __heap_start = .;</span><br><span class="line">        . = . + 2K;          /* 预留 2KB */</span><br><span class="line">        __heap_end = .;</span><br><span class="line">    &#125; &gt; RAM</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h2 id="8-完整实战：TC375-多核链接脚本精讲"><a href="#8-完整实战：TC375-多核链接脚本精讲" class="headerlink" title="8. 完整实战：TC375 多核链接脚本精讲"></a>8. 完整实战：TC375 多核链接脚本精讲</h2><p>下面是一份参照英飞凌官方 <code>Lcf_Gnuc_Tricore_Tc.lsl</code> 简化后的 TC375 链接脚本（AURIX GCC 格式），核心是理解<strong>多核段 + 缓存镜像 + 本地&#x2F;全局地址映射</strong>：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br><span class="line">138</span><br><span class="line">139</span><br><span class="line">140</span><br><span class="line">141</span><br><span class="line">142</span><br><span class="line">143</span><br><span class="line">144</span><br><span class="line">145</span><br><span class="line">146</span><br><span class="line">147</span><br></pre></td><td class="code"><pre><span class="line">/* Lcf_Gnuc_Tricore_Tc.lsl —— TC375 多核链接脚本（简化版） */</span><br><span class="line">OUTPUT_FORMAT(&quot;elf32-tricore&quot;)</span><br><span class="line">OUTPUT_ARCH(tricore)</span><br><span class="line">ENTRY(_start)</span><br><span class="line"></span><br><span class="line">/* ========== 1. 常量定义：各核栈/CSA/堆大小 ========== */</span><br><span class="line">LCF_CSA0_SIZE = 8k;</span><br><span class="line">LCF_USTACK0_SIZE = 2k;</span><br><span class="line">LCF_ISTACK0_SIZE = 1k;</span><br><span class="line">LCF_HEAP_SIZE = 4k;</span><br><span class="line"></span><br><span class="line">LCF_DSPR0_START = 0x70000000;</span><br><span class="line">LCF_DSPR0_SIZE = 240k;</span><br><span class="line">LCF_DSPR1_START = 0x60000000;</span><br><span class="line">LCF_DSPR1_SIZE = 240k;</span><br><span class="line">LCF_DSPR2_START = 0x50000000;</span><br><span class="line">LCF_DSPR2_SIZE = 96k;</span><br><span class="line"></span><br><span class="line">/* ========== 2. MEMORY：定义全部物理内存区域 ========== */</span><br><span class="line">MEMORY</span><br><span class="line">&#123;</span><br><span class="line">    /* ---- 程序 Flash：3MB + 3MB，缓存与非缓存镜像 ---- */</span><br><span class="line">    pfls0    (rx!p) : org = 0x80000000, len = 3M</span><br><span class="line">    pfls0_nc (rx!p) : org = 0xa0000000, len = 3M</span><br><span class="line">    pfls1    (rx!p) : org = 0x80300000, len = 3M</span><br><span class="line">    pfls1_nc (rx!p) : org = 0xa0300000, len = 3M</span><br><span class="line"></span><br><span class="line">    /* ---- 数据 Flash 与用户配置块 ---- */</span><br><span class="line">    dfls0    (rx!p) : org = 0xaf000000, len = 256K</span><br><span class="line">    ucb      (rx!p) : org = 0xaf400000, len = 24K</span><br><span class="line"></span><br><span class="line">    /* ---- CPU0 本地 RAM：DSPR + PSPR ---- */</span><br><span class="line">    dsram0_local (w!xp) : org = 0xd0000000, len = 240K  /* 本地地址 */</span><br><span class="line">    dsram0       (w!xp) : org = 0x70000000, len = 240K  /* 全局地址 */</span><br><span class="line">    psram0       (w!xp) : org = 0x70100000, len = 64K</span><br><span class="line">    psram_local  (w!xp) : org = 0xc0000000, len = 64K</span><br><span class="line"></span><br><span class="line">    /* ---- CPU1 本地 RAM ---- */</span><br><span class="line">    dsram1_local (w!xp) : org = 0xd0000000, len = 240K</span><br><span class="line">    dsram1       (w!xp) : org = 0x60000000, len = 240K</span><br><span class="line">    psram1       (w!xp) : org = 0x60100000, len = 64K</span><br><span class="line"></span><br><span class="line">    /* ---- CPU2 本地 RAM ---- */</span><br><span class="line">    dsram2_local (w!xp) : org = 0xd0000000, len = 96K</span><br><span class="line">    dsram2       (w!xp) : org = 0x50000000, len = 96K</span><br><span class="line">    psram2       (w!xp) : org = 0x50100000, len = 64K</span><br><span class="line"></span><br><span class="line">    /* ---- 全局共享 RAM（LMU/DLMU） ---- */</span><br><span class="line">    cpu0_dlmu    (w!xp) : org = 0x90000000, len = 64K</span><br><span class="line">    cpu0_dlmu_nc (w!xp) : org = 0xb0000000, len = 64K</span><br><span class="line">    cpu1_dlmu    (w!xp) : org = 0x90010000, len = 64K</span><br><span class="line">    cpu1_dlmu_nc (w!xp) : org = 0xb0010000, len = 64K</span><br><span class="line">    cpu2_dlmu    (w!xp) : org = 0x90020000, len = 64K</span><br><span class="line">    cpu2_dlmu_nc (w!xp) : org = 0xb0020000, len = 64K</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">/* ========== 3. 本地↔全局、缓存↔非缓存 地址映射 ========== */</span><br><span class="line">REGION_MAP(CPU0, ORIGIN(dsram0_local), LENGTH(dsram0_local), ORIGIN(dsram0))</span><br><span class="line">REGION_MAP(CPU1, ORIGIN(dsram1_local), LENGTH(dsram1_local), ORIGIN(dsram1))</span><br><span class="line">REGION_MAP(CPU2, ORIGIN(dsram2_local), LENGTH(dsram2_local), ORIGIN(dsram2))</span><br><span class="line"></span><br><span class="line">REGION_MIRROR(&quot;pfls0&quot;, &quot;pfls0_nc&quot;)</span><br><span class="line">REGION_MIRROR(&quot;pfls1&quot;, &quot;pfls1_nc&quot;)</span><br><span class="line">REGION_MIRROR(&quot;cpu0_dlmu&quot;, &quot;cpu0_dlmu_nc&quot;)</span><br><span class="line">REGION_MIRROR(&quot;cpu1_dlmu&quot;, &quot;cpu1_dlmu_nc&quot;)</span><br><span class="line">REGION_MIRROR(&quot;cpu2_dlmu&quot;, &quot;cpu2_dlmu_nc&quot;)</span><br><span class="line"></span><br><span class="line">/* ========== 4. 全局固定地址段 ========== */</span><br><span class="line">SECTIONS</span><br><span class="line">&#123;</span><br><span class="line">    /* CPU0 复位入口段：必须放 PFLASH 起始地址 0xA0000000（非缓存） */</span><br><span class="line">    .start_tc0 (0xA0000000) : FLAGS(rxl)</span><br><span class="line">    &#123;</span><br><span class="line">        KEEP(*(.start))</span><br><span class="line">    &#125; &gt; pfls0_nc</span><br><span class="line"></span><br><span class="line">    /* CPU1/CPU2 复位入口 */</span><br><span class="line">    .start_tc1 (0xA0300200) : FLAGS(rxl) &#123; KEEP(*(.start_cpu1)) &#125; &gt; pfls1_nc</span><br><span class="line">    .start_tc2 (0xA0300220) : FLAGS(rxl) &#123; KEEP(*(.start_cpu2)) &#125; &gt; pfls1_nc</span><br><span class="line"></span><br><span class="line">    /* 陷阱（异常）向量表 */</span><br><span class="line">    .traptab_tc0 (0x80000100) : &#123; KEEP(*(.traptab_cpu0)) &#125; &gt; pfls0</span><br><span class="line">    .traptab_tc1 (0x80300000) : &#123; KEEP(*(.traptab_cpu1)) &#125; &gt; pfls1</span><br><span class="line">    .traptab_tc2 (0x80300100) : &#123; KEEP(*(.traptab_cpu2)) &#125; &gt; pfls1</span><br><span class="line"></span><br><span class="line">    /* CPU0 代码段 */</span><br><span class="line">    .text :</span><br><span class="line">    &#123;</span><br><span class="line">        . = ALIGN(4);</span><br><span class="line">        *(.text*)</span><br><span class="line">        *(.rodata*)</span><br><span class="line">        _etext = .;</span><br><span class="line">        . = ALIGN(4);</span><br><span class="line">    &#125; &gt; pfls0</span><br><span class="line"></span><br><span class="line">    /* CPU0 已初始化数据：VMA 在 DSPR0，LMA 在 PFLASH0 */</span><br><span class="line">    .data :</span><br><span class="line">    &#123;</span><br><span class="line">        . = ALIGN(4);</span><br><span class="line">        _sdata = .;</span><br><span class="line">        *(.data*)</span><br><span class="line">        _edata = .;</span><br><span class="line">        . = ALIGN(4);</span><br><span class="line">    &#125; &gt; dsram0 AT&gt; pfls0</span><br><span class="line"></span><br><span class="line">    /* CPU0 未初始化数据：只占 DSPR0，启动时清零 */</span><br><span class="line">    .bss (NOLOAD) :</span><br><span class="line">    &#123;</span><br><span class="line">        _sbss = .;</span><br><span class="line">        *(.bss*)</span><br><span class="line">        _ebss = .;</span><br><span class="line">        . = ALIGN(4);</span><br><span class="line">    &#125; &gt; dsram0</span><br><span class="line"></span><br><span class="line">    /* CPU0 上下文保存区：64 字节对齐 */</span><br><span class="line">    .csa (NOLOAD) :</span><br><span class="line">    &#123;</span><br><span class="line">        __CSA0 = .;</span><br><span class="line">        . = . + LCF_CSA0_SIZE;</span><br><span class="line">        __CSA0_END = .;</span><br><span class="line">    &#125; &gt; dsram0</span><br><span class="line"></span><br><span class="line">    /* CPU0 用户栈与中断栈：向低地址增长 */</span><br><span class="line">    .ustack (NOLOAD) :</span><br><span class="line">    &#123;</span><br><span class="line">        __USTACK0_END = .;</span><br><span class="line">        . = . + LCF_USTACK0_SIZE;</span><br><span class="line">        __USTACK0 = .;</span><br><span class="line">    &#125; &gt; dsram0</span><br><span class="line"></span><br><span class="line">    .istack (NOLOAD) :</span><br><span class="line">    &#123;</span><br><span class="line">        __ISTACK0_END = .;</span><br><span class="line">        . = . + LCF_ISTACK0_SIZE;</span><br><span class="line">        __ISTACK0 = .;</span><br><span class="line">    &#125; &gt; dsram0</span><br><span class="line"></span><br><span class="line">    /* ======== CPU1、CPU2 的 .data/.bss/.csa/.stack 结构（简化）========</span><br><span class="line">     * 实际脚本会为每个核用 CORE_SEC 宏重复上述整套段，</span><br><span class="line">     * 分别定位到 dsram1/dsram2，避免跨核访问私有 RAM。 */</span><br><span class="line"></span><br><span class="line">    /* ======== 多核共享数据：放 LMU（非缓存区保证一致性）======== */</span><br><span class="line">    .lmu_data (NOLOAD) :</span><br><span class="line">    &#123;</span><br><span class="line">        *(.lmu_data*)</span><br><span class="line">    &#125; &gt; cpu0_dlmu_nc</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 
 <p><strong>几个值得注意的细节</strong>：</p>
 <ul>
-<li><code>_estack = ORIGIN(RAM) + LENGTH(RAM);</code> 直接由 MEMORY 计算栈顶，无需硬编码；</li>
-<li><code>.data</code> 段刻意放在 <code>.text</code> 之后，保证 <code>_etext</code> 紧邻 Flash 中数据的源头；</li>
-<li><code>*(COMMON)</code> 合并未初始化的公共符号，避免遗漏；</li>
-<li>用 <code>ALIGN(4)</code> 保证 Cortex-M 的 4 字节对齐。</li>
+<li><code>REGION_MAP</code> &#x2F; <code>REGION_MIRROR</code> 是 AURIX GCC 扩展命令，分别解决”本地地址 vs 全局地址”和”缓存 vs 非缓存”；</li>
+<li><code>.start_tc0</code> 固定在 0xA000_0000（非缓存镜像的 PFLASH 起始），因为 BootROM 通过 BMHD 跳转时按固定地址执行；</li>
+<li>每个核的 <code>.data</code>&#x2F;<code>.bss</code>&#x2F;<code>.csa</code>&#x2F;栈必须<strong>分开放</strong>，绝不能共享 DSPR——官方明确反对把一个核的 DSPR 当另一个核的”扩展内存”；</li>
+<li>多核共享数据放 DLMU，且推荐用<strong>非缓存</strong>地址（<code>cpu0_dlmu_nc</code>），避免 cache 一致性问题；</li>
+<li><code>.bss</code>&#x2F;<code>.csa</code>&#x2F;栈用 <code>(NOLOAD)</code>，只分配空间不烧录；</li>
+<li><code>__USTACK0</code> 指向栈顶（栈向低地址增长），<code>__USTACK0_END</code> 是栈底。</li>
 </ul>
 <hr>
 <h2 id="9-常用链接脚本命令速查"><a href="#9-常用链接脚本命令速查" class="headerlink" title="9. 常用链接脚本命令速查"></a>9. 常用链接脚本命令速查</h2><table>
@@ -395,13 +617,27 @@
 <td><code>ASSERT(cond, msg)</code></td>
 <td>链接期断言，条件不满足报错</td>
 </tr>
+<tr>
+<td><code>REGION_MAP(cpu, local_org, len, global_org)</code></td>
+<td>AURIX：本地↔全局地址映射</td>
+</tr>
+<tr>
+<td><code>REGION_MIRROR(cached, noncached)</code></td>
+<td>AURIX：缓存↔非缓存镜像</td>
+</tr>
+<tr>
+<td><code>FLAGS(rxl/awzl/...)</code></td>
+<td>AURIX：段属性（可加载&#x2F;可分配&#x2F;可零初始化）</td>
+</tr>
 </tbody></table>
-<h3 id="9-1-PROVIDE-的妙用"><a href="#9-1-PROVIDE-的妙用" class="headerlink" title="9.1 PROVIDE 的妙用"></a>9.1 <code>PROVIDE</code> 的妙用</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">PROVIDE(__stack = _estack);</span><br></pre></td></tr></table></figure>
+<h3 id="9-1-PROVIDE-的妙用"><a href="#9-1-PROVIDE-的妙用" class="headerlink" title="9.1 PROVIDE 的妙用"></a>9.1 <code>PROVIDE</code> 的妙用</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">PROVIDE(_SMALL_DATA_ = _sdata);</span><br></pre></td></tr></table></figure>
 
-<p>如果目标文件中没有定义 <code>__stack</code>，链接器就提供它；如果用户代码已定义则跳过。这给第三方库（如某些 RTOS 启动文件）提供了”缺省但不覆盖”的友好接口。</p>
-<h3 id="9-2-ASSERT：把错误挡在烧录之前"><a href="#9-2-ASSERT：把错误挡在烧录之前" class="headerlink" title="9.2 ASSERT：把错误挡在烧录之前"></a>9.2 <code>ASSERT</code>：把错误挡在烧录之前</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">ASSERT(_ebss &lt;= ORIGIN(RAM) + LENGTH(RAM),</span><br><span class="line">       &quot;RAM 溢出：.bss 超出 RAM 范围！&quot;)</span><br></pre></td></tr></table></figure>
+<p>如果目标文件中没有定义 <code>_SMALL_DATA_</code>，链接器就提供它（指向近数据段起始，供 TriCore 编译器初始化 A0 基址寄存器）；如果用户代码已定义则跳过。这给第三方库（如 RTOS、AURIX iLLD 库）提供了”缺省但不覆盖”的友好接口。</p>
+<h3 id="9-2-ASSERT：把错误挡在烧录之前"><a href="#9-2-ASSERT：把错误挡在烧录之前" class="headerlink" title="9.2 ASSERT：把错误挡在烧录之前"></a>9.2 <code>ASSERT</code>：把错误挡在烧录之前</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">ASSERT(_ebss &lt;= ORIGIN(dsram0) + LENGTH(dsram0),</span><br><span class="line">       &quot;DSPR0 溢出：.bss 超出 RAM 范围！&quot;)</span><br></pre></td></tr></table></figure>
 
-<p>链接时报错比运行时死机好排查一万倍，善用 <code>ASSERT</code>。</p>
+<p>链接时报错比运行时死机好排查一万倍，善用 <code>ASSERT</code>。AURIX 官方脚本里还常见这样的校验：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ASSERT(_ebss0 &lt; _stack0_begin, &quot;DSPR0 数据与栈冲突！&quot;)</span><br></pre></td></tr></table></figure>
+
 <hr>
 <h2 id="10-常见报错与调试技巧"><a href="#10-常见报错与调试技巧" class="headerlink" title="10. 常见报错与调试技巧"></a>10. 常见报错与调试技巧</h2><h3 id="10-1-经典报错对照表"><a href="#10-1-经典报错对照表" class="headerlink" title="10.1 经典报错对照表"></a>10.1 经典报错对照表</h3><table>
 <thead>
@@ -412,14 +648,14 @@
 </tr>
 </thead>
 <tbody><tr>
-<td><code>section .text will not fit in region FLASH</code></td>
+<td><code>section .text will not fit in region pfls0</code></td>
 <td>代码超出 Flash</td>
-<td>优化代码&#x2F;开启 <code>-Os</code>，检查有无死代码</td>
+<td>优化代码&#x2F;开启 <code>-Os</code>，检查有无死代码，或把部分代码挪到 pfls1</td>
 </tr>
 <tr>
-<td><code>region RAM overflowed by N bytes</code></td>
-<td>RAM 超限</td>
-<td>查数组、全局变量；<code>.bss</code> 过大</td>
+<td><code>region dsram0 overflowed by N bytes</code></td>
+<td>该核 RAM 超限</td>
+<td>查数组、全局变量；<code>.bss</code> 过大；把大数组挪到 LMU</td>
 </tr>
 <tr>
 <td><code>undefined reference to _sdata</code></td>
@@ -427,12 +663,17 @@
 <td>对照启动文件逐一核对符号名</td>
 </tr>
 <tr>
-<td><code>relocation truncated to fit: R_ARM_PREL31 ...</code></td>
-<td>跳转超出范围&#x2F;段地址不对</td>
-<td>检查 Flash 起始地址、向量表位置</td>
+<td><code>relocation truncated to fit: R_TRICORE_...</code></td>
+<td>跳转&#x2F;寻址超出范围</td>
+<td>abs18 数据超出低 512KB、32 位跳转超范围，检查段地址</td>
 </tr>
 <tr>
-<td><code>cannot find entry symbol Reset_Handler</code></td>
+<td><code>_SMALL_DATA_ not defined</code></td>
+<td>近数据段基址符号缺失</td>
+<td>在脚本中 <code>PROVIDE(_SMALL_DATA_ = _sdata)</code></td>
+</tr>
+<tr>
+<td><code>cannot find entry symbol _start</code></td>
 <td><code>ENTRY</code> 写错&#x2F;函数名拼写不一致</td>
 <td>确认 <code>ENTRY</code> 与启动文件函数名一致</td>
 </tr>
@@ -441,15 +682,25 @@
 <td>全局变量重复定义</td>
 <td>检查 <code>-fno-common</code> 与头文件定义</td>
 </tr>
+<tr>
+<td><code>region &#39;ucb&#39; overflowed</code></td>
+<td>BMHD 引导头放错位置</td>
+<td>检查 BMHD 结构体是否准确放在 0xAF400000 各槽位</td>
+</tr>
+<tr>
+<td>三核中只有某个核不跑</td>
+<td>该核栈&#x2F;CSA 配置错误或 DSPR 被占用</td>
+<td>检查每核独立的 <code>.csa</code>&#x2F;栈符号与大小</td>
+</tr>
 </tbody></table>
-<h3 id="10-2-调试工具：nm、objdump、size"><a href="#10-2-调试工具：nm、objdump、size" class="headerlink" title="10.2 调试工具：nm、objdump、size"></a>10.2 调试工具：<code>nm</code>、<code>objdump</code>、<code>size</code></h3><p>排查链接脚本最有效的三板斧：</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 1. 查看符号最终地址</span></span><br><span class="line">arm-none-eabi-nm -n firmware.elf</span><br><span class="line"></span><br><span class="line"><span class="comment"># 2. 反汇编，检查跳转目标是否合理</span></span><br><span class="line">arm-none-eabi-objdump -d firmware.elf</span><br><span class="line"></span><br><span class="line"><span class="comment"># 3. 查看各段占用</span></span><br><span class="line">arm-none-eabi-size -A firmware.elf</span><br><span class="line"></span><br><span class="line"><span class="comment"># 4. 完整段布局与 VMA/LMA（最有价值）</span></span><br><span class="line">arm-none-eabi-objdump -h firmware.elf</span><br></pre></td></tr></table></figure>
+<h3 id="10-2-调试工具：nm、objdump、size"><a href="#10-2-调试工具：nm、objdump、size" class="headerlink" title="10.2 调试工具：nm、objdump、size"></a>10.2 调试工具：<code>nm</code>、<code>objdump</code>、<code>size</code></h3><p>排查链接脚本最有效的三板斧（TriCore 工具链前缀可能是 <code>tricore-</code> 或 <code>hightec-</code>）：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 1. 查看符号最终地址（确认多核符号都落到对应 DSPR/PFLASH）</span></span><br><span class="line">tricore-elf-nm -n firmware.elf</span><br><span class="line"></span><br><span class="line"><span class="comment"># 2. 反汇编，检查跳转目标是否合理</span></span><br><span class="line">tricore-elf-objdump -d firmware.elf</span><br><span class="line"></span><br><span class="line"><span class="comment"># 3. 查看各段占用</span></span><br><span class="line">tricore-elf-size -A firmware.elf</span><br><span class="line"></span><br><span class="line"><span class="comment"># 4. 完整段布局与 VMA/LMA（最有价值）</span></span><br><span class="line">tricore-elf-objdump -h firmware.elf</span><br></pre></td></tr></table></figure>
 
-<p><code>objdump -h</code> 会列出每个段的 <strong>VMA 和 LMA</strong>，一眼就能看出 <code>.data</code> 是否正确地”住在 RAM、源于 Flash”：</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">Sections:</span><br><span class="line">Idx Name      Size    VMA       LMA       File off  Algn</span><br><span class="line">  0 .isr_vector 000000c0 08000000 08000000  00010000  2**2</span><br><span class="line">  1 .text     000023c8 080000c0 080000c0  000100c0  2**2</span><br><span class="line">  2 .data     00000010 20000000 08002488   ...</span><br><span class="line">  3 .bss      00000230 20000010 20000010   ...</span><br></pre></td></tr></table></figure>
+<p><code>objdump -h</code> 会列出每个段的 <strong>VMA 和 LMA</strong>，一眼就能看出 <code>.data</code> 是否正确地”住在 DSPR、源于 PFLASH”，以及三个核的数据是否各归其位：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">Sections:</span><br><span class="line">Idx Name      Size    VMA       LMA       File off  Algn</span><br><span class="line">  0 .start_tc0 00000080 a0000000 a0000000  00010000  2**2</span><br><span class="line">  1 .text     000023c8 800000c0 800000c0  000100c0  2**2</span><br><span class="line">  2 .data     00000010 70000000 80002488   ...</span><br><span class="line">  3 .bss      00000230 70000010 70000010   ...</span><br><span class="line">  4 .csa      00002000 70080000 70080000   ...</span><br></pre></td></tr></table></figure>
 
 <h3 id="10-3-打印链接-Map-文件"><a href="#10-3-打印链接-Map-文件" class="headerlink" title="10.3 打印链接 Map 文件"></a>10.3 打印链接 Map 文件</h3><p>编译时加 <code>-Wl,-Map=output.map</code> 生成 Map 文件，这是排查内存布局的”说明书”，包含所有符号地址、段归属、废弃段等完整信息：</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">arm-none-eabi-gcc ... -Wl,-Map=firmware.map</span><br></pre></td></tr></table></figure>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">tricore-elf-gcc ... -Wl,-Map=firmware.map</span><br></pre></td></tr></table></figure>
 
 <hr>
 <h2 id="11-进阶：-ffunction-sections-fdata-sections-–gc-sections"><a href="#11-进阶：-ffunction-sections-fdata-sections-–gc-sections" class="headerlink" title="11. 进阶：-ffunction-sections &#x2F; -fdata-sections &#x2F; –gc-sections"></a>11. 进阶：-ffunction-sections &#x2F; -fdata-sections &#x2F; –gc-sections</h2><p>为了裁剪固件体积，GCC 提供了”每函数&#x2F;每变量独立段 + 垃圾回收”的组合拳：</p>
@@ -460,12 +711,12 @@
 <li><code>-fdata-sections</code>：每个数据对象单独成段（<code>.data.g_value</code>）；</li>
 <li><code>--gc-sections</code>：链接时删除没有被引用到的段。</li>
 </ul>
-<p>配合 <code>KEEP()</code> 保留必须的段（向量表、构造函数表），可以在不牺牲功能的情况下显著减小固件。</p>
+<p>配合 <code>KEEP()</code> 保留必须的段（复位入口、向量表、BMHD、构造函数表），可以在不牺牲功能的情况下显著减小固件。</p>
 <blockquote>
 <p>⚠️ 注意：用了 <code>-ffunction-sections</code> 后，脚本中应使用 <code>*(.text*)</code> 而非 <code>*(.text)</code>，否则段匹配不上，会得到”空段”。</p>
 </blockquote>
 <hr>
-<h2 id="12-与其他工具链的异同"><a href="#12-与其他工具链的异同" class="headerlink" title="12. 与其他工具链的异同"></a>12. 与其他工具链的异同</h2><p>虽然本文以 GCC <code>ld</code> 为主线，但链接脚本思想是通用的：</p>
+<h2 id="12-与其他工具链的异同"><a href="#12-与其他工具链的异同" class="headerlink" title="12. 与其他工具链的异同"></a>12. 与其他工具链的异同</h2><p>虽然本文以 AURIX GCC <code>ld</code> 为主线，但链接脚本思想是通用的：</p>
 <table>
 <thead>
 <tr>
@@ -474,8 +725,16 @@
 </tr>
 </thead>
 <tbody><tr>
+<td><strong>AURIX GCC (HighTec)</strong></td>
+<td><code>.lsl</code> &#x2F; <code>.ld</code> 文件，<code>ld</code> 语法 + <code>REGION_MAP</code>&#x2F;<code>REGION_MIRROR</code> 扩展（本文内容）</td>
+</tr>
+<tr>
+<td><strong>TASKING (英飞凌官方)</strong></td>
+<td><code>.lsl</code> 文件，使用 <code>LSL</code>（Linker Script Language），以 <code>memory/group/section_layout</code> 描述多核布局</td>
+</tr>
+<tr>
 <td><strong>GCC (arm-none-eabi)</strong></td>
-<td><code>.ld</code> &#x2F; <code>.x</code> 文件，<code>ld</code> 语法（本文内容）</td>
+<td><code>.ld</code> &#x2F; <code>.x</code> 文件，<code>ld</code> 语法</td>
 </tr>
 <tr>
 <td><strong>IAR</strong></td>
@@ -485,41 +744,41 @@
 <td><strong>Keil MDK</strong></td>
 <td><code>.sct</code> 文件，<code>LR_</code> &#x2F; <code>ER_</code> 加载区与执行区</td>
 </tr>
-<tr>
-<td><strong>GNU ld with LLD</strong></td>
-<td>兼容 <code>ld</code> 语法的子集</td>
-</tr>
 </tbody></table>
+<p>TASKING 的 <code>.lsl</code>（TC375 官方默认工具链之一）写法完全不同，但目标一样——描述三核的内存布局：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line">// Lcf_Tasking_Tricore_Tc.lsl（TASKING 格式）</span><br><span class="line">derivative tc37</span><br><span class="line">&#123;</span><br><span class="line">    core tc0 &#123; architecture = TC1V1.6.2; copytable_space = vtc:linear; &#125;</span><br><span class="line">    core tc1 &#123; architecture = TC1V1.6.2; copytable_space = vtc:linear; &#125;</span><br><span class="line">    core tc2 &#123; architecture = TC1V1.6.2; copytable_space = vtc:linear; &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">memory dsram0</span><br><span class="line">&#123;</span><br><span class="line">    mau = 8;</span><br><span class="line">    size = 240k;</span><br><span class="line">    type = ram;</span><br><span class="line">    map (dest=bus:tc0:fpi_bus, dest_offset=0xd0000000, size=240k, priority=8);</span><br><span class="line">    map (dest=bus:sri, dest_offset=0x70000000, size=240k);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">memory pfls0</span><br><span class="line">&#123;</span><br><span class="line">    mau = 8;</span><br><span class="line">    size = 3M;</span><br><span class="line">    type = rom;</span><br><span class="line">    map cached     (dest=bus:sri, dest_offset=0x80000000, size=3M);</span><br><span class="line">    map not_cached (dest=bus:sri, dest_offset=0xa0000000, size=3M);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
 <p>IAR 的 <code>.icf</code>：</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">define memory FLASH with size = 512K, start = 0x08000000;</span><br><span class="line">define memory RAM   with size = 128K, start = 0x20000000;</span><br><span class="line">place in FLASH &#123; readonly section .text &#125;;</span><br><span class="line">place in RAM   &#123; readwrite section .data &#125;;</span><br></pre></td></tr></table></figure>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">define memory PFLASH0 with size = 3M, start = 0x80000000;</span><br><span class="line">define memory DSPR0   with size = 240K, start = 0x70000000;</span><br><span class="line">place in PFLASH0 &#123; readonly section .text &#125;;</span><br><span class="line">place in DSPR0   &#123; readwrite section .data &#125;;</span><br></pre></td></tr></table></figure>
 
 <p>Keil 的 <code>.sct</code>：</p>
 <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">LR_IROM1 0x08000000 0x00080000 &#123;</span><br><span class="line">  ER_IROM1 0x08000000 0x00080000 &#123;</span><br><span class="line">    *.o (RESET, +First)</span><br><span class="line">    *(InRoot$$Sections)</span><br><span class="line">    .ANY (+RO)</span><br><span class="line">  &#125;</span><br><span class="line">  RW_IRAM1 0x20000000 0x00020000 &#123;</span><br><span class="line">    .ANY (+RW +ZI)</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 
-<p><strong>换了 IDE 就换一套链接描述语言，但”VMA &#x2F; LMA &#x2F; 段 &#x2F; 位置计数器”这些概念完全相通</strong>——理解 GCC 脚本后，切换到 IAR&#x2F;Keil 只是换语法而已。</p>
+<p><strong>换了 IDE&#x2F;工具链就换一套链接描述语言，但”VMA &#x2F; LMA &#x2F; 段 &#x2F; 位置计数器 &#x2F; 多核私有与共享内存”这些概念完全相通</strong>——理解 GCC 脚本后，切换到 TASKING&#x2F;IAR&#x2F;Keil 只是换语法而已。</p>
 <hr>
-<h2 id="13-总结"><a href="#13-总结" class="headerlink" title="13. 总结"></a>13. 总结</h2><p>链接脚本是嵌入式工程师从”会写 C”走向”懂底层”的分水岭。回顾本文核心要点：</p>
+<h2 id="13-总结"><a href="#13-总结" class="headerlink" title="13. 总结"></a>13. 总结</h2><p>链接脚本是嵌入式工程师从”会写 C”走向”懂底层”的分水岭。以 TC375 为例回顾本文核心要点：</p>
 <ol>
 <li><strong>链接器</strong>负责符号解析与重定位，裸机程序必须用链接脚本定义内存布局；</li>
-<li><strong>MEMORY</strong> 定义芯片可用的内存区域与属性；</li>
+<li><strong>MEMORY</strong> 定义芯片可用的内存区域与属性——TC375 上要分清 PFLASH0&#x2F;1、三组 DSPR&#x2F;PSPR、LMU&#x2F;DLMU、DFLASH、UCB；</li>
 <li><strong>SECTIONS</strong> 定义输出段如何由输入段组成、放在哪块区域；</li>
 <li><strong>VMA 与 LMA</strong> 是理解 <code>.data</code> 拷贝、启动代码的钥匙；</li>
+<li><strong>AURIX 多核特性</strong>：<code>REGION_MAP</code>（本地&#x2F;全局地址）、<code>REGION_MIRROR</code>（缓存&#x2F;非缓存）、每核独立的 <code>.csa</code>&#x2F;栈&#x2F;<code>.data</code>&#x2F;<code>.bss</code>；</li>
 <li><strong><code>.</code>（位置计数器）、<code>ALIGN</code>、<code>KEEP</code>、<code>NOLOAD</code></strong> 是日常最常用的控制手段；</li>
-<li><strong>启动文件与链接脚本是一体两面</strong>，符号必须严格对应；</li>
+<li><strong>启动文件与链接脚本是一体两面</strong>，符号必须严格对应，多核项目更是如此；</li>
 <li>善用 <code>ASSERT</code>、<code>Map 文件</code>、<code>objdump -h</code> 把内存问题扼杀在链接阶段。</li>
 </ol>
-<p>理解链接脚本之后，你会发现自己对”程序到底怎么跑起来的”有了更清晰的画面：从 Flash 读取向量表 → 进 Reset_Handler → 搬数据 → 清 BSS → 跳转 main……而这一切的幕后导演，正是这份被无数人”复制粘贴”却鲜有人真正读懂的 <strong>Linker Script</strong>。</p>
+<p>理解链接脚本之后，你会发现自己对”程序到底怎么跑起来的”有了更清晰的画面：BootROM 读 BMHD → CPU0 从 0xA0000000 的 <code>_start</code> 启动 → 初始化栈与 CSA → 搬数据 → 清 BSS → 调 core0_main → 再释放 CPU1&#x2F;CPU2 让它们各自从自己的入口跑起来……而这一切的幕后导演，正是这份被无数人”复制粘贴”却鲜有人真正读懂的 <strong>Linker Script</strong>。</p>
 <hr>
-<p><em>参考文档：GNU ld 手册（<code>info ld</code>）、STM32 启动文件源码、Cortex-M3 权威指南 存储器映射章节。</em></p>
+<p><em>参考文档：GNU ld 手册（<code>info ld</code>）、Infineon AURIX TC3xx 用户手册内存映射章节、英飞凌官方 AURIX Development Studio 例程 <code>Lcf_Gnuc_Tricore_Tc.lsl</code> &#x2F; <code>Lcf_Tasking_Tricore_Tc.lsl</code>。</em></p>
 
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2026/08/01/%E5%B5%8C%E5%85%A5%E5%BC%8F%E9%93%BE%E6%8E%A5%E8%84%9A%E6%9C%AC%E8%AF%A6%E8%A7%A3%EF%BC%9A%E4%BB%8E%E9%9B%B6%E7%90%86%E8%A7%A3Linker-Script/" data-id="cmsa1llw2000798lmg7kv5ych" data-title="嵌入式链接脚本详解：从零理解Linker Script" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2026/08/01/%E5%B5%8C%E5%85%A5%E5%BC%8F%E9%93%BE%E6%8E%A5%E8%84%9A%E6%9C%AC%E8%AF%A6%E8%A7%A3%EF%BC%9A%E4%BB%8E%E9%9B%B6%E7%90%86%E8%A7%A3Linker-Script/" data-id="cmsa1whw8000eftlmddjiduxk" data-title="嵌入式链接脚本详解：以英飞凌TC375为例" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
-  <ul class="article-tag-list" itemprop="keywords"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/GCC/" rel="tag">GCC</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Linker-Script/" rel="tag">Linker Script</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/STM32/" rel="tag">STM32</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/%E5%B5%8C%E5%85%A5%E5%BC%8F/" rel="tag">嵌入式</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/%E6%B1%87%E7%BC%96/" rel="tag">汇编</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/%E9%93%BE%E6%8E%A5%E8%84%9A%E6%9C%AC/" rel="tag">链接脚本</a></li></ul>
+  <ul class="article-tag-list" itemprop="keywords"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/AURIX/" rel="tag">AURIX</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/GCC/" rel="tag">GCC</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Linker-Script/" rel="tag">Linker Script</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/TC375/" rel="tag">TC375</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/TriCore/" rel="tag">TriCore</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/%E5%B5%8C%E5%85%A5%E5%BC%8F/" rel="tag">嵌入式</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/%E6%B1%87%E7%BC%96/" rel="tag">汇编</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/%E8%8B%B1%E9%A3%9E%E5%87%8C/" rel="tag">英飞凌</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/%E9%93%BE%E6%8E%A5%E8%84%9A%E6%9C%AC/" rel="tag">链接脚本</a></li></ul>
 
     </footer>
   </div>
@@ -550,7 +809,7 @@
   <div class="widget-wrap">
     <h3 class="widget-title">Tags</h3>
     <div class="widget">
-      <ul class="tag-list" itemprop="keywords"><li class="tag-list-item"><a class="tag-list-link" href="/tags/AI-Agent/" rel="tag">AI Agent</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/AUTOSAR/" rel="tag">AUTOSAR</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/CANoe/" rel="tag">CANoe</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/CAPL/" rel="tag">CAPL</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/FOC/" rel="tag">FOC</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/GCC/" rel="tag">GCC</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Linker-Script/" rel="tag">Linker Script</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Linux/" rel="tag">Linux</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/STM32/" rel="tag">STM32</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/U%E7%9B%98%E5%90%AF%E5%8A%A8%E7%9B%98/" rel="tag">U盘启动盘</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Ventoy/" rel="tag">Ventoy</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/opencode/" rel="tag">opencode</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86/" rel="tag">内存管理</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%86%85%E6%A0%B8/" rel="tag">内核</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%90%AF%E5%8A%A8%E8%BF%87%E7%A8%8B/" rel="tag">启动过程</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/" rel="tag">学习笔记</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%B5%8C%E5%85%A5%E5%BC%8F/" rel="tag">嵌入式</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%BC%80%E5%8F%91/" rel="tag">开发</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%BC%95%E5%AF%BC/" rel="tag">引导</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E6%95%88%E7%8E%87%E5%B7%A5%E5%85%B7/" rel="tag">效率工具</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E6%B1%87%E7%BC%96/" rel="tag">汇编</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E6%B1%BD%E8%BD%A6%E7%94%B5%E5%AD%90/" rel="tag">汽车电子</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E6%B5%8B%E8%AF%95/" rel="tag">测试</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E7%94%B5%E5%8A%9B%E7%94%B5%E5%AD%90/" rel="tag">电力电子</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E7%94%B5%E6%9C%BA%E6%8E%A7%E5%88%B6/" rel="tag">电机控制</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E7%B3%BB%E7%BB%9F%E5%AE%89%E8%A3%85/" rel="tag">系统安装</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E8%A3%85%E6%9C%BA%E5%B7%A5%E5%85%B7/" rel="tag">装机工具</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E9%83%A8%E7%BD%B2/" rel="tag">部署</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E9%93%BE%E6%8E%A5%E8%84%9A%E6%9C%AC/" rel="tag">链接脚本</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E9%A3%9E%E4%B9%A6/" rel="tag">飞书</a></li></ul>
+      <ul class="tag-list" itemprop="keywords"><li class="tag-list-item"><a class="tag-list-link" href="/tags/AI-Agent/" rel="tag">AI Agent</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/AURIX/" rel="tag">AURIX</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/AUTOSAR/" rel="tag">AUTOSAR</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/CANoe/" rel="tag">CANoe</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/CAPL/" rel="tag">CAPL</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/FOC/" rel="tag">FOC</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/GCC/" rel="tag">GCC</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Linker-Script/" rel="tag">Linker Script</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Linux/" rel="tag">Linux</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/TC375/" rel="tag">TC375</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/TriCore/" rel="tag">TriCore</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/U%E7%9B%98%E5%90%AF%E5%8A%A8%E7%9B%98/" rel="tag">U盘启动盘</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Ventoy/" rel="tag">Ventoy</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/opencode/" rel="tag">opencode</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86/" rel="tag">内存管理</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%86%85%E6%A0%B8/" rel="tag">内核</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%90%AF%E5%8A%A8%E8%BF%87%E7%A8%8B/" rel="tag">启动过程</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/" rel="tag">学习笔记</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%B5%8C%E5%85%A5%E5%BC%8F/" rel="tag">嵌入式</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%BC%80%E5%8F%91/" rel="tag">开发</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%BC%95%E5%AF%BC/" rel="tag">引导</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E6%95%88%E7%8E%87%E5%B7%A5%E5%85%B7/" rel="tag">效率工具</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E6%B1%87%E7%BC%96/" rel="tag">汇编</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E6%B1%BD%E8%BD%A6%E7%94%B5%E5%AD%90/" rel="tag">汽车电子</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E6%B5%8B%E8%AF%95/" rel="tag">测试</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E7%94%B5%E5%8A%9B%E7%94%B5%E5%AD%90/" rel="tag">电力电子</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E7%94%B5%E6%9C%BA%E6%8E%A7%E5%88%B6/" rel="tag">电机控制</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E7%B3%BB%E7%BB%9F%E5%AE%89%E8%A3%85/" rel="tag">系统安装</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E8%8B%B1%E9%A3%9E%E5%87%8C/" rel="tag">英飞凌</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E8%A3%85%E6%9C%BA%E5%B7%A5%E5%85%B7/" rel="tag">装机工具</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E9%83%A8%E7%BD%B2/" rel="tag">部署</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E9%93%BE%E6%8E%A5%E8%84%9A%E6%9C%AC/" rel="tag">链接脚本</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E9%A3%9E%E4%B9%A6/" rel="tag">飞书</a></li></ul>
     </div>
   </div>
 
@@ -560,7 +819,7 @@
   <div class="widget-wrap">
     <h3 class="widget-title">Tag Cloud</h3>
     <div class="widget tagcloud">
-      <a href="/tags/AI-Agent/" style="font-size: 15px;">AI Agent</a> <a href="/tags/AUTOSAR/" style="font-size: 15px;">AUTOSAR</a> <a href="/tags/CANoe/" style="font-size: 10px;">CANoe</a> <a href="/tags/CAPL/" style="font-size: 10px;">CAPL</a> <a href="/tags/FOC/" style="font-size: 10px;">FOC</a> <a href="/tags/GCC/" style="font-size: 10px;">GCC</a> <a href="/tags/Linker-Script/" style="font-size: 10px;">Linker Script</a> <a href="/tags/Linux/" style="font-size: 20px;">Linux</a> <a href="/tags/STM32/" style="font-size: 10px;">STM32</a> <a href="/tags/U%E7%9B%98%E5%90%AF%E5%8A%A8%E7%9B%98/" style="font-size: 10px;">U盘启动盘</a> <a href="/tags/Ventoy/" style="font-size: 10px;">Ventoy</a> <a href="/tags/opencode/" style="font-size: 15px;">opencode</a> <a href="/tags/%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86/" style="font-size: 10px;">内存管理</a> <a href="/tags/%E5%86%85%E6%A0%B8/" style="font-size: 15px;">内核</a> <a href="/tags/%E5%90%AF%E5%8A%A8%E8%BF%87%E7%A8%8B/" style="font-size: 10px;">启动过程</a> <a href="/tags/%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/" style="font-size: 10px;">学习笔记</a> <a href="/tags/%E5%B5%8C%E5%85%A5%E5%BC%8F/" style="font-size: 15px;">嵌入式</a> <a href="/tags/%E5%BC%80%E5%8F%91/" style="font-size: 10px;">开发</a> <a href="/tags/%E5%BC%95%E5%AF%BC/" style="font-size: 10px;">引导</a> <a href="/tags/%E6%95%88%E7%8E%87%E5%B7%A5%E5%85%B7/" style="font-size: 15px;">效率工具</a> <a href="/tags/%E6%B1%87%E7%BC%96/" style="font-size: 15px;">汇编</a> <a href="/tags/%E6%B1%BD%E8%BD%A6%E7%94%B5%E5%AD%90/" style="font-size: 10px;">汽车电子</a> <a href="/tags/%E6%B5%8B%E8%AF%95/" style="font-size: 15px;">测试</a> <a href="/tags/%E7%94%B5%E5%8A%9B%E7%94%B5%E5%AD%90/" style="font-size: 10px;">电力电子</a> <a href="/tags/%E7%94%B5%E6%9C%BA%E6%8E%A7%E5%88%B6/" style="font-size: 10px;">电机控制</a> <a href="/tags/%E7%B3%BB%E7%BB%9F%E5%AE%89%E8%A3%85/" style="font-size: 10px;">系统安装</a> <a href="/tags/%E8%A3%85%E6%9C%BA%E5%B7%A5%E5%85%B7/" style="font-size: 10px;">装机工具</a> <a href="/tags/%E9%83%A8%E7%BD%B2/" style="font-size: 10px;">部署</a> <a href="/tags/%E9%93%BE%E6%8E%A5%E8%84%9A%E6%9C%AC/" style="font-size: 10px;">链接脚本</a> <a href="/tags/%E9%A3%9E%E4%B9%A6/" style="font-size: 10px;">飞书</a>
+      <a href="/tags/AI-Agent/" style="font-size: 15px;">AI Agent</a> <a href="/tags/AURIX/" style="font-size: 10px;">AURIX</a> <a href="/tags/AUTOSAR/" style="font-size: 15px;">AUTOSAR</a> <a href="/tags/CANoe/" style="font-size: 10px;">CANoe</a> <a href="/tags/CAPL/" style="font-size: 10px;">CAPL</a> <a href="/tags/FOC/" style="font-size: 10px;">FOC</a> <a href="/tags/GCC/" style="font-size: 10px;">GCC</a> <a href="/tags/Linker-Script/" style="font-size: 10px;">Linker Script</a> <a href="/tags/Linux/" style="font-size: 20px;">Linux</a> <a href="/tags/TC375/" style="font-size: 10px;">TC375</a> <a href="/tags/TriCore/" style="font-size: 10px;">TriCore</a> <a href="/tags/U%E7%9B%98%E5%90%AF%E5%8A%A8%E7%9B%98/" style="font-size: 10px;">U盘启动盘</a> <a href="/tags/Ventoy/" style="font-size: 10px;">Ventoy</a> <a href="/tags/opencode/" style="font-size: 15px;">opencode</a> <a href="/tags/%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86/" style="font-size: 10px;">内存管理</a> <a href="/tags/%E5%86%85%E6%A0%B8/" style="font-size: 15px;">内核</a> <a href="/tags/%E5%90%AF%E5%8A%A8%E8%BF%87%E7%A8%8B/" style="font-size: 10px;">启动过程</a> <a href="/tags/%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/" style="font-size: 10px;">学习笔记</a> <a href="/tags/%E5%B5%8C%E5%85%A5%E5%BC%8F/" style="font-size: 15px;">嵌入式</a> <a href="/tags/%E5%BC%80%E5%8F%91/" style="font-size: 10px;">开发</a> <a href="/tags/%E5%BC%95%E5%AF%BC/" style="font-size: 10px;">引导</a> <a href="/tags/%E6%95%88%E7%8E%87%E5%B7%A5%E5%85%B7/" style="font-size: 15px;">效率工具</a> <a href="/tags/%E6%B1%87%E7%BC%96/" style="font-size: 15px;">汇编</a> <a href="/tags/%E6%B1%BD%E8%BD%A6%E7%94%B5%E5%AD%90/" style="font-size: 10px;">汽车电子</a> <a href="/tags/%E6%B5%8B%E8%AF%95/" style="font-size: 15px;">测试</a> <a href="/tags/%E7%94%B5%E5%8A%9B%E7%94%B5%E5%AD%90/" style="font-size: 10px;">电力电子</a> <a href="/tags/%E7%94%B5%E6%9C%BA%E6%8E%A7%E5%88%B6/" style="font-size: 10px;">电机控制</a> <a href="/tags/%E7%B3%BB%E7%BB%9F%E5%AE%89%E8%A3%85/" style="font-size: 10px;">系统安装</a> <a href="/tags/%E8%8B%B1%E9%A3%9E%E5%87%8C/" style="font-size: 10px;">英飞凌</a> <a href="/tags/%E8%A3%85%E6%9C%BA%E5%B7%A5%E5%85%B7/" style="font-size: 10px;">装机工具</a> <a href="/tags/%E9%83%A8%E7%BD%B2/" style="font-size: 10px;">部署</a> <a href="/tags/%E9%93%BE%E6%8E%A5%E8%84%9A%E6%9C%AC/" style="font-size: 10px;">链接脚本</a> <a href="/tags/%E9%A3%9E%E4%B9%A6/" style="font-size: 10px;">飞书</a>
     </div>
   </div>
 
@@ -582,7 +841,7 @@
       <ul>
         
           <li>
-            <a href="/2026/08/01/%E5%B5%8C%E5%85%A5%E5%BC%8F%E9%93%BE%E6%8E%A5%E8%84%9A%E6%9C%AC%E8%AF%A6%E8%A7%A3%EF%BC%9A%E4%BB%8E%E9%9B%B6%E7%90%86%E8%A7%A3Linker-Script/">嵌入式链接脚本详解：从零理解Linker Script</a>
+            <a href="/2026/08/01/%E5%B5%8C%E5%85%A5%E5%BC%8F%E9%93%BE%E6%8E%A5%E8%84%9A%E6%9C%AC%E8%AF%A6%E8%A7%A3%EF%BC%9A%E4%BB%8E%E9%9B%B6%E7%90%86%E8%A7%A3Linker-Script/">嵌入式链接脚本详解：以英飞凌TC375为例</a>
           </li>
         
           <li>
