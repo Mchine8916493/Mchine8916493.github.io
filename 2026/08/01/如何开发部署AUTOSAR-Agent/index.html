@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  
+  
+  <title>如何开发部署AUTOSAR-Agent | Hexo</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <meta name="description" content="如何开发部署一个 AUTOSAR Agent 需求：让 AI 能真正读懂 ARXML、管理 SWC、配置 RTE 和 BSW，成为汽车电子工程师的「AUTOSAR 架构专家」队友。这篇文章完整记录基于 opencode 从零开发到一键部署 AUTOSAR Agent 的全过程。  一、整体思路为什么选 opencode 作为底座AUTOSAR 生态没有现成的 AI 工具链，但可以基于通用 AI A">
+<meta property="og:type" content="article">
+<meta property="og:title" content="如何开发部署AUTOSAR-Agent">
+<meta property="og:url" content="http://example.com/2026/08/01/%E5%A6%82%E4%BD%95%E5%BC%80%E5%8F%91%E9%83%A8%E7%BD%B2AUTOSAR-Agent/index.html">
+<meta property="og:site_name" content="Hexo">
+<meta property="og:description" content="如何开发部署一个 AUTOSAR Agent 需求：让 AI 能真正读懂 ARXML、管理 SWC、配置 RTE 和 BSW，成为汽车电子工程师的「AUTOSAR 架构专家」队友。这篇文章完整记录基于 opencode 从零开发到一键部署 AUTOSAR Agent 的全过程。  一、整体思路为什么选 opencode 作为底座AUTOSAR 生态没有现成的 AI 工具链，但可以基于通用 AI A">
+<meta property="og:locale" content="en_US">
+<meta property="article:published_time" content="2026-08-01T04:36:54.000Z">
+<meta property="article:modified_time" content="2026-08-01T04:37:26.630Z">
+<meta property="article:author" content="John Doe">
+<meta property="article:tag" content="AUTOSAR">
+<meta property="article:tag" content="opencode">
+<meta property="article:tag" content="AI Agent">
+<meta property="article:tag" content="开发">
+<meta property="article:tag" content="部署">
+<meta property="article:tag" content="效率工具">
+<meta name="twitter:card" content="summary">
+  
+    <link rel="alternate" href="/atom.xml" title="Hexo" type="application/atom+xml">
+  
+  
+    <link rel="shortcut icon" href="/favicon.png">
+  
+  
+  
+<link rel="stylesheet" href="/css/style.css">
+
+  
+    
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.min.css">
+
+  
+  
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fork-awesome@1.2.0/css/fork-awesome.min.css">
+
+<meta name="generator" content="Hexo 7.3.0"></head>
+
+<body>
+  <div id="container">
+    <div id="wrap">
+      <header id="header">
+  <div id="banner"></div>
+  <div id="header-outer" class="outer">
+    <div id="header-title" class="inner">
+      <h1 id="logo-wrap">
+        <a href="/" id="logo">Hexo</a>
+      </h1>
+      
+    </div>
+    <div id="header-inner" class="inner">
+      <nav id="main-nav">
+        <a id="main-nav-toggle" class="nav-icon"><span class="fa fa-bars"></span></a>
+        
+          <a class="main-nav-link" href="/">Home</a>
+        
+          <a class="main-nav-link" href="/archives">Archives</a>
+        
+      </nav>
+      <nav id="sub-nav">
+        
+        
+          <a class="nav-icon" href="/atom.xml" title="RSS Feed"><span class="fa fa-rss"></span></a>
+        
+        <a class="nav-icon nav-search-btn" title="Search"><span class="fa fa-search"></span></a>
+      </nav>
+      <div id="search-form-wrap">
+        <form action="//google.com/search" method="get" accept-charset="UTF-8" class="search-form"><input type="search" name="q" class="search-form-input" placeholder="Search"><button type="submit" class="search-form-submit">&#xF002;</button><input type="hidden" name="sitesearch" value="http://example.com"></form>
+      </div>
+    </div>
+  </div>
+</header>
+
+      <div class="outer">
+        <section id="main"><article id="post-如何开发部署AUTOSAR-Agent" class="h-entry article article-type-post" itemprop="blogPost" itemscope itemtype="https://schema.org/BlogPosting">
+  <div class="article-meta">
+    <a href="/2026/08/01/%E5%A6%82%E4%BD%95%E5%BC%80%E5%8F%91%E9%83%A8%E7%BD%B2AUTOSAR-Agent/" class="article-date">
+  <time class="dt-published" datetime="2026-08-01T04:36:54.000Z" itemprop="datePublished">2026-08-01</time>
+</a>
+    
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 class="p-name article-title" itemprop="headline name">
+      如何开发部署AUTOSAR-Agent
+    </h1>
+  
+
+      </header>
+    
+    <div class="e-content article-entry" itemprop="articleBody">
+      
+        <h1 id="如何开发部署一个-AUTOSAR-Agent"><a href="#如何开发部署一个-AUTOSAR-Agent" class="headerlink" title="如何开发部署一个 AUTOSAR Agent"></a>如何开发部署一个 AUTOSAR Agent</h1><blockquote>
+<p>需求：让 AI 能真正读懂 ARXML、管理 SWC、配置 RTE 和 BSW，成为汽车电子工程师的「AUTOSAR 架构专家」队友。这篇文章完整记录基于 opencode 从零开发到一键部署 AUTOSAR Agent 的全过程。</p>
+</blockquote>
+<h2 id="一、整体思路"><a href="#一、整体思路" class="headerlink" title="一、整体思路"></a>一、整体思路</h2><h3 id="为什么选-opencode-作为底座"><a href="#为什么选-opencode-作为底座" class="headerlink" title="为什么选 opencode 作为底座"></a>为什么选 opencode 作为底座</h3><p>AUTOSAR 生态没有现成的 AI 工具链，但可以基于通用 AI Agent 框架搭建。opencode 提供了一套轻量、可裁剪的 Agent 定义机制：</p>
+<table>
+<thead>
+<tr>
+<th>能力</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Agent 定义</td>
+<td><code>agent.md</code> 文件即可定义一个领域专家，支持 front-matter 声明元数据</td>
+</tr>
+<tr>
+<td>Skill 机制</td>
+<td>每个 skill 是一个 <code>SKILL.md</code>，随对话按需加载，注入专业工作流</td>
+</tr>
+<tr>
+<td>Command 机制</td>
+<td><code>/</code> 斜杠命令，快速触发固定任务</td>
+</tr>
+<tr>
+<td>模型可配</td>
+<td>front-matter 中指定 <code>model</code>，可切换任意 Provider</td>
+</tr>
+<tr>
+<td>权限管控</td>
+<td><code>permission.skill</code> 声明允许自动执行的 skill</td>
+</tr>
+</tbody></table>
+<p>这套机制非常适合「领域知识专家型 Agent」：领域知识沉淀在 skill 里，通用推理交给模型，各司其职。</p>
+<h3 id="架构总览"><a href="#架构总览" class="headerlink" title="架构总览"></a>架构总览</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line">用户终端</span><br><span class="line">   │  执行 `autosar` 命令</span><br><span class="line">   ▼</span><br><span class="line">scripts/autosar.sh          ← 启动器：git pull 更新 + 环境变量 + 启动 agent</span><br><span class="line">   │</span><br><span class="line">   ▼</span><br><span class="line">opencode --agent autosar    ← 加载 .opencode/agents/autosar/agent.md</span><br><span class="line">   │</span><br><span class="line">   ├── .opencode/skills/    ← 领域技能（按需注入）</span><br><span class="line">   │     ├── arxml-validate    ARXML 验证</span><br><span class="line">   │     ├── swc-manager        SWC 组件管理</span><br><span class="line">   │     ├── rte-config         RTE 配置</span><br><span class="line">   │     ├── ecu-extract        ECU Extract 管理</span><br><span class="line">   │     ├── bsw-config         BSW 模块配置</span><br><span class="line">   │     ├── autosar-code-gen   RTE/SWC 代码生成</span><br><span class="line">   │     ├── diagram-draw       Graphviz 架构图</span><br><span class="line">   │     └── pdf-parse          PDF 解析</span><br><span class="line">   │</span><br><span class="line">   └── .opencode/commands/  ← 斜杠命令</span><br><span class="line">         ├── autosar-init      初始化项目结构</span><br><span class="line">         ├── autosar-skill-list 列出技能</span><br><span class="line">         └── code-review        代码审查</span><br></pre></td></tr></table></figure>
+
+<h2 id="二、开发过程"><a href="#二、开发过程" class="headerlink" title="二、开发过程"></a>二、开发过程</h2><h3 id="1-定义-Agent（agent-md）"><a href="#1-定义-Agent（agent-md）" class="headerlink" title="1. 定义 Agent（agent.md）"></a>1. 定义 Agent（agent.md）</h3><p>一个 Agent 的核心就是一个 Markdown 文件，front-matter 声明元数据，正文是系统提示词：</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">---</span></span><br><span class="line"><span class="attr">name:</span> <span class="string">autosar</span></span><br><span class="line"><span class="attr">description:</span> <span class="string">AUTOSAR</span> <span class="string">架构专家，处理</span> <span class="string">ARXML、SWC、RTE、BSW、ECU</span> <span class="string">Extract</span> <span class="string">等任务</span></span><br><span class="line"><span class="attr">model:</span> <span class="string">opencode/deepseek-v4-flash-free</span></span><br><span class="line"><span class="attr">permission:</span></span><br><span class="line">  <span class="attr">skill:</span></span><br><span class="line">    <span class="attr">arxml-validate:</span> <span class="string">allow</span></span><br><span class="line">    <span class="attr">swc-manager:</span> <span class="string">allow</span></span><br><span class="line">    <span class="string">...</span></span><br><span class="line"><span class="meta">---</span></span><br></pre></td></tr></table></figure>
+
+<p>正文部分要写清楚三件事：</p>
+<ul>
+<li><strong>核心能力</strong>：ARXML 解析&#x2F;验证&#x2F;生成、SWC 设计与配置、RTE 配置、ECU Extract 管理、BSW 配置、文档与代码生成</li>
+<li><strong>工作流程</strong>：启动时切回用户原始工作目录（通过环境变量 <code>AUTOSAR_ORIG_DIR</code>）、先理解已有 ARXML 结构、再调用对应 skill、变更必须兼容 AUTOSAR 标准、用 Git 管理版本</li>
+<li><strong>约束</strong>：严格遵守 AUTOSAR 命名规范（CamelCase 模块名、大写包名）、优先复用已有 SWC 与数据类型定义、ECU Extract 不覆盖系统级配置</li>
+</ul>
+<h3 id="2-开发-Skill（SKILL-md）"><a href="#2-开发-Skill（SKILL-md）" class="headerlink" title="2. 开发 Skill（SKILL.md）"></a>2. 开发 Skill（SKILL.md）</h3><p>Skill 是领域知识的最小单元。每个 skill 目录下放一个 <code>SKILL.md</code>，同样用 front-matter 声明元数据：</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">---</span></span><br><span class="line"><span class="attr">name:</span> <span class="string">swc-manager</span></span><br><span class="line"><span class="attr">description:</span> <span class="string">AUTOSAR</span> <span class="string">Software</span> <span class="string">Component</span> <span class="string">应用层组件的创建、配置与管理</span></span><br><span class="line"><span class="attr">license:</span> <span class="string">MIT</span></span><br><span class="line"><span class="attr">compatibility:</span> <span class="string">opencode</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">domain:</span> <span class="string">autosar</span></span><br><span class="line"><span class="meta">---</span></span><br></pre></td></tr></table></figure>
+
+<p>正文则描述该 skill 的<strong>职责</strong>、<strong>工作方式</strong>和<strong>约束</strong>。比如 <code>swc-manager</code> 负责创建 Application &#x2F; SensorActuator &#x2F; Composition 三类 SWC、配置 P-Port &#x2F; R-Port、配置端口接口与数据类型等，并明确约束：Composition 不含 Runables、端口接口引用必须已存在于 <code>AR-PACKAGES</code>。</p>
+<p>这套设计的价值在于：<strong>模型不需要把 AUTOSAR 全量知识背在上下文里</strong>，用到什么 skill 再加载，省 token 且更精准。</p>
+<h3 id="3-开发-Command（commands-）"><a href="#3-开发-Command（commands-）" class="headerlink" title="3. 开发 Command（commands&#x2F;）"></a>3. 开发 Command（commands&#x2F;）</h3><p>Command 用于快速触发固定任务，同样是一个 Markdown 文件加 front-matter：</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">---</span></span><br><span class="line"><span class="attr">description:</span> <span class="string">初始化</span> <span class="string">AUTOSAR</span> <span class="string">项目目录结构和骨架</span> <span class="string">ARXML</span></span><br><span class="line"><span class="meta">---</span></span><br></pre></td></tr></table></figure>
+
+<p><code>autosar-init</code> 会创建 <code>system/</code>、<code>ecu/</code>、<code>swc/</code>、<code>bsw/</code>、<code>generate/</code>、<code>tools/</code> 目录结构、骨架 ARXML 和 <code>.gitignore</code>，并自动 <code>git init</code> 提交初始结构。这样成员在新项目中第一次使用即可一键初始化工程骨架。</p>
+<h3 id="4-编写项目文档（AGENTS-md）"><a href="#4-编写项目文档（AGENTS-md）" class="headerlink" title="4. 编写项目文档（AGENTS.md）"></a>4. 编写项目文档（AGENTS.md）</h3><p>仓库根目录的 <code>AGENTS.md</code> 是团队协作的「说明书」，包含：</p>
+<ul>
+<li>项目定位（个人笔记&#x2F;参考目录，非软件项目）</li>
+<li>安装&#x2F;启动命令（<code>npm i -g opencode-ai</code>、<code>opencode serve</code>）</li>
+<li>项目结构说明</li>
+<li>各 Agent 的能力清单</li>
+<li><strong>发布安全强制规则</strong>：任何发布到公网的操作必须先执行 <code>sensitive-info-review</code> skill</li>
+</ul>
+<h3 id="5-版本管理"><a href="#5-版本管理" class="headerlink" title="5. 版本管理"></a>5. 版本管理</h3><p>整个仓库用 Git 管理，提交信息遵循 Conventional Commits：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">git add .</span><br><span class="line">git commit -m <span class="string">&quot;feat: add swc-manager skill for SWC component management&quot;</span></span><br><span class="line">git push origin master</span><br></pre></td></tr></table></figure>
+
+<h2 id="三、部署过程"><a href="#三、部署过程" class="headerlink" title="三、部署过程"></a>三、部署过程</h2><h3 id="1-源码托管"><a href="#1-源码托管" class="headerlink" title="1. 源码托管"></a>1. 源码托管</h3><p>源码托管在 Gitee 私有仓库，作为团队的安装源和更新源。</p>
+<h3 id="2-一键安装脚本（scripts-install-sh）"><a href="#2-一键安装脚本（scripts-install-sh）" class="headerlink" title="2. 一键安装脚本（scripts&#x2F;install.sh）"></a>2. 一键安装脚本（scripts&#x2F;install.sh）</h3><p>团队成员安装只需一条命令：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">curl -fsSL https://gitee.com/&lt;org&gt;/&lt;repo&gt;/raw/main/scripts/install.sh | bash</span><br></pre></td></tr></table></figure>
+
+<p><code>install.sh</code> 自动完成 5 件事：</p>
+<ol>
+<li><strong>检查依赖</strong>：缺 git 报错；缺 opencode 自动安装（<code>curl -fsSL https://opencode.ai/install | bash</code>）</li>
+<li><strong>克隆&#x2F;更新仓库</strong>：已存在则 <code>git pull --rebase --autostash</code>，不存在则 <code>git clone</code> 到 <code>~/.autosar-agent</code></li>
+<li><strong>安装启动命令</strong>：在 <code>~/.local/bin/autosar</code> 写入一个包装脚本，转发到 <code>scripts/autosar.sh</code></li>
+<li><strong>配置 PATH</strong>：自动检测 shell（zsh&#x2F;bash），把 <code>~/.local/bin</code> 追加到 <code>.zshrc</code> &#x2F; <code>.bashrc</code></li>
+<li><strong>提示配置模型</strong>：首次使用需执行 <code>opencode connect</code> 配置 Provider</li>
+</ol>
+<h3 id="3-启动器（scripts-autosar-sh）"><a href="#3-启动器（scripts-autosar-sh）" class="headerlink" title="3. 启动器（scripts&#x2F;autosar.sh）"></a>3. 启动器（scripts&#x2F;autosar.sh）</h3><p><code>autosar</code> 命令启动时的行为：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">AUTOSAR_HOME=<span class="string">&quot;<span class="variable">$&#123;AUTOSAR_HOME:-<span class="variable">$HOME</span>/.autosar-agent&#125;</span>&quot;</span></span><br><span class="line">ORIG_DIR=<span class="string">&quot;<span class="subst">$(pwd)</span>&quot;</span>                       <span class="comment"># 记录用户当前目录</span></span><br><span class="line"><span class="built_in">cd</span> <span class="string">&quot;<span class="variable">$AUTOSAR_HOME</span>&quot;</span> &amp;&amp; git pull --rebase --autostash   <span class="comment"># 自动更新到最新版</span></span><br><span class="line"><span class="built_in">export</span> AUTOSAR_ORIG_DIR=<span class="string">&quot;<span class="variable">$ORIG_DIR</span>&quot;</span>     <span class="comment"># 让 agent 能切回用户工作目录</span></span><br><span class="line"><span class="built_in">exec</span> opencode <span class="string">&quot;<span class="variable">$ORIG_DIR</span>&quot;</span> --agent autosar</span><br></pre></td></tr></table></figure>
+
+<p>几个关键设计：</p>
+<ul>
+<li><strong>自动更新</strong>：每次启动先 <code>git pull</code>，成员永远用最新技能，无需手动升级</li>
+<li><strong>工作目录保真</strong>：通过 <code>AUTOSAR_ORIG_DIR</code> 环境变量把用户启动时的目录传给 agent，agent 在 <code>agent.md</code> 里声明启动时 <code>cd &quot;$AUTOSAR_ORIG_DIR&quot;</code>，解决「在 <code>~/.autosar-agent</code> 下启动导致工作目录错乱」的问题</li>
+<li><strong>可选飞书桥接</strong>：检测到 <code>feishu/.env</code> 配置时自动拉起 <code>opencode serve</code> 和飞书桥接服务，实现手机远程操控（详见本站另一篇《用飞书连接 AUTOSAR-Agent 手机远程操控指南》）</li>
+</ul>
+<h3 id="4-知识文档发布（本博客）"><a href="#4-知识文档发布（本博客）" class="headerlink" title="4. 知识文档发布（本博客）"></a>4. 知识文档发布（本博客）</h3><p>Agent 的能力说明和实战指南通过 Hexo 博客发布，与源码仓库解耦，方便成员在浏览器里查阅。发布流程：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">cd</span> ~/mchine8916493.github.io</span><br><span class="line">npx hexo new <span class="string">&quot;文章标题&quot;</span>          <span class="comment"># 创建文章</span></span><br><span class="line"><span class="comment"># 编辑 source/_posts/文章标题.md</span></span><br><span class="line">npx hexo clean &amp;&amp; npx hexo generate &amp;&amp; npx hexo deploy   <span class="comment"># 构建并部署到 gh-pages</span></span><br><span class="line">git add -A &amp;&amp; git commit -m <span class="string">&quot;新增文章：文章标题&quot;</span> &amp;&amp; git push origin master  <span class="comment"># 备份源码</span></span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p>⚠️ 强制规则：<strong>任何发布到公网的操作</strong>（git push、hexo deploy、上传等）之前，必须先运行 <code>sensitive-info-review</code> skill 做敏感信息审查，确认无 API 密钥、口令、私钥等泄露后才能发布。</p>
+</blockquote>
+<h2 id="四、持续迭代的实践经验"><a href="#四、持续迭代的实践经验" class="headerlink" title="四、持续迭代的实践经验"></a>四、持续迭代的实践经验</h2><ol>
+<li><strong>沉淀优先于重复</strong>：每次手工解答用户问题后，如果发现是重复性任务，就把它固化成 skill 或 command，形成知识飞轮</li>
+<li><strong>一次只改一个点</strong>：开发新 skill 时用 Git 分支，验证通过再合并，避免破坏在用的 agent</li>
+<li><strong>文档与代码同仓</strong>：<code>AGENTS.md</code>、skill、脚本、安装器放在同一个仓库，成员 clone 一次全部拿到</li>
+<li><strong>发布前必做安全审查</strong>：扫描密钥&#x2F;口令&#x2F;私钥模式，检查 <code>.env</code>、<code>*.log</code>、<code>state.json</code> 等运行时产物是否被意外入库</li>
+</ol>
+<h2 id="五、总结"><a href="#五、总结" class="headerlink" title="五、总结"></a>五、总结</h2><p>基于 opencode 搭建领域专家型 Agent 的完整链路是：</p>
+<blockquote>
+<p><strong>写 agent.md 定义角色 → 写 SKILL.md 沉淀领域知识 → 写 command 固化高频操作 → Git 管理 → 一键安装脚本分发 → 启动器自动更新 → 博客发布知识文档</strong></p>
+</blockquote>
+<p>这套模式的精髓在于「<strong>配置即代码</strong>」：整个 Agent 就是一个可版本化、可分发、可一键部署的 Git 仓库，团队成员既能直接使用，也能 fork 后按自己的领域裁剪。AUTOSAR Agent 只是第一个例子——同样的方法可以复制出 LIN&#x2F;以太网协议栈专家、ISO 26262 功能安全专家、CANoe 脚本专家等更多领域队友。</p>
+
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="http://example.com/2026/08/01/%E5%A6%82%E4%BD%95%E5%BC%80%E5%8F%91%E9%83%A8%E7%BD%B2AUTOSAR-Agent/" data-id="cms9vrpe600050ilm25ncgyoy" data-title="如何开发部署AUTOSAR-Agent" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      
+      
+      
+  <ul class="article-tag-list" itemprop="keywords"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/AI-Agent/" rel="tag">AI Agent</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/AUTOSAR/" rel="tag">AUTOSAR</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/opencode/" rel="tag">opencode</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/%E5%BC%80%E5%8F%91/" rel="tag">开发</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/%E6%95%88%E7%8E%87%E5%B7%A5%E5%85%B7/" rel="tag">效率工具</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/%E9%83%A8%E7%BD%B2/" rel="tag">部署</a></li></ul>
+
+    </footer>
+  </div>
+  
+    
+<nav id="article-nav">
+  
+  
+    <a href="/2026/08/01/%E7%94%B5%E6%9C%BA%E6%8E%A7%E5%88%B6%E7%9F%A5%E8%AF%86%E4%BD%93%E7%B3%BB%E5%85%A5%E9%97%A8%EF%BC%9A%E4%BB%8E%E7%94%B5%E6%9C%BA%E5%8E%9F%E7%90%86%E5%88%B0FOC%E5%AE%9E%E6%88%98/" id="article-nav-older" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">Older</strong>
+      <div class="article-nav-title">电机控制知识体系入门：从电机原理到FOC实战</div>
+    </a>
+  
+</nav>
+
+  
+</article>
+
+
+</section>
+        
+          <aside id="sidebar">
+  
+    
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Tags</h3>
+    <div class="widget">
+      <ul class="tag-list" itemprop="keywords"><li class="tag-list-item"><a class="tag-list-link" href="/tags/AI-Agent/" rel="tag">AI Agent</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/AUTOSAR/" rel="tag">AUTOSAR</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/CANoe/" rel="tag">CANoe</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/CAPL/" rel="tag">CAPL</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/FOC/" rel="tag">FOC</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Linux/" rel="tag">Linux</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/U%E7%9B%98%E5%90%AF%E5%8A%A8%E7%9B%98/" rel="tag">U盘启动盘</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Ventoy/" rel="tag">Ventoy</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/opencode/" rel="tag">opencode</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86/" rel="tag">内存管理</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%86%85%E6%A0%B8/" rel="tag">内核</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/" rel="tag">学习笔记</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%B5%8C%E5%85%A5%E5%BC%8F/" rel="tag">嵌入式</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%BC%80%E5%8F%91/" rel="tag">开发</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E6%95%88%E7%8E%87%E5%B7%A5%E5%85%B7/" rel="tag">效率工具</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E6%B1%BD%E8%BD%A6%E7%94%B5%E5%AD%90/" rel="tag">汽车电子</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E6%B5%8B%E8%AF%95/" rel="tag">测试</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E7%94%B5%E5%8A%9B%E7%94%B5%E5%AD%90/" rel="tag">电力电子</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E7%94%B5%E6%9C%BA%E6%8E%A7%E5%88%B6/" rel="tag">电机控制</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E7%B3%BB%E7%BB%9F%E5%AE%89%E8%A3%85/" rel="tag">系统安装</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E8%A3%85%E6%9C%BA%E5%B7%A5%E5%85%B7/" rel="tag">装机工具</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E9%83%A8%E7%BD%B2/" rel="tag">部署</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E9%A3%9E%E4%B9%A6/" rel="tag">飞书</a></li></ul>
+    </div>
+  </div>
+
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Tag Cloud</h3>
+    <div class="widget tagcloud">
+      <a href="/tags/AI-Agent/" style="font-size: 20px;">AI Agent</a> <a href="/tags/AUTOSAR/" style="font-size: 20px;">AUTOSAR</a> <a href="/tags/CANoe/" style="font-size: 10px;">CANoe</a> <a href="/tags/CAPL/" style="font-size: 10px;">CAPL</a> <a href="/tags/FOC/" style="font-size: 10px;">FOC</a> <a href="/tags/Linux/" style="font-size: 20px;">Linux</a> <a href="/tags/U%E7%9B%98%E5%90%AF%E5%8A%A8%E7%9B%98/" style="font-size: 10px;">U盘启动盘</a> <a href="/tags/Ventoy/" style="font-size: 10px;">Ventoy</a> <a href="/tags/opencode/" style="font-size: 20px;">opencode</a> <a href="/tags/%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86/" style="font-size: 10px;">内存管理</a> <a href="/tags/%E5%86%85%E6%A0%B8/" style="font-size: 10px;">内核</a> <a href="/tags/%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/" style="font-size: 10px;">学习笔记</a> <a href="/tags/%E5%B5%8C%E5%85%A5%E5%BC%8F/" style="font-size: 10px;">嵌入式</a> <a href="/tags/%E5%BC%80%E5%8F%91/" style="font-size: 10px;">开发</a> <a href="/tags/%E6%95%88%E7%8E%87%E5%B7%A5%E5%85%B7/" style="font-size: 20px;">效率工具</a> <a href="/tags/%E6%B1%BD%E8%BD%A6%E7%94%B5%E5%AD%90/" style="font-size: 10px;">汽车电子</a> <a href="/tags/%E6%B5%8B%E8%AF%95/" style="font-size: 20px;">测试</a> <a href="/tags/%E7%94%B5%E5%8A%9B%E7%94%B5%E5%AD%90/" style="font-size: 10px;">电力电子</a> <a href="/tags/%E7%94%B5%E6%9C%BA%E6%8E%A7%E5%88%B6/" style="font-size: 10px;">电机控制</a> <a href="/tags/%E7%B3%BB%E7%BB%9F%E5%AE%89%E8%A3%85/" style="font-size: 10px;">系统安装</a> <a href="/tags/%E8%A3%85%E6%9C%BA%E5%B7%A5%E5%85%B7/" style="font-size: 10px;">装机工具</a> <a href="/tags/%E9%83%A8%E7%BD%B2/" style="font-size: 10px;">部署</a> <a href="/tags/%E9%A3%9E%E4%B9%A6/" style="font-size: 10px;">飞书</a>
+    </div>
+  </div>
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Archives</h3>
+    <div class="widget">
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2026/08/">August 2026</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2026/07/">July 2026</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2026/05/">May 2026</a></li></ul>
+    </div>
+  </div>
+
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Recent Posts</h3>
+    <div class="widget">
+      <ul>
+        
+          <li>
+            <a href="/2026/08/01/%E5%A6%82%E4%BD%95%E5%BC%80%E5%8F%91%E9%83%A8%E7%BD%B2AUTOSAR-Agent/">如何开发部署AUTOSAR-Agent</a>
+          </li>
+        
+          <li>
+            <a href="/2026/08/01/%E7%94%B5%E6%9C%BA%E6%8E%A7%E5%88%B6%E7%9F%A5%E8%AF%86%E4%BD%93%E7%B3%BB%E5%85%A5%E9%97%A8%EF%BC%9A%E4%BB%8E%E7%94%B5%E6%9C%BA%E5%8E%9F%E7%90%86%E5%88%B0FOC%E5%AE%9E%E6%88%98/">电机控制知识体系入门：从电机原理到FOC实战</a>
+          </li>
+        
+          <li>
+            <a href="/2026/08/01/%E4%BD%BF%E7%94%A8-Ventoy-%E5%88%B6%E4%BD%9C-U-%E7%9B%98%E5%90%AF%E5%8A%A8%E7%9B%98%E5%AE%8C%E5%85%A8%E6%8C%87%E5%8D%97/">使用 Ventoy 制作 U 盘启动盘完全指南</a>
+          </li>
+        
+          <li>
+            <a href="/2026/07/31/%E7%94%A8%E9%A3%9E%E4%B9%A6%E8%BF%9E%E6%8E%A5AUTOSAR-Agent-%E6%89%8B%E6%9C%BA%E8%BF%9C%E7%A8%8B%E6%93%8D%E6%8E%A7%E6%8C%87%E5%8D%97/">用飞书连接AUTOSAR-Agent-手机远程操控指南</a>
+          </li>
+        
+          <li>
+            <a href="/2026/07/31/CANoe-CAPL%E8%84%9A%E6%9C%AC%E6%B5%8B%E8%AF%95%E5%85%A5%E9%97%A8%E4%B8%8E%E5%AE%9E%E8%B7%B5/">CANoe CAPL脚本测试入门与实践</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+
+  
+</aside>
+        
+      </div>
+      <footer id="footer">
+  
+  <div class="outer">
+    <div id="footer-info" class="inner">
+      
+      &copy; 2026 John Doe<br>
+      Powered by <a href="https://hexo.io/" target="_blank">Hexo</a>
+    </div>
+  </div>
+</footer>
+
+    </div>
+    <nav id="mobile-nav">
+  
+    <a href="/" class="mobile-nav-link">Home</a>
+  
+    <a href="/archives" class="mobile-nav-link">Archives</a>
+  
+</nav>
+    
+
+
+<script src="/js/jquery-3.6.4.min.js"></script>
+
+
+
+  
+<script src="/fancybox/jquery.fancybox.min.js"></script>
+
+
+
+
+<script src="/js/script.js"></script>
+
+
+
+
+
+  </div>
+</body>
+</html>
