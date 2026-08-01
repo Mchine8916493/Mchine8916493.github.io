@@ -1,2 +1,6 @@
 # hexo deployer-git 临时部署缓存（每次 hexo deploy 自动重建，不需要跟踪）
 .deploy_git/
+
+# 构建产物与缓存
+public/
+db.json
