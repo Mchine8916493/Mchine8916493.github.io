@@ -131,27 +131,32 @@ MEMORY
 
 ### 3.2 TC375 的多核内存映射（核心重点）
 
-TC375 是 **3 核 TriCore 1.6.2P** 架构，总 SRAM **992KB**、PFLASH **6MB**。它的内存映射比单核 MCU 复杂得多——每个核都有自己的私有 RAM，还有共享 RAM 与多组 Flash。下表是英飞凌官方 TC375 内存映射（来自 `Lcf_Gnuc_Tricore_Tc.lsl` / 用户手册）：
+TC375 是 **3 核 TriCore 1.6.2P** 架构，PFLASH **6MB**、DFLASH **384KB**（DF0 256KB + DF1 128KB）、总 SRAM **992KB**。它的内存映射比单核 MCU 复杂得多——每个核都有自己的私有 RAM，还有共享 RAM 与多组 Flash。下表是依据**英飞凌官方 `AURIX TC37x 用户手册 Appendix` 第2章（MEMMAP）**核对的内存映射（与 `Lcf_Gnuc_Tricore_Tc.lsl` 链接脚本一致）：
 
 | 区域名 | 起始地址 | 长度 | 用途 | 缓存 |
 |---|---|---|---|---|
-| `pfls0` | 0x8000_0000 | 3MB | 程序 Flash0（代码/只读数据） | 可缓存 |
+| `pfls0` | 0x8000_0000 | 3MB | 程序 Flash0（PFI0，代码/只读数据） | 可缓存 |
 | `pfls0_nc` | 0xA000_0000 | 3MB | PFLASH0 非缓存镜像 | 非缓存 |
-| `pfls1` | 0x8030_0000 | 3MB | 程序 Flash1（第二块代码区） | 可缓存 |
+| `pfls1` | 0x8030_0000 | 3MB | 程序 Flash1（PFI1，第二块代码区） | 可缓存 |
 | `pfls1_nc` | 0xA030_0000 | 3MB | PFLASH1 非缓存镜像 | 非缓存 |
-| `dfls0` | 0xAF00_0000 | 256KB | 数据 Flash（EEPROM 模拟） | 非缓存 |
-| `ucb` | 0xAF40_0000 | 24KB | 用户配置块（BMHD 引导头） | 非缓存 |
-| `dsram0` | 0x7000_0000 | 240KB | **CPU0** 本地数据 RAM（DSPR0） | — |
-| `psram0` | 0x7010_0000 | 64KB | **CPU0** 程序 RAM（PSPR0） | — |
-| `dsram1` | 0x6000_0000 | 240KB | **CPU1** 本地数据 RAM（DSPR1） | — |
-| `psram1` | 0x6010_0000 | 64KB | **CPU1** 程序 RAM（PSPR1） | — |
-| `dsram2` | 0x5000_0000 | 96KB | **CPU2** 本地数据 RAM（DSPR2） | — |
-| `psram2` | 0x5010_0000 | 64KB | **CPU2** 程序 RAM（PSPR2） | — |
-| `cpu0_dlmu` | 0x9000_0000 | 64KB | 全局共享 RAM（LMU 低段，DLMU0） | 可缓存 |
+| `dfls0` | 0xAF00_0000 | 256KB | 数据 Flash0（EEPROM 模拟） | 非缓存 |
+| `ucb` | 0xAF40_0000 | 24KB | 用户配置块 UCB（含 BMHD0-3 引导头） | 非缓存 |
+| `dfls1` | 0xAFC0_0000 | 128KB | 数据 Flash1（HSM EEPROM） | 非缓存 |
+| `brom` | 0x8FFF_0000 | 64KB | Boot ROM（DMU，SSW 启动软件） | 可缓存 |
+| `dsram0` | 0x7000_0000 | 240KB | **CPU0** 数据 ScratchPad RAM（DSPR0） | — |
+| `psram0` | 0x7010_0000 | 64KB | **CPU0** 程序 ScratchPad RAM（PSPR0） | — |
+| `dsram1` | 0x6000_0000 | 240KB | **CPU1** 数据 ScratchPad RAM（DSPR1） | — |
+| `psram1` | 0x6010_0000 | 64KB | **CPU1** 程序 ScratchPad RAM（PSPR1） | — |
+| `dsram2` | 0x5000_0000 | 96KB | **CPU2** 数据 ScratchPad RAM（DSPR2，注意只有 96KB） | — |
+| `psram2` | 0x5010_0000 | 64KB | **CPU2** 程序 ScratchPad RAM（PSPR2） | — |
+| `cpu0_dlmu` | 0x9000_0000 | 64KB | 全局共享 RAM（DLMU0，LMU 低段） | 可缓存 |
 | `cpu1_dlmu` | 0x9001_0000 | 64KB | 全局共享 RAM（DLMU1） | 可缓存 |
 | `cpu2_dlmu` | 0x9002_0000 | 64KB | 全局共享 RAM（DLMU2） | 可缓存 |
 | `cpu0_dlmu_nc` | 0xB000_0000 | 64KB | DLMU0 非缓存镜像 | 非缓存 |
-| ... | ... | ... | ... | ... |
+| `cpu1_dlmu_nc` | 0xB001_0000 | 64KB | DLMU1 非缓存镜像 | 非缓存 |
+| `cpu2_dlmu_nc` | 0xB002_0000 | 64KB | DLMU2 非缓存镜像 | 非缓存 |
+| `dam_ram` | 0x9040_0000 | 32KB | DAM SRAM（全局直接访问内存） | 可缓存 |
+| `olda` | 0x8FE0_0000 | 512KB | Online Data Acquisition（调试用） | — |
 
 **AURIX 独有的地址映射机制**：
 
@@ -165,6 +170,7 @@ TC375 是 **3 核 TriCore 1.6.2P** 架构，总 SRAM **992KB**、PFLASH **6MB**�
   REGION_MIRROR("pfls0", "pfls0_nc")
   REGION_MIRROR("cpu0_dlmu", "cpu0_dlmu_nc")
   ```
+- **16 个 256MB 段**：TriCore 4GB 地址空间按 `A[31:28]` 分为 16 段（Segment 0~15）。TC375 中：**段 1/3-7** 放 PSPR/DSPR/PCACHE/DCACHE，**段 8** 缓存访问 PFLASH/BROM，**段 9** 缓存访问 LMU，**段 10** 非缓存访问 PFLASH/DFLASH/BROM，**段 11** 非缓存访问 LMU，**段 15** 是 SPB/SRI 外设寄存器空间（如 F880_0000 起是 CPU 内核特殊功能寄存器）。链接脚本中 `pfls0`（0x8...）、`pfls0_nc`（0xA...）、`cpu0_dlmu`（0x9...）、`cpu0_dlmu_nc`（0xB...）正好落在这些段上。
 
 ---
 
@@ -339,8 +345,8 @@ uint32_t shared_flag;         /* 声明放到 .lmu_data 段 */
 
 TC375 的上电启动比普通 MCU 复杂，分成多级：
 
-1. **硬件复位**：CPU0 复位后先运行芯片内置的 **BootROM**（不可修改的固件）；
-2. **BootROM 引导**：BootROM 读取 UCB 区（0xAF40_0000）中的 **BMHD（Boot Mode Header）**，校验后根据 BMHD 中的地址跳转到用户的 `_start`（CPU0 复位入口）；
+1. **硬件复位**：CPU0 复位后先运行芯片内置的 **Boot ROM（BROM）**（不可修改的固件，位于 0x8FFF_0000，64KB）；
+2. **BootROM 引导**：BootROM 读取 UCB 区（0xAF40_0000，24KB）中的 **BMHD（Boot Mode Header）**，校验后根据 BMHD 中的地址跳转到用户的 `_start`（CPU0 复位入口）；
 3. **CPU0 用户启动**：执行链接脚本中的 `.start_tc0` 段代码（`_start`），完成：
    - 设置栈指针（`__USTACK0`）和 CSA 基址（`__CSA0`）；
    - 拷贝 `.data`（`_etext` → `_sdata`）；
@@ -349,7 +355,36 @@ TC375 的上电启动比普通 MCU 复杂，分成多级：
    - 调用 `main`（core0_main）；
 4. **CPU1/CPU2 启动**：CPU0 软件释放 CPU1/CPU2 的复位，后两者从各自的 `.start_tc1`/`.start_tc2` 段（`_start_cpu1`/`_start_cpu2`）开始，**每个核运行一份独立的 C 运行时启动代码**，各自有自己的 DSPR、栈、CSA，然后进入 `core1_main`/`core2_main`。
 
-### 7.2 每个核要独立维护的东西
+### 7.2 BMHD（Boot Mode Header）：启动链的"钥匙"
+
+BMHD 是写入 **UCB（User Configuration Block）** 中的信息结构，告诉 BootROM"用户代码在哪、用什么模式启动"。TC375 在 UCB 中定义了 **4 组 BMHD（BMHD0~BMHD3）**，每组包含**原档（ORIG）和副本（COPY）**：
+
+| BMHD 位置 | 地址 | 说明 |
+|---|---|---|
+| `UCB_BMHD0_ORIG` | 0xAF40_0000 | BMHD0 原档 |
+| `UCB_BMHD1_ORIG` | 0xAF40_0200 | BMHD1 原档 |
+| `UCB_BMHD2_ORIG` | 0xAF40_0400 | BMHD2 原档 |
+| `UCB_BMHD3_ORIG` | 0xAF40_0600 | BMHD3 原档 |
+| `UCB_BMHD0_COPY` | 0xAF40_1000 | BMHD0 副本 |
+| ... | ... | 依次类推 |
+
+> 实际烧录工具（如英飞凌 MemTool）会自动生成 BMHD 并写入上述地址，链接脚本中通常无需手动放置，但开发者应了解其结构。
+
+**BMHD 结构**（依据 Part1 用户手册 Table 45）：
+
+| 字段 | 大小 | 含义 |
+|---|---|---|
+| **BMI** | 16bit | Boot Mode Index：`HWCFG=111` 内部 Flash 启动、`011` ASC BSL、`100` 通用 BSL、`110` 备用启动模式 ABM |
+| **BMHDID** | 16bit | 标识符，必须为 `B359H` |
+| **STAD** | 32bit | **用户代码起始地址**（必须位于 PFLASH 内、字对齐）——这就是 BootROM 跳转的目标 |
+| **CRCBMHD** | 32bit | 整个 BMHD 的 CRC 校验值 |
+| **CRCBMHD_N** | 32bit | CRC 校验值取反 |
+
+**SSW 校验流程（17 步）**：BootROM 依次检查 BMHD 状态（CONFIRMED/UNLOCKED）→ BMHDID → BMI 合法性 → STAD 是否为 PFLASH 内字对齐地址 → CRC 校验 → 判断是否需要由 HWCFG 引脚选择启动模式 → 最终得到 `BOOT_CFG` 并跳转到 `STAD`。
+
+> **与链接脚本的联系**：`STAD` 值必须与链接脚本中 `.start_tc0` 段（`_start`）的实际地址一致。官方 AURIX 脚本把 `.start_tc0` 固定在 `0xA000_0000`（PFLASH0 非缓存镜像起始），因此烧录工具默认把 STAD 写成 `0xA0000000`。**改动了链接脚本的启动段地址，就必须同步更新 BMHD.STAD**，否则上电后 BootROM 会跳到错误位置。
+
+### 7.3 每个核要独立维护的东西
 
 | 项目 | CPU0 | CPU1 | CPU2 |
 |---|---|---|---|
@@ -399,8 +434,8 @@ MEMORY
     pfls1_nc (rx!p) : org = 0xa0300000, len = 3M
 
     /* ---- 数据 Flash 与用户配置块 ---- */
-    dfls0    (rx!p) : org = 0xaf000000, len = 256K
-    ucb      (rx!p) : org = 0xaf400000, len = 24K
+    dfls0    (rx!p) : org = 0xaf000000, len = 256K  /* DF0：EEPROM 模拟 */
+    ucb      (rx!p) : org = 0xaf400000, len = 24K   /* UCB：BMHD0-3 + 副本 */
 
     /* ---- CPU0 本地 RAM：DSPR + PSPR ---- */
     dsram0_local (w!xp) : org = 0xd0000000, len = 240K  /* 本地地址 */
@@ -589,6 +624,7 @@ ASSERT(_ebss0 < _stack0_begin, "DSPR0 数据与栈冲突！")
 | `cannot find entry symbol _start` | `ENTRY` 写错/函数名拼写不一致 | 确认 `ENTRY` 与启动文件函数名一致 |
 | `multiple definition of xxx` | 全局变量重复定义 | 检查 `-fno-common` 与头文件定义 |
 | `region 'ucb' overflowed` | BMHD 引导头放错位置 | 检查 BMHD 结构体是否准确放在 0xAF400000 各槽位 |
+| 上电后不进 main、程序停在 BootROM | **BMHD.STAD 与链接脚本启动段地址不一致** | 用 MemTool 重新烧录 BMHD，确保 STAD=0xA0000000（与 `.start_tc0` 对齐） |
 | 三核中只有某个核不跑 | 该核栈/CSA 配置错误或 DSPR 被占用 | 检查每核独立的 `.csa`/栈符号与大小 |
 
 ### 10.2 调试工具：`nm`、`objdump`、`size`
@@ -725,16 +761,17 @@ LR_IROM1 0x08000000 0x00080000 {
 链接脚本是嵌入式工程师从"会写 C"走向"懂底层"的分水岭。以 TC375 为例回顾本文核心要点：
 
 1. **链接器**负责符号解析与重定位，裸机程序必须用链接脚本定义内存布局；
-2. **MEMORY** 定义芯片可用的内存区域与属性——TC375 上要分清 PFLASH0/1、三组 DSPR/PSPR、LMU/DLMU、DFLASH、UCB；
+2. **MEMORY** 定义芯片可用的内存区域与属性——TC375 上要分清 PFLASH0/1（各 3MB）、三组 DSPR/PSPR、LMU/DLMU（各 64KB）、DAM（32KB）、DFLASH0/1、UCB、BROM；
 3. **SECTIONS** 定义输出段如何由输入段组成、放在哪块区域；
 4. **VMA 与 LMA** 是理解 `.data` 拷贝、启动代码的钥匙；
-5. **AURIX 多核特性**：`REGION_MAP`（本地/全局地址）、`REGION_MIRROR`（缓存/非缓存）、每核独立的 `.csa`/栈/`.data`/`.bss`；
+5. **AURIX 多核特性**：`REGION_MAP`（本地/全局地址）、`REGION_MIRROR`（缓存/非缓存）、16 个 256MB 段的划分、每核独立的 `.csa`/栈/`.data`/`.bss`；
 6. **`.`（位置计数器）、`ALIGN`、`KEEP`、`NOLOAD`** 是日常最常用的控制手段；
-7. **启动文件与链接脚本是一体两面**，符号必须严格对应，多核项目更是如此；
-8. 善用 `ASSERT`、`Map 文件`、`objdump -h` 把内存问题扼杀在链接阶段。
+7. **启动链三件套**：BootROM → BMHD（含 BMI/BMHDID/STAD/CRC）→ `.start_tc0`，其中 **STAD 必须与链接脚本启动段地址一致**；
+8. **启动文件与链接脚本是一体两面**，符号必须严格对应，多核项目更是如此；
+9. 善用 `ASSERT`、`Map 文件`、`objdump -h` 把内存问题扼杀在链接阶段。
 
 理解链接脚本之后，你会发现自己对"程序到底怎么跑起来的"有了更清晰的画面：BootROM 读 BMHD → CPU0 从 0xA0000000 的 `_start` 启动 → 初始化栈与 CSA → 搬数据 → 清 BSS → 调 core0_main → 再释放 CPU1/CPU2 让它们各自从自己的入口跑起来……而这一切的幕后导演，正是这份被无数人"复制粘贴"却鲜有人真正读懂的 **Linker Script**。
 
 ---
 
-*参考文档：GNU ld 手册（`info ld`）、Infineon AURIX TC3xx 用户手册内存映射章节、英飞凌官方 AURIX Development Studio 例程 `Lcf_Gnuc_Tricore_Tc.lsl` / `Lcf_Tasking_Tricore_Tc.lsl`。*
+*参考文档：GNU ld 手册（`info ld`）、Infineon **AURIX TC3xx 用户手册 Part 1**（V2.0.0, 2021-02，第2章 MEMMAP / 第3章 SSW 启动 / Table 45 BMHD 结构）、**AURIX TC37x 用户手册 Appendix**（V2.0.0，第2章 MEMMAP 设备级内存映射）、TC37x 数据手册（V1.1）、英飞凌官方 AURIX Development Studio 例程 `Lcf_Gnuc_Tricore_Tc.lsl` / `Lcf_Tasking_Tricore_Tc.lsl`。*
