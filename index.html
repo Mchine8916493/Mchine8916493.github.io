@@ -71,6 +71,489 @@
       <div class="outer">
         <section id="main">
   
+    <article id="post-汇编语言知识点详解" class="h-entry article article-type-post" itemprop="blogPost" itemscope itemtype="https://schema.org/BlogPosting">
+  <div class="article-meta">
+    <a href="/2026/08/02/%E6%B1%87%E7%BC%96%E8%AF%AD%E8%A8%80%E7%9F%A5%E8%AF%86%E7%82%B9%E8%AF%A6%E8%A7%A3/" class="article-date">
+  <time class="dt-published" datetime="2026-08-02T04:21:43.000Z" itemprop="datePublished">2026-08-02</time>
+</a>
+    
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 itemprop="name">
+      <a class="p-name article-title" href="/2026/08/02/%E6%B1%87%E7%BC%96%E8%AF%AD%E8%A8%80%E7%9F%A5%E8%AF%86%E7%82%B9%E8%AF%A6%E8%A7%A3/">汇编语言知识点详解</a>
+    </h1>
+  
+
+      </header>
+    
+    <div class="e-content article-entry" itemprop="articleBody">
+      
+        <p>汇编语言（Assembly Language）是介于机器码与高级语言之间的底层编程语言。它直接映射到 CPU 指令集，是理解计算机工作原理、进行底层优化、驱动开发、嵌入式开发和逆向工程的基础。本文从零开始系统梳理汇编语言的知识点。</p>
+<h1 id="一、汇编语言是什么"><a href="#一、汇编语言是什么" class="headerlink" title="一、汇编语言是什么"></a>一、汇编语言是什么</h1><h2 id="1-1-从机器码说起"><a href="#1-1-从机器码说起" class="headerlink" title="1.1 从机器码说起"></a>1.1 从机器码说起</h2><p>CPU 只认识二进制，一条指令在机器中就是一串 0 和 1。例如 x86-64 上：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">B8 01 00 00 00     ; mov eax, 1</span><br></pre></td></tr></table></figure>
+
+<p>这串字节可读性极差。汇编语言用助记符（Mnemonic）代替机器码：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">mov eax, 1</span><br></pre></td></tr></table></figure>
+
+<p>汇编器（Assembler）负责把助记符翻译成机器码，反汇编器（Disassembler）做相反的工作。</p>
+<h2 id="1-2-汇编语言的特点"><a href="#1-2-汇编语言的特点" class="headerlink" title="1.2 汇编语言的特点"></a>1.2 汇编语言的特点</h2><table>
+<thead>
+<tr>
+<th>特点</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>与硬件强相关</td>
+<td>每种 CPU 架构（x86&#x2F;ARM&#x2F;RISC-V）有自己独立的指令集，不可移植</td>
+</tr>
+<tr>
+<td>直接控制硬件</td>
+<td>可访问寄存器、标志位、特殊功能寄存器、内存映射 I&#x2F;O</td>
+</tr>
+<tr>
+<td>高效且可预测</td>
+<td>程序员完全掌控每条指令，无编译器中间优化</td>
+</tr>
+<tr>
+<td>语法较繁琐</td>
+<td>语句极简，一个操作往往需要多条指令完成</td>
+</tr>
+</tbody></table>
+<h2 id="1-3-为什么要学汇编"><a href="#1-3-为什么要学汇编" class="headerlink" title="1.3 为什么要学汇编"></a>1.3 为什么要学汇编</h2><ul>
+<li><strong>理解程序执行本质</strong>：C 语言指针、栈、递归、数组下标的背后都是汇编语义</li>
+<li><strong>嵌入式&#x2F;驱动开发</strong>：启动代码、中断向量表、寄存器配置必须写汇编</li>
+<li><strong>性能优化</strong>：编译器生成不了最优代码的热点可用汇编手写</li>
+<li><strong>逆向工程与安全</strong>：分析恶意软件、漏洞利用、CTF 都必须读汇编</li>
+<li><strong>操作系统</strong>：任务切换、上下文保存、系统调用入口本质是汇编</li>
+</ul>
+<hr>
+<h1 id="二、CPU-架构基础"><a href="#二、CPU-架构基础" class="headerlink" title="二、CPU 架构基础"></a>二、CPU 架构基础</h1><h2 id="2-1-主要指令集架构（ISA）"><a href="#2-1-主要指令集架构（ISA）" class="headerlink" title="2.1 主要指令集架构（ISA）"></a>2.1 主要指令集架构（ISA）</h2><table>
+<thead>
+<tr>
+<th>架构</th>
+<th>类型</th>
+<th>指令长度</th>
+<th>代表</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>x86 &#x2F; x86-64</td>
+<td>CISC</td>
+<td>变长（1~15 字节）</td>
+<td>Intel、AMD</td>
+</tr>
+<tr>
+<td>ARM &#x2F; AArch64</td>
+<td>RISC</td>
+<td>定长（32 位&#x2F;64 位）</td>
+<td>手机、嵌入式、Apple M 系列</td>
+</tr>
+<tr>
+<td>RISC-V</td>
+<td>RISC</td>
+<td>定长（32 位基线）</td>
+<td>开源架构，RISC 的教科书实现</td>
+</tr>
+<tr>
+<td>MIPS</td>
+<td>RISC</td>
+<td>定长 32 位</td>
+<td>经典教学架构</td>
+</tr>
+</tbody></table>
+<ul>
+<li><strong>CISC（复杂指令集）</strong>：指令多且功能复杂，如 x86 单条指令可完成内存操作</li>
+<li><strong>RISC（精简指令集）</strong>：指令少且规整，绝大多数指令只在寄存器间操作，访存只能通过 load&#x2F;store</li>
+</ul>
+<h2 id="2-2-寄存器"><a href="#2-2-寄存器" class="headerlink" title="2.2 寄存器"></a>2.2 寄存器</h2><p>寄存器是 CPU 内部的高速存储单元，比内存快几个数量级，是汇编操作的核心对象。</p>
+<h3 id="x86-64-通用寄存器（16-个，64-位）"><a href="#x86-64-通用寄存器（16-个，64-位）" class="headerlink" title="x86-64 通用寄存器（16 个，64 位）"></a>x86-64 通用寄存器（16 个，64 位）</h3><table>
+<thead>
+<tr>
+<th>寄存器</th>
+<th>用途约定</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>RAX</td>
+<td>累加器，函数返回值</td>
+</tr>
+<tr>
+<td>RBX</td>
+<td>通用，被调用者保存</td>
+</tr>
+<tr>
+<td>RCX</td>
+<td>计数，常作循环计数</td>
+</tr>
+<tr>
+<td>RDX</td>
+<td>数据，常配合 RAX 做除法&#x2F;乘法</td>
+</tr>
+<tr>
+<td>RSI &#x2F; RDI</td>
+<td>源&#x2F;目的索引，常用于字符串操作与传参</td>
+</tr>
+<tr>
+<td>RBP</td>
+<td>帧指针（栈帧基址）</td>
+</tr>
+<tr>
+<td>RSP</td>
+<td><strong>栈指针（Stack Pointer）</strong></td>
+</tr>
+<tr>
+<td>R8~R15</td>
+<td>扩展通用寄存器</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p>还有专用寄存器：RIP（指令指针）、RFLAGS（标志寄存器）、段寄存器、控制寄存器、XMM 等。</p>
+</blockquote>
+<h3 id="ARM-用户模式通用寄存器（R0-R15）"><a href="#ARM-用户模式通用寄存器（R0-R15）" class="headerlink" title="ARM 用户模式通用寄存器（R0~R15）"></a>ARM 用户模式通用寄存器（R0~R15）</h3><table>
+<thead>
+<tr>
+<th>寄存器</th>
+<th>别名</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>R0~R3</td>
+<td>—</td>
+<td>传参&#x2F;返回值</td>
+</tr>
+<tr>
+<td>R4~R11</td>
+<td>—</td>
+<td>变量（被调用者保存）</td>
+</tr>
+<tr>
+<td>R12</td>
+<td>IP</td>
+<td>过程调用中间暂存</td>
+</tr>
+<tr>
+<td>R13</td>
+<td>SP</td>
+<td>栈指针</td>
+</tr>
+<tr>
+<td>R14</td>
+<td>LR</td>
+<td>链接寄存器（保存返回地址）</td>
+</tr>
+<tr>
+<td>R15</td>
+<td>PC</td>
+<td>程序计数器</td>
+</tr>
+</tbody></table>
+<p>状态寄存器 <strong>CPSR</strong> 保存 <strong>N&#x2F;Z&#x2F;C&#x2F;V</strong> 标志位（负&#x2F;零&#x2F;进位&#x2F;溢出）、中断屏蔽位和处理器模式。</p>
+<h2 id="2-3-内存布局与寻址"><a href="#2-3-内存布局与寻址" class="headerlink" title="2.3 内存布局与寻址"></a>2.3 内存布局与寻址</h2><p>程序运行时内存按段划分：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">高地址 ┌──────────────┐</span><br><span class="line">       │  栈 Stack    │  ← 向下增长（x86/ARM 均向低地址）</span><br><span class="line">       ├──────────────┤</span><br><span class="line">       │      ↓       │</span><br><span class="line">       │  空闲区      │</span><br><span class="line">       │      ↑       │</span><br><span class="line">       ├──────────────┤</span><br><span class="line">       │  堆 Heap     │  ← 向上增长</span><br><span class="line">       ├──────────────┤</span><br><span class="line">       │  BSS（未初始化全局变量） │</span><br><span class="line">       ├──────────────┤</span><br><span class="line">       │  数据段（已初始化全局变量）│</span><br><span class="line">       ├──────────────┤</span><br><span class="line">       │  只读数据（字符串常量等）│</span><br><span class="line">       ├──────────────┤</span><br><span class="line">       │  代码段 Text │</span><br><span class="line">低地址 └──────────────┘</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h1 id="三、汇编语句格式"><a href="#三、汇编语句格式" class="headerlink" title="三、汇编语句格式"></a>三、汇编语句格式</h1><h2 id="3-1-一般格式"><a href="#3-1-一般格式" class="headerlink" title="3.1 一般格式"></a>3.1 一般格式</h2><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">[标号:] 助记符 [操作数1, 操作数2, 操作数3] [; 注释]</span><br></pre></td></tr></table></figure>
+
+<p>示例（NASM 语法，Intel 风格）：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">start:              ; 标号，表示一条指令的地址</span><br><span class="line">    mov  eax, 10    ; 把立即数 10 送入 eax</span><br><span class="line">    add  eax, 5     ; eax = eax + 5</span><br></pre></td></tr></table></figure>
+
+<h2 id="3-2-两种语法风格"><a href="#3-2-两种语法风格" class="headerlink" title="3.2 两种语法风格"></a>3.2 两种语法风格</h2><table>
+<thead>
+<tr>
+<th></th>
+<th>Intel 风格（x86）</th>
+<th>AT&amp;T 风格（GNU，x86）</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>操作数顺序</td>
+<td><code>mov 目标, 源</code></td>
+<td><code>movl 源, 目标</code></td>
+</tr>
+<tr>
+<td>立即数</td>
+<td><code>mov eax, 10</code></td>
+<td><code>movl $10, %eax</code></td>
+</tr>
+<tr>
+<td>寄存器前缀</td>
+<td>无</td>
+<td><code>%</code>（如 <code>%eax</code>）</td>
+</tr>
+<tr>
+<td>立即数前缀</td>
+<td>无</td>
+<td><code>$</code>（如 <code>$10</code>）</td>
+</tr>
+<tr>
+<td>内存寻址</td>
+<td><code>[ebx+4]</code></td>
+<td><code>4(%ebx)</code></td>
+</tr>
+<tr>
+<td>指令宽度后缀</td>
+<td>无</td>
+<td><code>b/w/l/q</code>（如 <code>movb/movl</code>）</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p>了解 AT&amp;T 风格很重要，因为 GCC 默认产出 AT&amp;T 汇编、Linux 内核源码也大量使用。</p>
+</blockquote>
+<h2 id="3-3-ARM-汇编语法（GNU-as）"><a href="#3-3-ARM-汇编语法（GNU-as）" class="headerlink" title="3.3 ARM 汇编语法（GNU as）"></a>3.3 ARM 汇编语法（GNU as）</h2><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">[标号:] 助记符 &#123;条件码&#125;&#123;S&#125; 目标, 第一操作数, 第二操作数 ; 注释</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">adds r0, r1, r2    ; r0 = r1 + r2，且更新 CPSR 标志位（S 后缀）</span><br><span class="line">mov  r3, r0, lsl #2 ; r3 = r0 &lt;&lt; 2</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h1 id="四、指令分类详解"><a href="#四、指令分类详解" class="headerlink" title="四、指令分类详解"></a>四、指令分类详解</h1><h2 id="4-1-数据搬移指令"><a href="#4-1-数据搬移指令" class="headerlink" title="4.1 数据搬移指令"></a>4.1 数据搬移指令</h2><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">; x86</span><br><span class="line">mov eax, 10        ; eax = 10</span><br><span class="line">mov ebx, eax       ; ebx = eax</span><br><span class="line">mov [addr], eax    ; 把 eax 存入内存地址 addr</span><br><span class="line"></span><br><span class="line">; ARM</span><br><span class="line">mov r0, #5         ; r0 = 5</span><br><span class="line">ldr r1, [r2]       ; r1 = *(int*)r2 （加载）</span><br><span class="line">str r1, [r2]       ; *(int*)r2 = r1 （存储）</span><br></pre></td></tr></table></figure>
+
+<p>要点：</p>
+<ul>
+<li>x86 允许 <strong>内存↔寄存器</strong> 直接搬移，但 <strong>内存↔内存</strong> 不允许</li>
+<li>ARM 是 load&#x2F;store 架构，<strong>任何访存必须经过 ldr&#x2F;str 系列</strong></li>
+<li>立即数（常数）直接编码在指令中</li>
+</ul>
+<h2 id="4-2-算术运算指令"><a href="#4-2-算术运算指令" class="headerlink" title="4.2 算术运算指令"></a>4.2 算术运算指令</h2><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">; x86</span><br><span class="line">add eax, 1         ; eax += 1</span><br><span class="line">sub eax, ebx       ; eax -= ebx</span><br><span class="line">inc eax            ; eax++</span><br><span class="line">dec eax            ; eax--</span><br><span class="line">imul eax, 10       ; eax *= 10</span><br><span class="line">idiv ebx           ; edx:eax ÷ ebx，商→eax，余数→edx</span><br><span class="line"></span><br><span class="line">; ARM</span><br><span class="line">add r0, r1, r2     ; r0 = r1 + r2</span><br><span class="line">sub r0, r1, #3     ; r0 = r1 - 3</span><br><span class="line">rsb r0, r1, #0     ; r0 = 0 - r1 = -r1（反向减法，取负）</span><br><span class="line">mul r0, r1, r2     ; r0 = r1 * r2</span><br></pre></td></tr></table></figure>
+
+<h2 id="4-3-逻辑与移位指令"><a href="#4-3-逻辑与移位指令" class="headerlink" title="4.3 逻辑与移位指令"></a>4.3 逻辑与移位指令</h2><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line">; x86</span><br><span class="line">and eax, 0xFF      ; eax = eax &amp; 0xFF（取最低字节）</span><br><span class="line">or  eax, 0x0F      ; eax |= 0x0F</span><br><span class="line">xor eax, eax       ; eax = 0（最快清零方式！）</span><br><span class="line">shl eax, 2         ; eax &lt;&lt;= 2（无符号左移）</span><br><span class="line">shr eax, 2         ; eax &gt;&gt;= 2（无符号右移）</span><br><span class="line">sar eax, 2         ; eax &gt;&gt;= 2（算术右移，保留符号位）</span><br><span class="line">not eax            ; eax = ~eax</span><br><span class="line"></span><br><span class="line">; ARM</span><br><span class="line">and r0, r1, #0xFF</span><br><span class="line">orr r0, r1, r2</span><br><span class="line">eor r0, r1, #0xFFFFFFFF   ; 异或全 1 即取反</span><br><span class="line">bic r0, r1, #0x0F         ; 位清零（bit clear）</span><br><span class="line">lsl r0, r1, #2            ; 逻辑左移</span><br><span class="line">lsr r0, r1, #2            ; 逻辑右移</span><br><span class="line">asr r0, r1, #2            ; 算术右移</span><br><span class="line">ror r0, r1, #2            ; 循环右移</span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p><code>xor reg, reg</code> 是编译器生成<strong>寄存器清零</strong>的标准手法，因为它比 <code>mov reg, 0</code> 更短更快。</p>
+</blockquote>
+<h2 id="4-4-比较与条件跳转"><a href="#4-4-比较与条件跳转" class="headerlink" title="4.4 比较与条件跳转"></a>4.4 比较与条件跳转</h2><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">; x86</span><br><span class="line">cmp eax, 10        ; 计算 eax-10，只更新标志位，不保存结果</span><br><span class="line">je  label          ; 相等则跳（Z=1）</span><br><span class="line">jne label          ; 不等则跳</span><br><span class="line">jg  label          ; 有符号大于</span><br><span class="line">jl  label          ; 有符号小于</span><br><span class="line">ja  label          ; 无符号大于</span><br><span class="line">jb  label          ; 无符号小于</span><br><span class="line">jge label          ; 有符号 ≥</span><br><span class="line">jle label          ; 有符号 ≤</span><br><span class="line">jmp label          ; 无条件跳转</span><br></pre></td></tr></table></figure>
+
+<p>条件跳转依赖 <strong>RFLAGS 标志位</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>标志</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>ZF</td>
+<td>结果为零</td>
+</tr>
+<tr>
+<td>SF</td>
+<td>结果为负（最高位为 1）</td>
+</tr>
+<tr>
+<td>CF</td>
+<td>无符号运算产生进位&#x2F;借位</td>
+</tr>
+<tr>
+<td>OF</td>
+<td>有符号运算溢出</td>
+</tr>
+<tr>
+<td>PF</td>
+<td>结果低 8 位中 1 的个数为偶数</td>
+</tr>
+</tbody></table>
+<p>ARM 则把条件直接写在指令后缀上（条件执行）：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">cmp r0, #10</span><br><span class="line">beq label       ; 相等跳转</span><br><span class="line">bne label       ; 不等跳转</span><br><span class="line">bgt label       ; 有符号 &gt;</span><br><span class="line">bge label       ; 有符号 ≥</span><br><span class="line">movgt r2, #1    ; 若 r0 &gt; r1 则 r2 = 1（条件执行，无需跳转！）</span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p>ARM 的<strong>条件执行</strong>是精髓：单条指令可加条件后缀，避免跳转带来的流水线清空代价。</p>
+</blockquote>
+<h2 id="4-5-栈操作与函数调用"><a href="#4-5-栈操作与函数调用" class="headerlink" title="4.5 栈操作与函数调用"></a>4.5 栈操作与函数调用</h2><h3 id="栈（Stack）"><a href="#栈（Stack）" class="headerlink" title="栈（Stack）"></a>栈（Stack）</h3><p>栈是”后进先出”（LIFO）结构，由 <strong>SP&#x2F;RSP 栈指针</strong> 维护，通常<strong>向低地址增长</strong>。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">; x86</span><br><span class="line">push eax          ; rsp -= 8; [rsp] = eax</span><br><span class="line">pop  ebx          ; ebx = [rsp]; rsp += 8</span><br><span class="line"></span><br><span class="line">; ARM</span><br><span class="line">push &#123;r0-r3, lr&#125;  ; 压入多个寄存器</span><br><span class="line">pop  &#123;r0-r3, pc&#125;  ; 弹出并返回（pc=lr）</span><br></pre></td></tr></table></figure>
+
+<h3 id="函数调用约定（x86-64-System-V）"><a href="#函数调用约定（x86-64-System-V）" class="headerlink" title="函数调用约定（x86-64 System V）"></a>函数调用约定（x86-64 System V）</h3><ul>
+<li>前 6 个整数参数依次放入 <strong>RDI, RSI, RDX, RCX, R8, R9</strong></li>
+<li>返回值放在 <strong>RAX</strong></li>
+<li><strong>RSP 在调用时必须 16 字节对齐</strong></li>
+<li>调用者保存：RAX, RCX, RDX, RSI, RDI, R8~R11</li>
+<li>被调用者保存：RBX, RBP, R12~R15（需先压栈保护）</li>
+</ul>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">; 函数调用示例</span><br><span class="line">main:</span><br><span class="line">    mov edi, 10        ; 第一个参数</span><br><span class="line">    mov esi, 20        ; 第二个参数</span><br><span class="line">    call add_two       ; 调用函数（自动把返回地址压栈）</span><br><span class="line">    ; 结果在 eax</span><br><span class="line"></span><br><span class="line">add_two:</span><br><span class="line">    push rbp           ; 保存旧帧指针</span><br><span class="line">    mov  rbp, rsp      ; 建立新栈帧</span><br><span class="line">    mov  eax, edi</span><br><span class="line">    add  eax, esi</span><br><span class="line">    pop  rbp           ; 恢复帧指针</span><br><span class="line">    ret                ; 弹出返回地址并跳回</span><br></pre></td></tr></table></figure>
+
+<h3 id="栈帧（Stack-Frame）"><a href="#栈帧（Stack-Frame）" class="headerlink" title="栈帧（Stack Frame）"></a>栈帧（Stack Frame）</h3><p>每个函数在栈上占用一段区域叫栈帧，包含：返回地址、保存的寄存器、局部变量、参数。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">高地址</span><br><span class="line">  ┌─────────────────┐</span><br><span class="line">  │ 调用者局部变量   │</span><br><span class="line">  ├─────────────────┤</span><br><span class="line">  │ 返回地址         │ ← ret 用</span><br><span class="line">  ├─────────────────┤</span><br><span class="line">  │ 保存的 RBP       │ ← RBP 指向这里</span><br><span class="line">  ├─────────────────┤</span><br><span class="line">  │ 局部变量区       │ ← 通过 [RBP-偏移] 访问</span><br><span class="line">  ├─────────────────┤</span><br><span class="line">  │ 参数区（若溢出）│</span><br><span class="line">  └─────────────────┘ ← RSP</span><br><span class="line">低地址</span><br></pre></td></tr></table></figure>
+
+<h2 id="4-6-ARM-特有指令补充"><a href="#4-6-ARM-特有指令补充" class="headerlink" title="4.6 ARM 特有指令补充"></a>4.6 ARM 特有指令补充</h2><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">bl  function      ; 跳转并链接：lr = 返回地址，再跳转（调用）</span><br><span class="line">bx  lr            ; 跳转到 lr（函数返回，可切换指令集）</span><br><span class="line">mrs r0, cpsr      ; 读状态寄存器</span><br><span class="line">msr cpsr_c, r0    ; 写状态寄存器</span><br><span class="line">svc #0            ; 软中断（系统调用入口，旧名 swi）</span><br><span class="line">ldr r0, =0x12345678 ; 伪指令：加载任意 32 位立即数</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h1 id="五、寻址模式"><a href="#五、寻址模式" class="headerlink" title="五、寻址模式"></a>五、寻址模式</h1><p>寻址模式（Addressing Mode）决定指令如何找到操作数。</p>
+<h2 id="5-1-x86-寻址模式"><a href="#5-1-x86-寻址模式" class="headerlink" title="5.1 x86 寻址模式"></a>5.1 x86 寻址模式</h2><table>
+<thead>
+<tr>
+<th>模式</th>
+<th>示例</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>立即寻址</td>
+<td><code>mov eax, 5</code></td>
+<td>常数直接给</td>
+</tr>
+<tr>
+<td>寄存器寻址</td>
+<td><code>mov eax, ebx</code></td>
+<td>操作数在寄存器</td>
+</tr>
+<tr>
+<td>直接寻址</td>
+<td><code>mov eax, [0x1234]</code></td>
+<td>内存绝对地址</td>
+</tr>
+<tr>
+<td>寄存器间接</td>
+<td><code>mov eax, [ebx]</code></td>
+<td>地址在寄存器</td>
+</tr>
+<tr>
+<td>基址变址</td>
+<td><code>mov eax, [ebx+ecx]</code></td>
+<td>两寄存器相加</td>
+</tr>
+<tr>
+<td>基址+变址+偏移</td>
+<td><code>mov eax, [ebx+ecx*4+8]</code></td>
+<td>完整形式（最常用）</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p><code>[ebx+ecx*4+8]</code> 这种形式完美映射 C 数组访问 <code>arr[i]</code>：基址&#x3D;数组首地址、变址&#x3D;i、比例因子&#x3D;元素大小。</p>
+</blockquote>
+<h2 id="5-2-ARM-寻址模式"><a href="#5-2-ARM-寻址模式" class="headerlink" title="5.2 ARM 寻址模式"></a>5.2 ARM 寻址模式</h2><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">ldr r0, [r1]            ; 寄存器间接</span><br><span class="line">ldr r0, [r1, #4]        ; 前索引：访问 r1+4，r1 不变</span><br><span class="line">ldr r0, [r1, #4]!       ; 前索引+回写：访问 r1+4，然后 r1=r1+4</span><br><span class="line">ldr r0, [r1], #4        ; 后索引：访问 r1，然后 r1=r1+4</span><br><span class="line">ldr r0, [r1, r2, lsl #2] ; 基址+寄存器变址（可移位）</span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p>后索引 <code>[r1], #4</code> 非常适合遍历数组，一条指令完成”取数+指针自增”。</p>
+</blockquote>
+<hr>
+<h1 id="六、汇编与-C-语言的关系"><a href="#六、汇编与-C-语言的关系" class="headerlink" title="六、汇编与 C 语言的关系"></a>六、汇编与 C 语言的关系</h1><h2 id="6-1-C-语句对应的汇编"><a href="#6-1-C-语句对应的汇编" class="headerlink" title="6.1 C 语句对应的汇编"></a>6.1 C 语句对应的汇编</h2><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">int</span> a = <span class="number">5</span>;           <span class="comment">// mov eax, 5</span></span><br><span class="line"><span class="type">int</span> b = a + <span class="number">3</span>;       <span class="comment">// add eax, 3</span></span><br><span class="line"><span class="keyword">if</span> (b &gt; <span class="number">0</span>) &#123;...&#125;     <span class="comment">// cmp eax, 0 / jle / ...</span></span><br><span class="line"><span class="type">int</span> arr[<span class="number">4</span>];          <span class="comment">// 栈上分配 16 字节</span></span><br><span class="line">arr[i] = x;          <span class="comment">// mov [rbp-16+rax*4], edx</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="6-2-查看-C-编译出的汇编"><a href="#6-2-查看-C-编译出的汇编" class="headerlink" title="6.2 查看 C 编译出的汇编"></a>6.2 查看 C 编译出的汇编</h2><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 查看汇编</span></span><br><span class="line">gcc -S hello.c -o hello.s</span><br><span class="line"><span class="comment"># 查看含 C 源码混排的汇编</span></span><br><span class="line">gcc -g -O2 -c hello.c -o hello.o</span><br><span class="line">objdump -dS hello.o</span><br><span class="line"><span class="comment"># 反汇编可执行文件</span></span><br><span class="line">objdump -d a.out</span><br><span class="line"><span class="comment"># 在线反汇编神器：Compiler Explorer（godbolt.org）</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="6-3-内联汇编（GCC）"><a href="#6-3-内联汇编（GCC）" class="headerlink" title="6.3 内联汇编（GCC）"></a>6.3 内联汇编（GCC）</h2><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">int</span> a = <span class="number">10</span>, b = <span class="number">20</span>, sum;</span><br><span class="line">__asm__ <span class="title function_">volatile</span> <span class="params">(</span></span><br><span class="line"><span class="params">    <span class="string">&quot;addl %%ebx, %%eax&quot;</span></span></span><br><span class="line"><span class="params">    : <span class="string">&quot;=a&quot;</span>(sum)        <span class="comment">// 输出操作数：eax → sum</span></span></span><br><span class="line"><span class="params">    : <span class="string">&quot;a&quot;</span>(a), <span class="string">&quot;b&quot;</span>(b)   <span class="comment">// 输入操作数：a→eax, b→ebx</span></span></span><br><span class="line"><span class="params">    : <span class="string">&quot;cc&quot;</span>             <span class="comment">// 被破坏的寄存器/条件码</span></span></span><br><span class="line"><span class="params">)</span>;</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h1 id="七、程序运行流程"><a href="#七、程序运行流程" class="headerlink" title="七、程序运行流程"></a>七、程序运行流程</h1><h2 id="7-1-编译链接全过程"><a href="#7-1-编译链接全过程" class="headerlink" title="7.1 编译链接全过程"></a>7.1 编译链接全过程</h2><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">源代码.c ──编译──▶ 汇编代码.s ──汇编──▶ 目标文件.o ──链接──▶ 可执行文件</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li><strong>编译（Compile）</strong>：C → 汇编（编译器做语义分析、优化）</li>
+<li><strong>汇编（Assemble）</strong>：汇编 → 机器码目标文件（带重定位信息）</li>
+<li><strong>链接（Link）</strong>：合并目标文件、解析符号地址、生成可执行文件</li>
+</ul>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">gcc -S hello.c      <span class="comment"># 只编译到汇编</span></span><br><span class="line">gcc -c hello.c      <span class="comment"># 编译+汇编到目标文件</span></span><br><span class="line">gcc hello.o -o hello  <span class="comment"># 链接成可执行文件</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="7-2-ELF-文件结构"><a href="#7-2-ELF-文件结构" class="headerlink" title="7.2 ELF 文件结构"></a>7.2 ELF 文件结构</h2><p>Linux 下可执行文件是 ELF（Executable and Linkable Format）：</p>
+<ul>
+<li><strong>ELF Header</strong>：魔数 <code>7f 45 4c 46</code>（<code>\x7fELF</code>）、架构、入口地址</li>
+<li><strong>Program Header</strong>：段（Segment）加载信息</li>
+<li><strong>Section</strong>：<code>.text</code>（代码）、<code>.data</code>（已初始化数据）、<code>.bss</code>（未初始化数据）、<code>.rodata</code>（只读数据）、<code>.symtab</code>（符号表）等</li>
+</ul>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">readelf -h a.out       <span class="comment"># 查看 ELF 头</span></span><br><span class="line">readelf -S a.out       <span class="comment"># 查看 section</span></span><br><span class="line">readelf -s a.out       <span class="comment"># 查看符号表</span></span><br><span class="line">objdump -t a.out       <span class="comment"># 查看符号表</span></span><br></pre></td></tr></table></figure>
+
+<hr>
+<h1 id="八、调试与逆向工具"><a href="#八、调试与逆向工具" class="headerlink" title="八、调试与逆向工具"></a>八、调试与逆向工具</h1><table>
+<thead>
+<tr>
+<th>工具</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>GDB</td>
+<td>断点、单步（<code>stepi</code> 单步指令）、查看寄存器（<code>info registers</code>）、查看内存（<code>x/20gx $rsp</code>）</td>
+</tr>
+<tr>
+<td>objdump</td>
+<td>反汇编目标文件&#x2F;可执行文件</td>
+</tr>
+<tr>
+<td>readelf</td>
+<td>分析 ELF 结构</td>
+</tr>
+<tr>
+<td>ghidra &#x2F; IDA</td>
+<td>图形化逆向工具</td>
+</tr>
+<tr>
+<td>radare2 &#x2F; rizin</td>
+<td>命令行逆向框架</td>
+</tr>
+<tr>
+<td>strace</td>
+<td>跟踪系统调用（验证汇编中 svc 调用是否生效）</td>
+</tr>
+<tr>
+<td>ltrace</td>
+<td>跟踪库函数调用</td>
+</tr>
+</tbody></table>
+<p>GDB 常用汇编调试命令：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">break</span> main            <span class="comment"># 断点</span></span><br><span class="line">info registers        <span class="comment"># 查看所有寄存器</span></span><br><span class="line">x/8gx <span class="variable">$rsp</span>            <span class="comment"># 查看栈顶 8 个 8 字节</span></span><br><span class="line">stepi / nexti         <span class="comment"># 单步执行一条指令</span></span><br><span class="line">disassemble main      <span class="comment"># 反汇编函数</span></span><br><span class="line">p/x <span class="variable">$rax</span>              <span class="comment"># 以十六进制打印 rax</span></span><br></pre></td></tr></table></figure>
+
+<hr>
+<h1 id="九、进阶知识点"><a href="#九、进阶知识点" class="headerlink" title="九、进阶知识点"></a>九、进阶知识点</h1><h2 id="9-1-函数调用规范与-ABI"><a href="#9-1-函数调用规范与-ABI" class="headerlink" title="9.1 函数调用规范与 ABI"></a>9.1 函数调用规范与 ABI</h2><ul>
+<li><strong>ABI（Application Binary Interface）</strong> 定义了函数如何传递参数、返回、栈对齐、寄存器谁保存</li>
+<li>x86-64 有 SysV（Linux&#x2F;Unix）和 Microsoft x64（Windows）两套</li>
+<li>理解 ABI 才能写可互调的内联汇编和手写函数</li>
+</ul>
+<h2 id="9-2-系统调用（syscall）"><a href="#9-2-系统调用（syscall）" class="headerlink" title="9.2 系统调用（syscall）"></a>9.2 系统调用（syscall）</h2><p>Linux x86-64 系统调用流程：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">section .data</span><br><span class="line">msg db &#x27;Hello&#x27;, 0</span><br><span class="line"></span><br><span class="line">section .text</span><br><span class="line">global _start</span><br><span class="line">_start:</span><br><span class="line">    mov eax, 1        ; sys_write 系统调用号</span><br><span class="line">    mov edi, 1        ; fd = stdout</span><br><span class="line">    mov rsi, msg      ; 缓冲区地址</span><br><span class="line">    mov edx, 5        ; 长度</span><br><span class="line">    syscall           ; 触发内核</span><br><span class="line"></span><br><span class="line">    mov eax, 60       ; sys_exit</span><br><span class="line">    xor edi, edi      ; 退出码 0</span><br><span class="line">    syscall</span><br></pre></td></tr></table></figure>
+
+<p>ARM 32 位则是 <code>svc #0</code>，系统调用号放在 R7。</p>
+<h2 id="9-3-中断与异常"><a href="#9-3-中断与异常" class="headerlink" title="9.3 中断与异常"></a>9.3 中断与异常</h2><ul>
+<li><strong>中断</strong>：外部硬件事件（定时器、串口），异步</li>
+<li><strong>异常</strong>：指令执行引起（除零、缺页、非法指令），同步</li>
+<li>CPU 收到中断&#x2F;异常后：保存现场 → 跳到中断向量表 → 执行 ISR → 恢复现场</li>
+<li>ARM 异常向量表地址：0x00000000（或 <code>VBAR</code> 寄存器指定）</li>
+</ul>
+<h2 id="9-4-寄存器窗口与流水线（了解）"><a href="#9-4-寄存器窗口与流水线（了解）" class="headerlink" title="9.4 寄存器窗口与流水线（了解）"></a>9.4 寄存器窗口与流水线（了解）</h2><ul>
+<li>ARM 的异常模式有<strong>影子寄存器</strong>（FIQ 独享 R8~R12，加速中断响应）</li>
+<li>流水线：取指→译码→执行，条件分支会<strong>清空流水线</strong>，这是 ARM 条件执行和预测技术的动机</li>
+</ul>
+<hr>
+<h1 id="十、学习路径与建议"><a href="#十、学习路径与建议" class="headerlink" title="十、学习路径与建议"></a>十、学习路径与建议</h1><ol>
+<li><strong>先定架构</strong>：嵌入式&#x2F;手机推荐 ARM（或 RISC-V，更简洁）；PC 端逆向&#x2F;优化推荐 x86-64</li>
+<li><strong>基础工具链</strong>：GCC + GDB + objdump + readelf</li>
+<li><strong>实践三件套</strong>：<ul>
+<li>写一个 <code>_start</code> 入口的裸汇编程序（不依赖 libc）</li>
+<li>用 C 写小函数，<code>-S</code> 看生成的汇编并逐条理解</li>
+<li>用 GDB <code>stepi</code> 单步观察寄存器和标志位变化</li>
+</ul>
+</li>
+<li><strong>进阶阅读</strong>：架构官方手册（ARM ARM、Intel SDM）、ABI 规范、《Computer Systems: A Programmer’s Perspective》（CSAPP）</li>
+<li><strong>在线资源</strong>：Compiler Explorer（godbolt.org）、ARM 官方汇编文档、x86-64 SysV ABI 文档</li>
+</ol>
+<hr>
+<h1 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h1><p>汇编语言知识点可归纳为一条主线：</p>
+<blockquote>
+<p><strong>寄存器 ↔ 内存（寻址） ↔ 运算（算术&#x2F;逻辑&#x2F;移位） ↔ 控制流（比较&#x2F;跳转&#x2F;调用） ↔ 栈（压栈&#x2F;弹栈&#x2F;栈帧）</strong></p>
+</blockquote>
+<p>掌握任意一种 ISA 的这几类指令，再学其他架构只需对比差异。汇编是理解计算机的”第一性原理”，也是通往内核、驱动、逆向、性能工程的必经之路。</p>
+<blockquote>
+<p><strong>一句话记住</strong>：高级语言写”意图”，汇编写”指令”，机器码是”电信号”。三者间多一步解释或翻译，就多一层抽象与效率损耗——而汇编，正是离硬件最近、可读性最高的那一层。</p>
+</blockquote>
+
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="http://example.com/2026/08/02/%E6%B1%87%E7%BC%96%E8%AF%AD%E8%A8%80%E7%9F%A5%E8%AF%86%E7%82%B9%E8%AF%A6%E8%A7%A3/" data-id="cmsbanzzn000dyalm2dqv8wq3" data-title="汇编语言知识点详解" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      
+      
+      
+  <ul class="article-tag-list" itemprop="keywords"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/ARM/" rel="tag">ARM</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/RISC-V/" rel="tag">RISC-V</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/x86/" rel="tag">x86</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/%E5%BA%95%E5%B1%82%E5%8E%9F%E7%90%86/" rel="tag">底层原理</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/%E6%B1%87%E7%BC%96%E8%AF%AD%E8%A8%80/" rel="tag">汇编语言</a></li></ul>
+
+    </footer>
+  </div>
+  
+</article>
+
+
+
+  
     <article id="post-嵌入式固件地址三件套-LMA-VMA-XIP与PIC" class="h-entry article article-type-post" itemprop="blogPost" itemscope itemtype="https://schema.org/BlogPosting">
   <div class="article-meta">
     <a href="/2026/08/02/%E5%B5%8C%E5%85%A5%E5%BC%8F%E5%9B%BA%E4%BB%B6%E5%9C%B0%E5%9D%80%E4%B8%89%E4%BB%B6%E5%A5%97-LMA-VMA-XIP%E4%B8%8EPIC/" class="article-date">
@@ -717,7 +1200,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2026/08/02/%E5%B5%8C%E5%85%A5%E5%BC%8F%E5%9B%BA%E4%BB%B6%E5%9C%B0%E5%9D%80%E4%B8%89%E4%BB%B6%E5%A5%97-LMA-VMA-XIP%E4%B8%8EPIC/" data-id="cmsb3cjwh0008w2lm1a33h3fr" data-title="嵌入式固件地址三件套：加载地址、运行时地址、XIP 与 PIC" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2026/08/02/%E5%B5%8C%E5%85%A5%E5%BC%8F%E5%9B%BA%E4%BB%B6%E5%9C%B0%E5%9D%80%E4%B8%89%E4%BB%B6%E5%A5%97-LMA-VMA-XIP%E4%B8%8EPIC/" data-id="cmsbanzzk0008yalm1cs5gs0u" data-title="嵌入式固件地址三件套：加载地址、运行时地址、XIP 与 PIC" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
@@ -763,7 +1246,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2026/08/01/%E5%B5%8C%E5%85%A5%E5%BC%8F%E9%93%BE%E6%8E%A5%E8%84%9A%E6%9C%AC%E8%AF%A6%E8%A7%A3%EF%BC%9A%E4%BB%8E%E9%9B%B6%E7%90%86%E8%A7%A3Linker-Script/" data-id="cmsb3cjwk000bw2lmc7ql21zw" data-title="嵌入式链接脚本详解：以英飞凌TC375为例" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2026/08/01/%E5%B5%8C%E5%85%A5%E5%BC%8F%E9%93%BE%E6%8E%A5%E8%84%9A%E6%9C%AC%E8%AF%A6%E8%A7%A3%EF%BC%9A%E4%BB%8E%E9%9B%B6%E7%90%86%E8%A7%A3Linker-Script/" data-id="cmsbanzzm000byalm9wbng02g" data-title="嵌入式链接脚本详解：以英飞凌TC375为例" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
@@ -960,7 +1443,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2026/08/01/Linux%E8%BD%AF%E4%BB%B6%E5%90%AF%E5%8A%A8%E8%BF%87%E7%A8%8B%E8%AF%A6%E8%A7%A3/" data-id="cmsb3cjwc0003w2lm8w3xbzfl" data-title="Linux软件启动过程详解" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2026/08/01/Linux%E8%BD%AF%E4%BB%B6%E5%90%AF%E5%8A%A8%E8%BF%87%E7%A8%8B%E8%AF%A6%E8%A7%A3/" data-id="cmsbanzzf0003yalm1r9bbptu" data-title="Linux软件启动过程详解" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
@@ -1102,7 +1585,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2026/08/01/%E5%A6%82%E4%BD%95%E5%BC%80%E5%8F%91%E9%83%A8%E7%BD%B2AUTOSAR-Agent/" data-id="cmsb3cjwg0007w2lmh1fcf7nt" data-title="如何开发部署AUTOSAR-Agent" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2026/08/01/%E5%A6%82%E4%BD%95%E5%BC%80%E5%8F%91%E9%83%A8%E7%BD%B2AUTOSAR-Agent/" data-id="cmsbanzzi0005yalm0c0zck9u" data-title="如何开发部署AUTOSAR-Agent" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
@@ -1827,7 +2310,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2026/08/01/%E7%94%B5%E6%9C%BA%E6%8E%A7%E5%88%B6%E7%9F%A5%E8%AF%86%E4%BD%93%E7%B3%BB%E5%85%A5%E9%97%A8%EF%BC%9A%E4%BB%8E%E7%94%B5%E6%9C%BA%E5%8E%9F%E7%90%86%E5%88%B0FOC%E5%AE%9E%E6%88%98/" data-id="cmsb3cjwn000hw2lme8lq7bw6" data-title="电机控制知识体系入门：从电机原理到FOC实战" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2026/08/01/%E7%94%B5%E6%9C%BA%E6%8E%A7%E5%88%B6%E7%9F%A5%E8%AF%86%E4%BD%93%E7%B3%BB%E5%85%A5%E9%97%A8%EF%BC%9A%E4%BB%8E%E7%94%B5%E6%9C%BA%E5%8E%9F%E7%90%86%E5%88%B0FOC%E5%AE%9E%E6%88%98/" data-id="cmsbanzzr000iyalmcx4p0nre" data-title="电机控制知识体系入门：从电机原理到FOC实战" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
@@ -2073,7 +2556,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2026/08/01/%E4%BD%BF%E7%94%A8-Ventoy-%E5%88%B6%E4%BD%9C-U-%E7%9B%98%E5%90%AF%E5%8A%A8%E7%9B%98%E5%AE%8C%E5%85%A8%E6%8C%87%E5%8D%97/" data-id="cmsb3cjwf0005w2lmdvm3fpms" data-title="使用 Ventoy 制作 U 盘启动盘完全指南" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2026/08/01/%E4%BD%BF%E7%94%A8-Ventoy-%E5%88%B6%E4%BD%9C-U-%E7%9B%98%E5%90%AF%E5%8A%A8%E7%9B%98%E5%AE%8C%E5%85%A8%E6%8C%87%E5%8D%97/" data-id="cmsbanzzj0007yalmfb230pk6" data-title="使用 Ventoy 制作 U 盘启动盘完全指南" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
@@ -2236,7 +2719,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2026/07/31/%E7%94%A8%E9%A3%9E%E4%B9%A6%E8%BF%9E%E6%8E%A5AUTOSAR-Agent-%E6%89%8B%E6%9C%BA%E8%BF%9C%E7%A8%8B%E6%93%8D%E6%8E%A7%E6%8C%87%E5%8D%97/" data-id="cmsb3cjwm000ew2lm6dq522yu" data-title="用飞书连接AUTOSAR-Agent-手机远程操控指南" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2026/07/31/%E7%94%A8%E9%A3%9E%E4%B9%A6%E8%BF%9E%E6%8E%A5AUTOSAR-Agent-%E6%89%8B%E6%9C%BA%E8%BF%9C%E7%A8%8B%E6%93%8D%E6%8E%A7%E6%8C%87%E5%8D%97/" data-id="cmsbanzzq000gyalmfxpacnht" data-title="用飞书连接AUTOSAR-Agent-手机远程操控指南" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
@@ -2990,7 +3473,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2026/07/31/CANoe-CAPL%E8%84%9A%E6%9C%AC%E6%B5%8B%E8%AF%95%E5%85%A5%E9%97%A8%E4%B8%8E%E5%AE%9E%E8%B7%B5/" data-id="cmsb3cjw10000w2lmchiofntg" data-title="CANoe CAPL脚本测试入门与实践" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2026/07/31/CANoe-CAPL%E8%84%9A%E6%9C%AC%E6%B5%8B%E8%AF%95%E5%85%A5%E9%97%A8%E4%B8%8E%E5%AE%9E%E8%B7%B5/" data-id="cmsbanzz50000yalm62rcgqow" data-title="CANoe CAPL脚本测试入门与实践" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
@@ -3341,57 +3824,11 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2026/07/31/Linux%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86%E8%AF%A6%E8%A7%A3/" data-id="cmsb3cjw80001w2lmfp1k313z" data-title="Linux内存管理详解" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2026/07/31/Linux%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86%E8%AF%A6%E8%A7%A3/" data-id="cmsbanzzc0001yalm6e73cr7q" data-title="Linux内存管理详解" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
   <ul class="article-tag-list" itemprop="keywords"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Linux/" rel="tag">Linux</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86/" rel="tag">内存管理</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/%E5%86%85%E6%A0%B8/" rel="tag">内核</a></li></ul>
-
-    </footer>
-  </div>
-  
-</article>
-
-
-
-  
-    <article id="post-测试文章-自动部署验证" class="h-entry article article-type-post" itemprop="blogPost" itemscope itemtype="https://schema.org/BlogPosting">
-  <div class="article-meta">
-    <a href="/2026/07/31/%E6%B5%8B%E8%AF%95%E6%96%87%E7%AB%A0-%E8%87%AA%E5%8A%A8%E9%83%A8%E7%BD%B2%E9%AA%8C%E8%AF%81/" class="article-date">
-  <time class="dt-published" datetime="2026-07-31T09:50:43.000Z" itemprop="datePublished">2026-07-31</time>
-</a>
-    
-  </div>
-  <div class="article-inner">
-    
-    
-      <header class="article-header">
-        
-  
-    <h1 itemprop="name">
-      <a class="p-name article-title" href="/2026/07/31/%E6%B5%8B%E8%AF%95%E6%96%87%E7%AB%A0-%E8%87%AA%E5%8A%A8%E9%83%A8%E7%BD%B2%E9%AA%8C%E8%AF%81/">测试文章-自动部署验证</a>
-    </h1>
-  
-
-      </header>
-    
-    <div class="e-content article-entry" itemprop="articleBody">
-      
-        <p>这是一篇用于验证 Hexo 自动部署流程的测试文章。</p>
-<h2 id="验证内容"><a href="#验证内容" class="headerlink" title="验证内容"></a>验证内容</h2><ol>
-<li><code>hexo generate</code> 正常生成网页</li>
-<li><code>hexo deploy</code> 成功推送到 <code>gh-pages</code> 分支</li>
-<li>线上网站 <code>https://mchine8916493.github.io/</code> 能看到这篇文章</li>
-</ol>
-
-      
-    </div>
-    <footer class="article-footer">
-      <a data-url="http://example.com/2026/07/31/%E6%B5%8B%E8%AF%95%E6%96%87%E7%AB%A0-%E8%87%AA%E5%8A%A8%E9%83%A8%E7%BD%B2%E9%AA%8C%E8%AF%81/" data-id="cmsb3cjwl000dw2lm962x3dqv" data-title="测试文章-自动部署验证" class="article-share-link"><span class="fa fa-share">Share</span></a>
-      
-      
-      
-  <ul class="article-tag-list" itemprop="keywords"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/%E6%B5%8B%E8%AF%95/" rel="tag">测试</a></li></ul>
 
     </footer>
   </div>
@@ -3419,7 +3856,7 @@
   <div class="widget-wrap">
     <h3 class="widget-title">Tags</h3>
     <div class="widget">
-      <ul class="tag-list" itemprop="keywords"><li class="tag-list-item"><a class="tag-list-link" href="/tags/AI-Agent/" rel="tag">AI Agent</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/AURIX/" rel="tag">AURIX</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/AUTOSAR/" rel="tag">AUTOSAR</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/CANoe/" rel="tag">CANoe</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/CAPL/" rel="tag">CAPL</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/FOC/" rel="tag">FOC</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/GCC/" rel="tag">GCC</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/LMA/" rel="tag">LMA</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Linker-Script/" rel="tag">Linker Script</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Linux/" rel="tag">Linux</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/PIC/" rel="tag">PIC</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/RT-Thread/" rel="tag">RT-Thread</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/SOTA/" rel="tag">SOTA</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/TC375/" rel="tag">TC375</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/TriCore/" rel="tag">TriCore</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/U%E7%9B%98%E5%90%AF%E5%8A%A8%E7%9B%98/" rel="tag">U盘启动盘</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/VMA/" rel="tag">VMA</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Ventoy/" rel="tag">Ventoy</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/XIP/" rel="tag">XIP</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/opencode/" rel="tag">opencode</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86/" rel="tag">内存管理</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%86%85%E6%A0%B8/" rel="tag">内核</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%90%AF%E5%8A%A8%E8%BF%87%E7%A8%8B/" rel="tag">启动过程</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/" rel="tag">学习笔记</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%B5%8C%E5%85%A5%E5%BC%8F/" rel="tag">嵌入式</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%BC%80%E5%8F%91/" rel="tag">开发</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%BC%95%E5%AF%BC/" rel="tag">引导</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E6%95%88%E7%8E%87%E5%B7%A5%E5%85%B7/" rel="tag">效率工具</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E6%B1%87%E7%BC%96/" rel="tag">汇编</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E6%B1%BD%E8%BD%A6%E7%94%B5%E5%AD%90/" rel="tag">汽车电子</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E6%B5%8B%E8%AF%95/" rel="tag">测试</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E7%94%B5%E5%8A%9B%E7%94%B5%E5%AD%90/" rel="tag">电力电子</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E7%94%B5%E6%9C%BA%E6%8E%A7%E5%88%B6/" rel="tag">电机控制</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E7%B3%BB%E7%BB%9F%E5%AE%89%E8%A3%85/" rel="tag">系统安装</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E8%8B%B1%E9%A3%9E%E5%87%8C/" rel="tag">英飞凌</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E8%A3%85%E6%9C%BA%E5%B7%A5%E5%85%B7/" rel="tag">装机工具</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E9%83%A8%E7%BD%B2/" rel="tag">部署</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E9%93%BE%E6%8E%A5%E8%84%9A%E6%9C%AC/" rel="tag">链接脚本</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E9%A3%9E%E4%B9%A6/" rel="tag">飞书</a></li></ul>
+      <ul class="tag-list" itemprop="keywords"><li class="tag-list-item"><a class="tag-list-link" href="/tags/AI-Agent/" rel="tag">AI Agent</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/ARM/" rel="tag">ARM</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/AURIX/" rel="tag">AURIX</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/AUTOSAR/" rel="tag">AUTOSAR</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/CANoe/" rel="tag">CANoe</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/CAPL/" rel="tag">CAPL</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/FOC/" rel="tag">FOC</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/GCC/" rel="tag">GCC</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/LMA/" rel="tag">LMA</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Linker-Script/" rel="tag">Linker Script</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Linux/" rel="tag">Linux</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/PIC/" rel="tag">PIC</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/RISC-V/" rel="tag">RISC-V</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/RT-Thread/" rel="tag">RT-Thread</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/SOTA/" rel="tag">SOTA</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/TC375/" rel="tag">TC375</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/TriCore/" rel="tag">TriCore</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/U%E7%9B%98%E5%90%AF%E5%8A%A8%E7%9B%98/" rel="tag">U盘启动盘</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/VMA/" rel="tag">VMA</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Ventoy/" rel="tag">Ventoy</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/XIP/" rel="tag">XIP</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/opencode/" rel="tag">opencode</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/x86/" rel="tag">x86</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86/" rel="tag">内存管理</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%86%85%E6%A0%B8/" rel="tag">内核</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%90%AF%E5%8A%A8%E8%BF%87%E7%A8%8B/" rel="tag">启动过程</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/" rel="tag">学习笔记</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%B5%8C%E5%85%A5%E5%BC%8F/" rel="tag">嵌入式</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%BA%95%E5%B1%82%E5%8E%9F%E7%90%86/" rel="tag">底层原理</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%BC%80%E5%8F%91/" rel="tag">开发</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%BC%95%E5%AF%BC/" rel="tag">引导</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E6%95%88%E7%8E%87%E5%B7%A5%E5%85%B7/" rel="tag">效率工具</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E6%B1%87%E7%BC%96/" rel="tag">汇编</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E6%B1%87%E7%BC%96%E8%AF%AD%E8%A8%80/" rel="tag">汇编语言</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E6%B1%BD%E8%BD%A6%E7%94%B5%E5%AD%90/" rel="tag">汽车电子</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E6%B5%8B%E8%AF%95/" rel="tag">测试</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E7%94%B5%E5%8A%9B%E7%94%B5%E5%AD%90/" rel="tag">电力电子</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E7%94%B5%E6%9C%BA%E6%8E%A7%E5%88%B6/" rel="tag">电机控制</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E7%B3%BB%E7%BB%9F%E5%AE%89%E8%A3%85/" rel="tag">系统安装</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E8%8B%B1%E9%A3%9E%E5%87%8C/" rel="tag">英飞凌</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E8%A3%85%E6%9C%BA%E5%B7%A5%E5%85%B7/" rel="tag">装机工具</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E9%83%A8%E7%BD%B2/" rel="tag">部署</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E9%93%BE%E6%8E%A5%E8%84%9A%E6%9C%AC/" rel="tag">链接脚本</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E9%A3%9E%E4%B9%A6/" rel="tag">飞书</a></li></ul>
     </div>
   </div>
 
@@ -3429,7 +3866,7 @@
   <div class="widget-wrap">
     <h3 class="widget-title">Tag Cloud</h3>
     <div class="widget tagcloud">
-      <a href="/tags/AI-Agent/" style="font-size: 15px;">AI Agent</a> <a href="/tags/AURIX/" style="font-size: 15px;">AURIX</a> <a href="/tags/AUTOSAR/" style="font-size: 15px;">AUTOSAR</a> <a href="/tags/CANoe/" style="font-size: 10px;">CANoe</a> <a href="/tags/CAPL/" style="font-size: 10px;">CAPL</a> <a href="/tags/FOC/" style="font-size: 10px;">FOC</a> <a href="/tags/GCC/" style="font-size: 10px;">GCC</a> <a href="/tags/LMA/" style="font-size: 10px;">LMA</a> <a href="/tags/Linker-Script/" style="font-size: 15px;">Linker Script</a> <a href="/tags/Linux/" style="font-size: 20px;">Linux</a> <a href="/tags/PIC/" style="font-size: 10px;">PIC</a> <a href="/tags/RT-Thread/" style="font-size: 10px;">RT-Thread</a> <a href="/tags/SOTA/" style="font-size: 10px;">SOTA</a> <a href="/tags/TC375/" style="font-size: 15px;">TC375</a> <a href="/tags/TriCore/" style="font-size: 15px;">TriCore</a> <a href="/tags/U%E7%9B%98%E5%90%AF%E5%8A%A8%E7%9B%98/" style="font-size: 10px;">U盘启动盘</a> <a href="/tags/VMA/" style="font-size: 10px;">VMA</a> <a href="/tags/Ventoy/" style="font-size: 10px;">Ventoy</a> <a href="/tags/XIP/" style="font-size: 10px;">XIP</a> <a href="/tags/opencode/" style="font-size: 15px;">opencode</a> <a href="/tags/%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86/" style="font-size: 10px;">内存管理</a> <a href="/tags/%E5%86%85%E6%A0%B8/" style="font-size: 15px;">内核</a> <a href="/tags/%E5%90%AF%E5%8A%A8%E8%BF%87%E7%A8%8B/" style="font-size: 10px;">启动过程</a> <a href="/tags/%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/" style="font-size: 10px;">学习笔记</a> <a href="/tags/%E5%B5%8C%E5%85%A5%E5%BC%8F/" style="font-size: 20px;">嵌入式</a> <a href="/tags/%E5%BC%80%E5%8F%91/" style="font-size: 10px;">开发</a> <a href="/tags/%E5%BC%95%E5%AF%BC/" style="font-size: 10px;">引导</a> <a href="/tags/%E6%95%88%E7%8E%87%E5%B7%A5%E5%85%B7/" style="font-size: 15px;">效率工具</a> <a href="/tags/%E6%B1%87%E7%BC%96/" style="font-size: 15px;">汇编</a> <a href="/tags/%E6%B1%BD%E8%BD%A6%E7%94%B5%E5%AD%90/" style="font-size: 10px;">汽车电子</a> <a href="/tags/%E6%B5%8B%E8%AF%95/" style="font-size: 15px;">测试</a> <a href="/tags/%E7%94%B5%E5%8A%9B%E7%94%B5%E5%AD%90/" style="font-size: 10px;">电力电子</a> <a href="/tags/%E7%94%B5%E6%9C%BA%E6%8E%A7%E5%88%B6/" style="font-size: 10px;">电机控制</a> <a href="/tags/%E7%B3%BB%E7%BB%9F%E5%AE%89%E8%A3%85/" style="font-size: 10px;">系统安装</a> <a href="/tags/%E8%8B%B1%E9%A3%9E%E5%87%8C/" style="font-size: 15px;">英飞凌</a> <a href="/tags/%E8%A3%85%E6%9C%BA%E5%B7%A5%E5%85%B7/" style="font-size: 10px;">装机工具</a> <a href="/tags/%E9%83%A8%E7%BD%B2/" style="font-size: 10px;">部署</a> <a href="/tags/%E9%93%BE%E6%8E%A5%E8%84%9A%E6%9C%AC/" style="font-size: 15px;">链接脚本</a> <a href="/tags/%E9%A3%9E%E4%B9%A6/" style="font-size: 10px;">飞书</a>
+      <a href="/tags/AI-Agent/" style="font-size: 15px;">AI Agent</a> <a href="/tags/ARM/" style="font-size: 10px;">ARM</a> <a href="/tags/AURIX/" style="font-size: 15px;">AURIX</a> <a href="/tags/AUTOSAR/" style="font-size: 15px;">AUTOSAR</a> <a href="/tags/CANoe/" style="font-size: 10px;">CANoe</a> <a href="/tags/CAPL/" style="font-size: 10px;">CAPL</a> <a href="/tags/FOC/" style="font-size: 10px;">FOC</a> <a href="/tags/GCC/" style="font-size: 10px;">GCC</a> <a href="/tags/LMA/" style="font-size: 10px;">LMA</a> <a href="/tags/Linker-Script/" style="font-size: 15px;">Linker Script</a> <a href="/tags/Linux/" style="font-size: 20px;">Linux</a> <a href="/tags/PIC/" style="font-size: 10px;">PIC</a> <a href="/tags/RISC-V/" style="font-size: 10px;">RISC-V</a> <a href="/tags/RT-Thread/" style="font-size: 10px;">RT-Thread</a> <a href="/tags/SOTA/" style="font-size: 10px;">SOTA</a> <a href="/tags/TC375/" style="font-size: 15px;">TC375</a> <a href="/tags/TriCore/" style="font-size: 15px;">TriCore</a> <a href="/tags/U%E7%9B%98%E5%90%AF%E5%8A%A8%E7%9B%98/" style="font-size: 10px;">U盘启动盘</a> <a href="/tags/VMA/" style="font-size: 10px;">VMA</a> <a href="/tags/Ventoy/" style="font-size: 10px;">Ventoy</a> <a href="/tags/XIP/" style="font-size: 10px;">XIP</a> <a href="/tags/opencode/" style="font-size: 15px;">opencode</a> <a href="/tags/x86/" style="font-size: 10px;">x86</a> <a href="/tags/%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86/" style="font-size: 10px;">内存管理</a> <a href="/tags/%E5%86%85%E6%A0%B8/" style="font-size: 15px;">内核</a> <a href="/tags/%E5%90%AF%E5%8A%A8%E8%BF%87%E7%A8%8B/" style="font-size: 10px;">启动过程</a> <a href="/tags/%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/" style="font-size: 10px;">学习笔记</a> <a href="/tags/%E5%B5%8C%E5%85%A5%E5%BC%8F/" style="font-size: 20px;">嵌入式</a> <a href="/tags/%E5%BA%95%E5%B1%82%E5%8E%9F%E7%90%86/" style="font-size: 10px;">底层原理</a> <a href="/tags/%E5%BC%80%E5%8F%91/" style="font-size: 10px;">开发</a> <a href="/tags/%E5%BC%95%E5%AF%BC/" style="font-size: 10px;">引导</a> <a href="/tags/%E6%95%88%E7%8E%87%E5%B7%A5%E5%85%B7/" style="font-size: 15px;">效率工具</a> <a href="/tags/%E6%B1%87%E7%BC%96/" style="font-size: 15px;">汇编</a> <a href="/tags/%E6%B1%87%E7%BC%96%E8%AF%AD%E8%A8%80/" style="font-size: 10px;">汇编语言</a> <a href="/tags/%E6%B1%BD%E8%BD%A6%E7%94%B5%E5%AD%90/" style="font-size: 10px;">汽车电子</a> <a href="/tags/%E6%B5%8B%E8%AF%95/" style="font-size: 15px;">测试</a> <a href="/tags/%E7%94%B5%E5%8A%9B%E7%94%B5%E5%AD%90/" style="font-size: 10px;">电力电子</a> <a href="/tags/%E7%94%B5%E6%9C%BA%E6%8E%A7%E5%88%B6/" style="font-size: 10px;">电机控制</a> <a href="/tags/%E7%B3%BB%E7%BB%9F%E5%AE%89%E8%A3%85/" style="font-size: 10px;">系统安装</a> <a href="/tags/%E8%8B%B1%E9%A3%9E%E5%87%8C/" style="font-size: 15px;">英飞凌</a> <a href="/tags/%E8%A3%85%E6%9C%BA%E5%B7%A5%E5%85%B7/" style="font-size: 10px;">装机工具</a> <a href="/tags/%E9%83%A8%E7%BD%B2/" style="font-size: 10px;">部署</a> <a href="/tags/%E9%93%BE%E6%8E%A5%E8%84%9A%E6%9C%AC/" style="font-size: 15px;">链接脚本</a> <a href="/tags/%E9%A3%9E%E4%B9%A6/" style="font-size: 10px;">飞书</a>
     </div>
   </div>
 
@@ -3451,6 +3888,10 @@
       <ul>
         
           <li>
+            <a href="/2026/08/02/%E6%B1%87%E7%BC%96%E8%AF%AD%E8%A8%80%E7%9F%A5%E8%AF%86%E7%82%B9%E8%AF%A6%E8%A7%A3/">汇编语言知识点详解</a>
+          </li>
+        
+          <li>
             <a href="/2026/08/02/%E5%B5%8C%E5%85%A5%E5%BC%8F%E5%9B%BA%E4%BB%B6%E5%9C%B0%E5%9D%80%E4%B8%89%E4%BB%B6%E5%A5%97-LMA-VMA-XIP%E4%B8%8EPIC/">嵌入式固件地址三件套：加载地址、运行时地址、XIP 与 PIC</a>
           </li>
         
@@ -3464,10 +3905,6 @@
         
           <li>
             <a href="/2026/08/01/%E5%A6%82%E4%BD%95%E5%BC%80%E5%8F%91%E9%83%A8%E7%BD%B2AUTOSAR-Agent/">如何开发部署AUTOSAR-Agent</a>
-          </li>
-        
-          <li>
-            <a href="/2026/08/01/%E7%94%B5%E6%9C%BA%E6%8E%A7%E5%88%B6%E7%9F%A5%E8%AF%86%E4%BD%93%E7%B3%BB%E5%85%A5%E9%97%A8%EF%BC%9A%E4%BB%8E%E7%94%B5%E6%9C%BA%E5%8E%9F%E7%90%86%E5%88%B0FOC%E5%AE%9E%E6%88%98/">电机控制知识体系入门：从电机原理到FOC实战</a>
           </li>
         
       </ul>
