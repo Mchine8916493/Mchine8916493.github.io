@@ -71,6 +71,353 @@
       <div class="outer">
         <section id="main">
   
+    <article id="post-C语言嵌入式汇编详解" class="h-entry article article-type-post" itemprop="blogPost" itemscope itemtype="https://schema.org/BlogPosting">
+  <div class="article-meta">
+    <a href="/2026/08/02/C%E8%AF%AD%E8%A8%80%E5%B5%8C%E5%85%A5%E5%BC%8F%E6%B1%87%E7%BC%96%E8%AF%A6%E8%A7%A3/" class="article-date">
+  <time class="dt-published" datetime="2026-08-02T08:35:16.000Z" itemprop="datePublished">2026-08-02</time>
+</a>
+    
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 itemprop="name">
+      <a class="p-name article-title" href="/2026/08/02/C%E8%AF%AD%E8%A8%80%E5%B5%8C%E5%85%A5%E5%BC%8F%E6%B1%87%E7%BC%96%E8%AF%A6%E8%A7%A3/">C语言嵌入式汇编详解</a>
+    </h1>
+  
+
+      </header>
+    
+    <div class="e-content article-entry" itemprop="articleBody">
+      
+        <p>在 C 语言中直接嵌入汇编指令，叫<strong>嵌入式汇编</strong>（Inline Assembly）或内联汇编。它让你在 C 代码中直接编写汇编指令，既能获得汇编级的控制力，又能保留 C 的便利性。这在嵌入式驱动开发、操作系统底层、性能关键代码中极为常用。本文以 <strong>GCC 编译器</strong>为主讲解（同时覆盖 x86 与 ARM），并补充 Keil&#x2F;IAR 等其他常见编译器写法。</p>
+<h1 id="一、为什么需要嵌入式汇编"><a href="#一、为什么需要嵌入式汇编" class="headerlink" title="一、为什么需要嵌入式汇编"></a>一、为什么需要嵌入式汇编</h1><h2 id="1-1-使用场景"><a href="#1-1-使用场景" class="headerlink" title="1.1 使用场景"></a>1.1 使用场景</h2><table>
+<thead>
+<tr>
+<th>场景</th>
+<th>原因</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>访问特殊寄存器</td>
+<td>如 CP15、状态寄存器等 C 无法直接操作</td>
+</tr>
+<tr>
+<td>原子操作</td>
+<td>如 <code>ldrex/strex</code>、<code>cmpxchg</code>、<code>fetch_and_add</code></td>
+</tr>
+<tr>
+<td>特权指令</td>
+<td>开&#x2F;关中断、进入休眠、切换模式</td>
+</tr>
+<tr>
+<td>性能热点</td>
+<td>编译器生成不了最优代码的极小代码段</td>
+</tr>
+<tr>
+<td>内建指令替代</td>
+<td>部分场景可用 <code>__builtin_*</code>，但仍有兜底需求</td>
+</tr>
+<tr>
+<td>启动代码</td>
+<td>设置栈指针、跳转、初始化 MMU&#x2F;Cache</td>
+</tr>
+</tbody></table>
+<h2 id="1-2-嵌入式汇编-vs-独立汇编文件"><a href="#1-2-嵌入式汇编-vs-独立汇编文件" class="headerlink" title="1.2 嵌入式汇编 vs 独立汇编文件"></a>1.2 嵌入式汇编 vs 独立汇编文件</h2><table>
+<thead>
+<tr>
+<th></th>
+<th>嵌入式汇编（inline）</th>
+<th>独立 <code>.s</code> 汇编文件</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>与 C 变量交互</td>
+<td>直接绑定，无需手动传参</td>
+<td>需按 ABI 手工传参</td>
+</tr>
+<tr>
+<td>优化</td>
+<td>编译器可整体优化</td>
+<td>固定不变</td>
+</tr>
+<tr>
+<td>可移植性</td>
+<td>受编译器方言影响</td>
+<td>纯汇编</td>
+</tr>
+<tr>
+<td>适用</td>
+<td>短小、与 C 数据交互多</td>
+<td>长段、固定不变的例程</td>
+</tr>
+</tbody></table>
+<hr>
+<h1 id="二、GCC-内联汇编基础语法"><a href="#二、GCC-内联汇编基础语法" class="headerlink" title="二、GCC 内联汇编基础语法"></a>二、GCC 内联汇编基础语法</h1><h2 id="2-1-基本语法格式"><a href="#2-1-基本语法格式" class="headerlink" title="2.1 基本语法格式"></a>2.1 基本语法格式</h2><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">__asm__ [<span class="keyword">volatile</span>] (</span><br><span class="line">    <span class="string">&quot;汇编指令序列&quot;</span></span><br><span class="line">    : 输出操作数</span><br><span class="line">    : 输入操作数</span><br><span class="line">    : 破坏列表(clobber)</span><br><span class="line">);</span><br></pre></td></tr></table></figure>
+
+<p>四个部分用冒号分隔：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">__asm__ (</span><br><span class="line">    <span class="string">&quot;addl %1, %0&quot;</span>        <span class="comment">// 汇编指令，%0 %1 是操作数占位符</span></span><br><span class="line">    : <span class="string">&quot;=r&quot;</span> (result)      <span class="comment">// 输出操作数</span></span><br><span class="line">    : <span class="string">&quot;r&quot;</span> (a), <span class="string">&quot;r&quot;</span> (b)   <span class="comment">// 输入操作数</span></span><br><span class="line">    : <span class="string">&quot;cc&quot;</span>               <span class="comment">// 破坏列表</span></span><br><span class="line">);</span><br></pre></td></tr></table></figure>
+
+<h2 id="2-2-操作数约束（Constraints）"><a href="#2-2-操作数约束（Constraints）" class="headerlink" title="2.2 操作数约束（Constraints）"></a>2.2 操作数约束（Constraints）</h2><p>约束告诉编译器操作数放在哪里（寄存器、内存、立即数）。</p>
+<h3 id="常用寄存器约束"><a href="#常用寄存器约束" class="headerlink" title="常用寄存器约束"></a>常用寄存器约束</h3><table>
+<thead>
+<tr>
+<th>约束</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>r</code></td>
+<td>任意通用寄存器</td>
+</tr>
+<tr>
+<td><code>a</code></td>
+<td>x86 的 EAX&#x2F;RAX</td>
+</tr>
+<tr>
+<td><code>b</code></td>
+<td>EBX&#x2F;RBX</td>
+</tr>
+<tr>
+<td><code>c</code></td>
+<td>ECX&#x2F;RCX</td>
+</tr>
+<tr>
+<td><code>d</code></td>
+<td>EDX&#x2F;RDX</td>
+</tr>
+<tr>
+<td><code>D</code></td>
+<td>EDI&#x2F;RDI</td>
+</tr>
+<tr>
+<td><code>S</code></td>
+<td>ESI&#x2F;RSI</td>
+</tr>
+<tr>
+<td><code>q</code></td>
+<td>x86 的 a&#x2F;b&#x2F;c&#x2F;d 之一</td>
+</tr>
+<tr>
+<td><code>I</code></td>
+<td>0~31 的立即数（ARM 移位立即数）</td>
+</tr>
+<tr>
+<td><code>J</code></td>
+<td>-4095~4095（ARM）</td>
+</tr>
+<tr>
+<td><code>M</code></td>
+<td>0~0xFFFFFFFF（ARM）</td>
+</tr>
+</tbody></table>
+<h3 id="修饰符（放在约束前）"><a href="#修饰符（放在约束前）" class="headerlink" title="修饰符（放在约束前）"></a>修饰符（放在约束前）</h3><table>
+<thead>
+<tr>
+<th>修饰符</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>=</code></td>
+<td>输出操作数（只写）</td>
+</tr>
+<tr>
+<td><code>+</code></td>
+<td>读写操作数</td>
+</tr>
+<tr>
+<td><code>&amp;</code></td>
+<td>earlyclobber：该输出在指令全部输入用完前就可能被写，须分配独立寄存器</td>
+</tr>
+</tbody></table>
+<h2 id="2-3-最简单的示例"><a href="#2-3-最简单的示例" class="headerlink" title="2.3 最简单的示例"></a>2.3 最简单的示例</h2><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;stdio.h&gt;</span></span></span><br><span class="line"></span><br><span class="line"><span class="type">int</span> <span class="title function_">main</span><span class="params">(<span class="type">void</span>)</span> &#123;</span><br><span class="line">    <span class="type">int</span> a = <span class="number">10</span>, b = <span class="number">20</span>, sum;</span><br><span class="line"></span><br><span class="line">    __asm__ (</span><br><span class="line">        <span class="string">&quot;addl %1, %0\n\t&quot;</span></span><br><span class="line">        : <span class="string">&quot;=r&quot;</span>(sum)</span><br><span class="line">        : <span class="string">&quot;r&quot;</span>(a), <span class="string">&quot;0&quot;</span>(b)</span><br><span class="line">        : <span class="string">&quot;cc&quot;</span></span><br><span class="line">    );</span><br><span class="line">    <span class="built_in">printf</span>(<span class="string">&quot;%d\n&quot;</span>, sum);   <span class="comment">// 输出 30</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p><code>%0</code> 对应第一个操作数（输出 sum），<code>%1</code> 对应输入 a，<code>%2</code> 对应输入 b。<code>&quot;0&quot;</code> 表示与第 0 个操作数共用寄存器（即输入 b 复用 sum 的寄存器）。</p>
+</blockquote>
+<hr>
+<h1 id="三、内联汇编各部分的深入"><a href="#三、内联汇编各部分的深入" class="headerlink" title="三、内联汇编各部分的深入"></a>三、内联汇编各部分的深入</h1><h2 id="3-1-输出操作数（Output）"><a href="#3-1-输出操作数（Output）" class="headerlink" title="3.1 输出操作数（Output）"></a>3.1 输出操作数（Output）</h2><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">int</span> out;</span><br><span class="line">__asm__ (<span class="string">&quot;movl %1, %0&quot;</span></span><br><span class="line">         : <span class="string">&quot;=r&quot;</span>(out)     <span class="comment">// 输出必须带 &quot;=&quot; 或 &quot;+&quot;</span></span><br><span class="line">         : <span class="string">&quot;r&quot;</span>(in));</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li>输出约束必须用 <code>=</code>（只写）或 <code>+</code>（读写）</li>
+<li>多个输出用逗号分隔，分别对应 <code>%0</code>、<code>%1</code>…</li>
+<li>若汇编指令修改了某个输入，但没有对应输出，编译器不知道——必须用 <code>+</code> 或加入破坏列表</li>
+</ul>
+<h2 id="3-2-输入操作数（Input）"><a href="#3-2-输入操作数（Input）" class="headerlink" title="3.2 输入操作数（Input）"></a>3.2 输入操作数（Input）</h2><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">int</span> <span class="title function_">add</span><span class="params">(<span class="type">int</span> a, <span class="type">int</span> b)</span> &#123;</span><br><span class="line">    <span class="type">int</span> result;</span><br><span class="line">    __asm__ (</span><br><span class="line">        <span class="string">&quot;addl %2, %1\n\t&quot;</span></span><br><span class="line">        <span class="string">&quot;movl %1, %0&quot;</span></span><br><span class="line">        : <span class="string">&quot;=r&quot;</span>(result)</span><br><span class="line">        : <span class="string">&quot;r&quot;</span>(a), <span class="string">&quot;r&quot;</span>(b)</span><br><span class="line">    );</span><br><span class="line">    <span class="keyword">return</span> result;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="3-3-破坏列表（Clobber）"><a href="#3-3-破坏列表（Clobber）" class="headerlink" title="3.3 破坏列表（Clobber）"></a>3.3 破坏列表（Clobber）</h2><p>告诉编译器”我的汇编代码会破坏这些资源，请自行保存&#x2F;恢复”：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">__asm__ (</span><br><span class="line">    <span class="string">&quot;movl %0, %%eax\n\t&quot;</span>   <span class="comment">// 在 AT&amp;T 语法中寄存器前要加 %%</span></span><br><span class="line">    : : <span class="string">&quot;r&quot;</span>(val)</span><br><span class="line">    : <span class="string">&quot;eax&quot;</span>                <span class="comment">// 告诉编译器 eax 被改写了</span></span><br><span class="line">);</span><br></pre></td></tr></table></figure>
+
+<p>常用破坏项：</p>
+<ul>
+<li>寄存器名：<code>&quot;eax&quot;</code>, <code>&quot;r1&quot;</code>, <code>&quot;r2&quot;</code>…</li>
+<li><code>&quot;cc&quot;</code>：修改了条件标志（状态寄存器）</li>
+<li><code>&quot;memory&quot;</code>：修改了内存（编译器需保守，禁止跨内联汇编重新排布内存访问）</li>
+</ul>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 内存屏障示例</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> barrier() __asm__ volatile(<span class="string">&quot;&quot;</span> : : : <span class="string">&quot;memory&quot;</span>)</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="3-4-volatile-关键字"><a href="#3-4-volatile-关键字" class="headerlink" title="3.4 volatile 关键字"></a>3.4 volatile 关键字</h2><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">__asm__ <span class="title function_">volatile</span> <span class="params">(<span class="string">&quot;...&quot;</span> : : : <span class="string">&quot;memory&quot;</span>)</span>;</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li><code>volatile</code> 告诉编译器：<strong>不要移动、不要删除、不要优化</strong>这段汇编</li>
+<li>对”有副作用”的指令（写寄存器、I&#x2F;O、开关中断）必须加</li>
+<li>纯计算且结果只由输出承载的汇编，不加 volatile 反而能让编译器调度优化</li>
+</ul>
+<hr>
+<h1 id="四、AT-T-与-Intel-语法切换"><a href="#四、AT-T-与-Intel-语法切换" class="headerlink" title="四、AT&amp;T 与 Intel 语法切换"></a>四、AT&amp;T 与 Intel 语法切换</h1><h2 id="4-1-GCC-默认用-AT-T-语法（x86）"><a href="#4-1-GCC-默认用-AT-T-语法（x86）" class="headerlink" title="4.1 GCC 默认用 AT&amp;T 语法（x86）"></a>4.1 GCC 默认用 AT&amp;T 语法（x86）</h2><table>
+<thead>
+<tr>
+<th>差异</th>
+<th>AT&amp;T（GCC 默认）</th>
+<th>Intel</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>操作数顺序</td>
+<td><code>源, 目标</code></td>
+<td><code>目标, 源</code></td>
+</tr>
+<tr>
+<td>寄存器前缀</td>
+<td><code>%%eax</code></td>
+<td><code>eax</code></td>
+</tr>
+<tr>
+<td>立即数前缀</td>
+<td><code>$10</code></td>
+<td><code>10</code></td>
+</tr>
+<tr>
+<td>内存寻址</td>
+<td><code>(%ebx)</code></td>
+<td><code>[ebx]</code></td>
+</tr>
+<tr>
+<td>后缀宽度</td>
+<td><code>movl</code>（l&#x2F;w&#x2F;b&#x2F;q）</td>
+<td><code>mov</code>（按操作数推断）</td>
+</tr>
+</tbody></table>
+<h2 id="4-2-开启-Intel-语法"><a href="#4-2-开启-Intel-语法" class="headerlink" title="4.2 开启 Intel 语法"></a>4.2 开启 Intel 语法</h2><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">__asm__ (<span class="string">&quot;.intel_syntax noprefix\n\t&quot;</span></span><br><span class="line">         <span class="string">&quot;mov eax, %0\n\t&quot;</span></span><br><span class="line">         <span class="string">&quot;add eax, 1\n\t&quot;</span></span><br><span class="line">         <span class="string">&quot;.att_syntax prefix&quot;</span></span><br><span class="line">         : <span class="string">&quot;=r&quot;</span>(result)</span><br><span class="line">         : <span class="string">&quot;r&quot;</span>(input));</span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p>结尾记得切回 AT&amp;T，避免污染后续代码。</p>
+</blockquote>
+<h2 id="4-3-ARM-内联汇编"><a href="#4-3-ARM-内联汇编" class="headerlink" title="4.3 ARM 内联汇编"></a>4.3 ARM 内联汇编</h2><p>ARM 汇编本身没有 AT&amp;T&#x2F;Intel 之分，操作数顺序为 <code>目标, 源1, 源2</code>：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">int</span> <span class="title function_">add_arm</span><span class="params">(<span class="type">int</span> a, <span class="type">int</span> b)</span> &#123;</span><br><span class="line">    <span class="type">int</span> result;</span><br><span class="line">    __asm__ (</span><br><span class="line">        <span class="string">&quot;add %0, %1, %2\n\t&quot;</span></span><br><span class="line">        : <span class="string">&quot;=r&quot;</span>(result)</span><br><span class="line">        : <span class="string">&quot;r&quot;</span>(a), <span class="string">&quot;r&quot;</span>(b)</span><br><span class="line">    );</span><br><span class="line">    <span class="keyword">return</span> result;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h1 id="五、内联汇编的常见用法示例"><a href="#五、内联汇编的常见用法示例" class="headerlink" title="五、内联汇编的常见用法示例"></a>五、内联汇编的常见用法示例</h1><h2 id="5-1-开关中断"><a href="#5-1-开关中断" class="headerlink" title="5.1 开关中断"></a>5.1 开关中断</h2><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// ARM Cortex-M：开/关中断</span></span><br><span class="line"><span class="type">static</span> <span class="keyword">inline</span> <span class="type">void</span> <span class="title function_">irq_enable</span><span class="params">(<span class="type">void</span>)</span> &#123;</span><br><span class="line">    __asm__ <span class="title function_">volatile</span><span class="params">(<span class="string">&quot;cpsie i&quot;</span> : : : <span class="string">&quot;memory&quot;</span>)</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="type">static</span> <span class="keyword">inline</span> <span class="type">void</span> <span class="title function_">irq_disable</span><span class="params">(<span class="type">void</span>)</span> &#123;</span><br><span class="line">    __asm__ <span class="title function_">volatile</span><span class="params">(<span class="string">&quot;cpsid i&quot;</span> : : : <span class="string">&quot;memory&quot;</span>)</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// x86：关中断</span></span><br><span class="line"><span class="type">static</span> <span class="keyword">inline</span> <span class="type">void</span> <span class="title function_">cli</span><span class="params">(<span class="type">void</span>)</span> &#123;</span><br><span class="line">    __asm__ <span class="title function_">volatile</span><span class="params">(<span class="string">&quot;cli&quot;</span> : : : <span class="string">&quot;memory&quot;</span>)</span>;</span><br><span class="line">&#125;</span><br><span class="line"><span class="type">static</span> <span class="keyword">inline</span> <span class="type">void</span> <span class="title function_">sti</span><span class="params">(<span class="type">void</span>)</span> &#123;</span><br><span class="line">    __asm__ <span class="title function_">volatile</span><span class="params">(<span class="string">&quot;sti&quot;</span> : : : <span class="string">&quot;memory&quot;</span>)</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="5-2-原子操作（x86-lock-前缀）"><a href="#5-2-原子操作（x86-lock-前缀）" class="headerlink" title="5.2 原子操作（x86 lock 前缀）"></a>5.2 原子操作（x86 lock 前缀）</h2><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="keyword">inline</span> <span class="type">int</span> <span class="title function_">atomic_inc</span><span class="params">(<span class="type">int</span> *ptr)</span> &#123;</span><br><span class="line">    <span class="type">int</span> tmp;</span><br><span class="line">    __asm__ <span class="title function_">volatile</span> <span class="params">(</span></span><br><span class="line"><span class="params">        <span class="string">&quot;lock incl %0&quot;</span></span></span><br><span class="line"><span class="params">        : <span class="string">&quot;+m&quot;</span>(*ptr)</span></span><br><span class="line"><span class="params">        : : <span class="string">&quot;memory&quot;</span>, <span class="string">&quot;cc&quot;</span></span></span><br><span class="line"><span class="params">    )</span>;</span><br><span class="line">    <span class="keyword">return</span> tmp;  <span class="comment">// 简化示例</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="5-3-读取-CPU-时间戳（x86）"><a href="#5-3-读取-CPU-时间戳（x86）" class="headerlink" title="5.3 读取 CPU 时间戳（x86）"></a>5.3 读取 CPU 时间戳（x86）</h2><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="keyword">inline</span> <span class="type">uint64_t</span> <span class="title function_">rdtsc</span><span class="params">(<span class="type">void</span>)</span> &#123;</span><br><span class="line">    <span class="type">uint32_t</span> lo, hi;</span><br><span class="line">    __asm__ <span class="title function_">volatile</span> <span class="params">(</span></span><br><span class="line"><span class="params">        <span class="string">&quot;rdtsc&quot;</span></span></span><br><span class="line"><span class="params">        : <span class="string">&quot;=a&quot;</span>(lo), <span class="string">&quot;=d&quot;</span>(hi)</span></span><br><span class="line"><span class="params">        : : <span class="string">&quot;memory&quot;</span></span></span><br><span class="line"><span class="params">    )</span>;</span><br><span class="line">    <span class="keyword">return</span> ((<span class="type">uint64_t</span>)hi &lt;&lt; <span class="number">32</span>) | lo;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="5-4-ARM-独占访问（ldrex-strex，自旋锁核心）"><a href="#5-4-ARM-独占访问（ldrex-strex，自旋锁核心）" class="headerlink" title="5.4 ARM 独占访问（ldrex&#x2F;strex，自旋锁核心）"></a>5.4 ARM 独占访问（ldrex&#x2F;strex，自旋锁核心）</h2><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 原子加：ARM 上实现 *ptr += val</span></span><br><span class="line"><span class="type">int</span> <span class="title function_">atomic_add</span><span class="params">(<span class="type">int</span> *ptr, <span class="type">int</span> val)</span> &#123;</span><br><span class="line">    <span class="type">int</span> old, result;</span><br><span class="line">    __asm__ <span class="title function_">volatile</span> <span class="params">(</span></span><br><span class="line"><span class="params">        <span class="string">&quot;1:\n\t&quot;</span></span></span><br><span class="line"><span class="params">        <span class="string">&quot;ldrex %0, [%2]\n\t&quot;</span>      <span class="comment">// 独占读</span></span></span><br><span class="line"><span class="params">        <span class="string">&quot;add %1, %0, %3\n\t&quot;</span>      <span class="comment">// 计算新值</span></span></span><br><span class="line"><span class="params">        <span class="string">&quot;strex %0, %1, [%2]\n\t&quot;</span>  <span class="comment">// 独占写，返回 0=成功</span></span></span><br><span class="line"><span class="params">        <span class="string">&quot;teq %0, #0\n\t&quot;</span>          <span class="comment">// 测试是否成功</span></span></span><br><span class="line"><span class="params">        <span class="string">&quot;bne 1b&quot;</span>                  <span class="comment">// 失败则重试</span></span></span><br><span class="line"><span class="params">        : <span class="string">&quot;=&amp;r&quot;</span>(result), <span class="string">&quot;=&amp;r&quot;</span>(old)</span></span><br><span class="line"><span class="params">        : <span class="string">&quot;r&quot;</span>(ptr), <span class="string">&quot;r&quot;</span>(val)</span></span><br><span class="line"><span class="params">        : <span class="string">&quot;cc&quot;</span>, <span class="string">&quot;memory&quot;</span></span></span><br><span class="line"><span class="params">    )</span>;</span><br><span class="line">    <span class="keyword">return</span> old;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="5-5-触发软中断（系统调用）"><a href="#5-5-触发软中断（系统调用）" class="headerlink" title="5.5 触发软中断（系统调用）"></a>5.5 触发软中断（系统调用）</h2><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// ARM 32 位 Linux 系统调用：sys_write</span></span><br><span class="line"><span class="type">static</span> <span class="keyword">inline</span> <span class="type">long</span> <span class="title function_">sys_write</span><span class="params">(<span class="type">int</span> fd, <span class="type">const</span> <span class="type">char</span> *buf, <span class="type">size_t</span> count)</span> &#123;</span><br><span class="line">    <span class="keyword">register</span> <span class="type">long</span> r7 __asm__(<span class="string">&quot;r7&quot;</span>) = <span class="number">4</span>;       <span class="comment">// sys_write 编号</span></span><br><span class="line">    <span class="keyword">register</span> <span class="type">long</span> r0 __asm__(<span class="string">&quot;r0&quot;</span>) = fd;</span><br><span class="line">    <span class="keyword">register</span> <span class="type">const</span> <span class="type">char</span> *r1 __asm__(<span class="string">&quot;r1&quot;</span>) = buf;</span><br><span class="line">    <span class="keyword">register</span> <span class="type">size_t</span> r2 __asm__(<span class="string">&quot;r2&quot;</span>) = count;</span><br><span class="line">    __asm__ <span class="title function_">volatile</span> <span class="params">(<span class="string">&quot;svc #0&quot;</span></span></span><br><span class="line"><span class="params">                      : <span class="string">&quot;+r&quot;</span>(r0)</span></span><br><span class="line"><span class="params">                      : <span class="string">&quot;r&quot;</span>(r1), <span class="string">&quot;r&quot;</span>(r2), <span class="string">&quot;r&quot;</span>(r7)</span></span><br><span class="line"><span class="params">                      : <span class="string">&quot;memory&quot;</span>)</span>;</span><br><span class="line">    <span class="keyword">return</span> r0;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="5-6-读特殊寄存器（CP15，ARM）"><a href="#5-6-读特殊寄存器（CP15，ARM）" class="headerlink" title="5.6 读特殊寄存器（CP15，ARM）"></a>5.6 读特殊寄存器（CP15，ARM）</h2><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="keyword">inline</span> <span class="type">uint32_t</span> <span class="title function_">read_cp15_sctlr</span><span class="params">(<span class="type">void</span>)</span> &#123;</span><br><span class="line">    <span class="type">uint32_t</span> val;</span><br><span class="line">    __asm__ <span class="title function_">volatile</span> <span class="params">(</span></span><br><span class="line"><span class="params">        <span class="string">&quot;mrc p15, 0, %0, c1, c0, 0&quot;</span>   <span class="comment">// 读系统控制寄存器</span></span></span><br><span class="line"><span class="params">        : <span class="string">&quot;=r&quot;</span>(val)</span></span><br><span class="line"><span class="params">    )</span>;</span><br><span class="line">    <span class="keyword">return</span> val;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="5-7-内存屏障"><a href="#5-7-内存屏障" class="headerlink" title="5.7 内存屏障"></a>5.7 内存屏障</h2><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">define</span> dmb()   __asm__ volatile(<span class="string">&quot;dmb&quot;</span>  : : : <span class="string">&quot;memory&quot;</span>)</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> dsb()   __asm__ volatile(<span class="string">&quot;dsb&quot;</span>  : : : <span class="string">&quot;memory&quot;</span>)</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> isb()   __asm__ volatile(<span class="string">&quot;isb&quot;</span>  : : : <span class="string">&quot;memory&quot;</span>)</span></span><br></pre></td></tr></table></figure>
+
+<hr>
+<h1 id="六、Linux-内核中的内联汇编实例"><a href="#六、Linux-内核中的内联汇编实例" class="headerlink" title="六、Linux 内核中的内联汇编实例"></a>六、Linux 内核中的内联汇编实例</h1><h2 id="6-1-读-写寄存器"><a href="#6-1-读-写寄存器" class="headerlink" title="6.1 读 &#x2F; 写寄存器"></a>6.1 读 &#x2F; 写寄存器</h2><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// Linux 内核 arch/arm 通用寄存器访问</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> readl(addr) (&#123; \</span></span><br><span class="line"><span class="meta">    u32 __v; \</span></span><br><span class="line"><span class="meta">    __asm__ volatile(<span class="string">&quot;ldr %0, %1&quot;</span> : <span class="string">&quot;=r&quot;</span>(__v) : <span class="string">&quot;m&quot;</span>(*(volatile u32 *)(addr))); \</span></span><br><span class="line"><span class="meta">    __v; \</span></span><br><span class="line"><span class="meta">&#125;)</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="6-2-自旋锁（Linux-经典实现片段）"><a href="#6-2-自旋锁（Linux-经典实现片段）" class="headerlink" title="6.2 自旋锁（Linux 经典实现片段）"></a>6.2 自旋锁（Linux 经典实现片段）</h2><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="keyword">inline</span> <span class="type">void</span> <span class="title function_">arch_spin_lock</span><span class="params">(<span class="type">raw_spinlock_t</span> *lock)</span> &#123;</span><br><span class="line">    <span class="type">unsigned</span> <span class="type">long</span> tmp;</span><br><span class="line">    __asm__ __volatile__(</span><br><span class="line">        <span class="string">&quot;1: ldrex %0, [%1]\n&quot;</span></span><br><span class="line">        <span class="string">&quot;   teq %0, #0\n&quot;</span></span><br><span class="line">        <span class="string">&quot;   strexeq %0, %2, [%1]\n&quot;</span></span><br><span class="line">        <span class="string">&quot;   teqeq %0, #0\n&quot;</span></span><br><span class="line">        <span class="string">&quot;   bne 1b&quot;</span></span><br><span class="line">        : <span class="string">&quot;=&amp;r&quot;</span> (tmp)</span><br><span class="line">        : <span class="string">&quot;r&quot;</span> (&amp;lock-&gt;raw_lock), <span class="string">&quot;r&quot;</span> (<span class="number">1</span>)</span><br><span class="line">        : <span class="string">&quot;cc&quot;</span>, <span class="string">&quot;memory&quot;</span>);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p>内联汇编大量用于 Linux 内核对锁、屏障、系统调用的封装，是嵌入式汇编的最佳教材。</p>
+</blockquote>
+<hr>
+<h1 id="七、其他编译器的内联汇编"><a href="#七、其他编译器的内联汇编" class="headerlink" title="七、其他编译器的内联汇编"></a>七、其他编译器的内联汇编</h1><h2 id="7-1-MSVC（Windows，Intel-语法）"><a href="#7-1-MSVC（Windows，Intel-语法）" class="headerlink" title="7.1 MSVC（Windows，Intel 语法）"></a>7.1 MSVC（Windows，Intel 语法）</h2><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// x86 32 位可用 __asm 块</span></span><br><span class="line">__asm &#123;</span><br><span class="line">    mov eax, a</span><br><span class="line">    add eax, b</span><br><span class="line">    mov result, eax</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// x64 不支持 __asm，需用内建函数或独立汇编</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="7-2-Keil-MDK-ARM-Compiler"><a href="#7-2-Keil-MDK-ARM-Compiler" class="headerlink" title="7.2 Keil MDK &#x2F; ARM Compiler"></a>7.2 Keil MDK &#x2F; ARM Compiler</h2><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// Keil 使用 __asm 关键字（ARM Compiler 6 支持内联）</span></span><br><span class="line">__asm <span class="type">int</span> <span class="title function_">add_func</span><span class="params">(<span class="type">int</span> a, <span class="type">int</span> b)</span> &#123;</span><br><span class="line">    ADD r0, r0, r1</span><br><span class="line">    BX  lr</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="7-3-IAR-EWARM"><a href="#7-3-IAR-EWARM" class="headerlink" title="7.3 IAR EWARM"></a>7.3 IAR EWARM</h2><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// IAR 用 __asm 关键字，支持操作数绑定</span></span><br><span class="line"><span class="type">int</span> <span class="title function_">add</span><span class="params">(<span class="type">int</span> a, <span class="type">int</span> b)</span> &#123;</span><br><span class="line">    <span class="type">int</span> result;</span><br><span class="line">    __asm(<span class="string">&quot;add %0, %1, %2&quot;</span> : <span class="string">&quot;=r&quot;</span>(result) : <span class="string">&quot;r&quot;</span>(a), <span class="string">&quot;r&quot;</span>(b));</span><br><span class="line">    <span class="keyword">return</span> result;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="7-4-Clang"><a href="#7-4-Clang" class="headerlink" title="7.4 Clang"></a>7.4 Clang</h2><p>与 GCC 语法兼容，可直接用 <code>__asm__</code>。</p>
+<blockquote>
+<p>不同编译器方言差异大，<strong>跨编译器代码尽量用 <code>__builtin_*</code> 内建函数</strong>替代，提高可移植性。</p>
+</blockquote>
+<hr>
+<h1 id="八、用-builtin-代替内联汇编（推荐优先）"><a href="#八、用-builtin-代替内联汇编（推荐优先）" class="headerlink" title="八、用 __builtin 代替内联汇编（推荐优先）"></a>八、用 __builtin 代替内联汇编（推荐优先）</h1><p>很多场景 GCC 提供了内建函数，比手写汇编更安全、更可移植：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">__sync_fetch_and_add(&amp;x, <span class="number">1</span>);       <span class="comment">// 原子自增</span></span><br><span class="line">__sync_lock_test_and_set(&amp;x, <span class="number">1</span>);   <span class="comment">// 原子交换</span></span><br><span class="line">__atomic_add_fetch(&amp;x, <span class="number">1</span>, __ATOMIC_SEQ_CST);  <span class="comment">// C11 原子操作</span></span><br><span class="line">__builtin_popcount(x);             <span class="comment">// 位计数</span></span><br><span class="line">__builtin_clz(x);                  <span class="comment">// 前导零</span></span><br><span class="line">__builtin_ctz(x);                  <span class="comment">// 尾随零</span></span><br><span class="line">__builtin_expect(x, <span class="number">1</span>);            <span class="comment">// 分支预测提示</span></span><br><span class="line">__builtin_unreachable();           <span class="comment">// 告诉编译器不会到达</span></span><br><span class="line">__builtin_return_address(<span class="number">0</span>);       <span class="comment">// 获取返回地址</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>建议优先级</strong>：</p>
+<ol>
+<li>优先标准库 &#x2F; C11 原子</li>
+<li>其次 <code>__builtin_*</code></li>
+<li>只有前两者覆盖不了，才手写内联汇编</li>
+</ol>
+<hr>
+<h1 id="九、内联汇编常见陷阱"><a href="#九、内联汇编常见陷阱" class="headerlink" title="九、内联汇编常见陷阱"></a>九、内联汇编常见陷阱</h1><h2 id="9-1-忘记输出约束的-“-”"><a href="#9-1-忘记输出约束的-“-”" class="headerlink" title="9.1 忘记输出约束的 “&#x3D;”"></a>9.1 忘记输出约束的 “&#x3D;”</h2><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">__asm__(<span class="string">&quot;movl %1, %0&quot;</span> : <span class="string">&quot;r&quot;</span>(out) : <span class="string">&quot;r&quot;</span>(in));  <span class="comment">// ❌ 输出少了 &quot;=&quot;</span></span><br><span class="line">__asm__(<span class="string">&quot;movl %1, %0&quot;</span> : <span class="string">&quot;=r&quot;</span>(out) : <span class="string">&quot;r&quot;</span>(in)); <span class="comment">// ✅</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="9-2-修改了操作数却没声明"><a href="#9-2-修改了操作数却没声明" class="headerlink" title="9.2 修改了操作数却没声明"></a>9.2 修改了操作数却没声明</h2><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 输入 a 被指令修改，但只声明为输入 → 编译器不感知，产生错误代码</span></span><br><span class="line">__asm__(<span class="string">&quot;incl %1&quot;</span> : <span class="string">&quot;=r&quot;</span>(r) : <span class="string">&quot;r&quot;</span>(a));  <span class="comment">// ⚠️ a 被改但未声明</span></span><br><span class="line">__asm__(<span class="string">&quot;incl %1&quot;</span> : <span class="string">&quot;=r&quot;</span>(r), <span class="string">&quot;+r&quot;</span>(a));  <span class="comment">// ✅ 用 + 声明读写</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="9-3-earlyclobber-漏写"><a href="#9-3-earlyclobber-漏写" class="headerlink" title="9.3 earlyclobber 漏写 &amp;"></a>9.3 earlyclobber 漏写 &amp;</h2><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 输入和输出可能分配到同一寄存器，导致计算结果被破坏</span></span><br><span class="line">__asm__(<span class="string">&quot;addl %1, %0&quot;</span></span><br><span class="line">        : <span class="string">&quot;=&amp;r&quot;</span>(result)     <span class="comment">// &amp; 强制 result 用独立寄存器</span></span><br><span class="line">        : <span class="string">&quot;r&quot;</span>(a), <span class="string">&quot;r&quot;</span>(b));</span><br></pre></td></tr></table></figure>
+
+<h2 id="9-4-忘记-clobber"><a href="#9-4-忘记-clobber" class="headerlink" title="9.4 忘记 clobber"></a>9.4 忘记 clobber</h2><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">__asm__(<span class="string">&quot;movl %0, %%ecx&quot;</span> : : <span class="string">&quot;r&quot;</span>(x));  <span class="comment">// ❌ 改了 ecx 没声明</span></span><br><span class="line">__asm__(<span class="string">&quot;movl %0, %%ecx&quot;</span> : : <span class="string">&quot;r&quot;</span>(x) : <span class="string">&quot;ecx&quot;</span>); <span class="comment">// ✅</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="9-5-忘记-volatile-导致指令被优化掉"><a href="#9-5-忘记-volatile-导致指令被优化掉" class="headerlink" title="9.5 忘记 volatile 导致指令被优化掉"></a>9.5 忘记 volatile 导致指令被优化掉</h2><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 没有副作用也没输出的纯汇编可能被优化删除</span></span><br><span class="line">__asm__ <span class="title function_">volatile</span><span class="params">(<span class="string">&quot;nop&quot;</span>)</span>;   <span class="comment">// ✅ 加 volatile</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="9-6-汇编指令内部操作数顺序搞反"><a href="#9-6-汇编指令内部操作数顺序搞反" class="headerlink" title="9.6 汇编指令内部操作数顺序搞反"></a>9.6 汇编指令内部操作数顺序搞反</h2><p>x86 AT&amp;T：<code>&quot;movl %1, %0&quot;</code> 是 <code>%1 → %0</code>（源在前）。</p>
+<h2 id="9-7-寄存器被-C-编译器用于其他用途"><a href="#9-7-寄存器被-C-编译器用于其他用途" class="headerlink" title="9.7 寄存器被 C 编译器用于其他用途"></a>9.7 寄存器被 C 编译器用于其他用途</h2><p>内联汇编里<strong>不要直接写死寄存器名</strong>（如 <code>eax</code>、<code>r0</code>），除非声明在破坏列表中，否则可能覆盖编译器正在使用的值。</p>
+<hr>
+<h1 id="十、调试内联汇编"><a href="#十、调试内联汇编" class="headerlink" title="十、调试内联汇编"></a>十、调试内联汇编</h1><h2 id="10-1-查看编译器生成的汇编"><a href="#10-1-查看编译器生成的汇编" class="headerlink" title="10.1 查看编译器生成的汇编"></a>10.1 查看编译器生成的汇编</h2><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">gcc -S test.c -o test.s        <span class="comment"># 看完整汇编</span></span><br><span class="line">gcc -O2 -S test.c -o test.s    <span class="comment"># 优化后</span></span><br><span class="line">objdump -d <span class="built_in">test</span>                <span class="comment"># 反汇编</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="10-2-验证生成的指令序列"><a href="#10-2-验证生成的指令序列" class="headerlink" title="10.2 验证生成的指令序列"></a>10.2 验证生成的指令序列</h2><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">gcc -O2 -S -fverbose-asm test.c -o test.s   <span class="comment"># 带注释的汇编</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="10-3-常见检查"><a href="#10-3-常见检查" class="headerlink" title="10.3 常见检查"></a>10.3 常见检查</h2><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">- 用 <span class="built_in">printf</span> 打印结果验证</span><br><span class="line">- 用 -fsanitize 检测内存问题</span><br><span class="line">- 用 GDB stepi 单步进入汇编指令</span><br><span class="line">- 反汇编确认 clobber 后寄存器确实被保存</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h1 id="十一、实战：完整示例"><a href="#十一、实战：完整示例" class="headerlink" title="十一、实战：完整示例"></a>十一、实战：完整示例</h1><h2 id="11-1-用内联汇编实现-memcpy（ARM-优化示例）"><a href="#11-1-用内联汇编实现-memcpy（ARM-优化示例）" class="headerlink" title="11.1 用内联汇编实现 memcpy（ARM 优化示例）"></a>11.1 用内联汇编实现 memcpy（ARM 优化示例）</h2><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">void</span> <span class="title function_">asm_memcpy</span><span class="params">(<span class="type">void</span> *dst, <span class="type">const</span> <span class="type">void</span> *src, <span class="type">size_t</span> n)</span> &#123;</span><br><span class="line">    __asm__ <span class="title function_">volatile</span> <span class="params">(</span></span><br><span class="line"><span class="params">        <span class="string">&quot;1:\n\t&quot;</span></span></span><br><span class="line"><span class="params">        <span class="string">&quot;ldr r3, [%1], #4\n\t&quot;</span>     <span class="comment">// 读取 4 字节，源指针后移</span></span></span><br><span class="line"><span class="params">        <span class="string">&quot;str r3, [%0], #4\n\t&quot;</span>     <span class="comment">// 写入 4 字节，目的指针后移</span></span></span><br><span class="line"><span class="params">        <span class="string">&quot;subs %2, %2, #4\n\t&quot;</span>      <span class="comment">// n -= 4</span></span></span><br><span class="line"><span class="params">        <span class="string">&quot;bne 1b&quot;</span>                   <span class="comment">// 不为 0 继续</span></span></span><br><span class="line"><span class="params">        : <span class="string">&quot;+r&quot;</span>(dst), <span class="string">&quot;+r&quot;</span>(src), <span class="string">&quot;+r&quot;</span>(n)</span></span><br><span class="line"><span class="params">        : : <span class="string">&quot;memory&quot;</span>, <span class="string">&quot;r3&quot;</span></span></span><br><span class="line"><span class="params">    )</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="11-2-内联汇编-C-混合完成位翻转"><a href="#11-2-内联汇编-C-混合完成位翻转" class="headerlink" title="11.2 内联汇编 + C 混合完成位翻转"></a>11.2 内联汇编 + C 混合完成位翻转</h2><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 反转一个字节的 8 位</span></span><br><span class="line"><span class="type">uint8_t</span> <span class="title function_">reverse_bits</span><span class="params">(<span class="type">uint8_t</span> b)</span> &#123;</span><br><span class="line">    <span class="type">uint8_t</span> out;</span><br><span class="line">    __asm__ (</span><br><span class="line">        <span class="string">&quot;mov %0, %1\n\t&quot;</span>       <span class="comment">// out = b</span></span><br><span class="line">        <span class="string">&quot;rbit %0, %0\n\t&quot;</span>      <span class="comment">// ARM 指令：反转整个寄存器的位</span></span><br><span class="line">        <span class="string">&quot;lsr %0, %0, #24\n\t&quot;</span>  <span class="comment">// 移到低 8 位</span></span><br><span class="line">        : <span class="string">&quot;=r&quot;</span>(out)</span><br><span class="line">        : <span class="string">&quot;r&quot;</span>(b)</span><br><span class="line">    );</span><br><span class="line">    <span class="keyword">return</span> out;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h1 id="十二、跨平台封装的建议"><a href="#十二、跨平台封装的建议" class="headerlink" title="十二、跨平台封装的建议"></a>十二、跨平台封装的建议</h1><p>为了可移植性，建议用宏封装，各平台分别实现：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">if</span> defined(__ARM_ARCH_7A__)</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> memory_barrier() __asm__ volatile(<span class="string">&quot;dmb&quot;</span> : : : <span class="string">&quot;memory&quot;</span>)</span></span><br><span class="line"><span class="meta">#<span class="keyword">elif</span> defined(__x86_64__) || defined(__i386__)</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> memory_barrier() __asm__ volatile(<span class="string">&quot;mfence&quot;</span> : : : <span class="string">&quot;memory&quot;</span>)</span></span><br><span class="line"><span class="meta">#<span class="keyword">elif</span> defined(__riscv)</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> memory_barrier() __asm__ volatile(<span class="string">&quot;fence rw, rw&quot;</span> : : : <span class="string">&quot;memory&quot;</span>)</span></span><br><span class="line"><span class="meta">#<span class="keyword">else</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> memory_barrier() __asm__ volatile(<span class="string">&quot;&quot;</span> : : : <span class="string">&quot;memory&quot;</span>)</span></span><br><span class="line"><span class="meta">#<span class="keyword">endif</span></span></span><br></pre></td></tr></table></figure>
+
+<hr>
+<h1 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h1><p>C 语言嵌入式汇编的知识图谱：</p>
+<blockquote>
+<p><strong>基本语法（四段式：指令&#x2F;输出&#x2F;输入&#x2F;破坏）→ 约束与修饰符（r、&#x3D;、+、&amp;）→ volatile 语义 → 平台差异（AT&amp;T vs Intel、x86 vs ARM）→ 实用场景（开关中断&#x2F;原子操作&#x2F;系统调用&#x2F;寄存器访问）→ 陷阱规避（clobber、earlyclobber、优化删除）</strong></p>
+</blockquote>
+<p><strong>最佳实践总结</strong>：</p>
+<ol>
+<li>优先用 <code>__builtin_*</code> 和 C11 原子操作，减少裸汇编</li>
+<li>汇编必须加 <code>volatile</code>（有副作用时）</li>
+<li>每个被修改的寄存器、内存、标志都要写进破坏列表</li>
+<li>输入输出用约束绑定，避免写死寄存器名</li>
+<li>使用 <code>&amp;</code> 防止 earlyclobber 冲突</li>
+<li>写完务必反汇编核对生成的代码</li>
+</ol>
+<blockquote>
+<p><strong>一句话记住</strong>：内联汇编是 C 和汇编之间的”接口协议”——通过约束和破坏列表把寄存器所有权交给编译器管理，你只负责描述”做什么”，编译器负责”别踩到我的寄存器”。</p>
+</blockquote>
+
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="http://example.com/2026/08/02/C%E8%AF%AD%E8%A8%80%E5%B5%8C%E5%85%A5%E5%BC%8F%E6%B1%87%E7%BC%96%E8%AF%A6%E8%A7%A3/" data-id="cmsbjq3jl000327lmc3dzee7p" data-title="C语言嵌入式汇编详解" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      
+      
+      
+  <ul class="article-tag-list" itemprop="keywords"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/ARM/" rel="tag">ARM</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/C%E8%AF%AD%E8%A8%80/" rel="tag">C语言</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/GCC/" rel="tag">GCC</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/%E5%86%85%E8%81%94%E6%B1%87%E7%BC%96/" rel="tag">内联汇编</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/%E5%B5%8C%E5%85%A5%E5%BC%8F%E6%B1%87%E7%BC%96/" rel="tag">嵌入式汇编</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/%E5%BA%95%E5%B1%82%E5%8E%9F%E7%90%86/" rel="tag">底层原理</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/%E6%B1%87%E7%BC%96%E8%AF%AD%E8%A8%80/" rel="tag">汇编语言</a></li></ul>
+
+    </footer>
+  </div>
+  
+</article>
+
+
+
+  
     <article id="post-C语言基础知识点详解" class="h-entry article article-type-post" itemprop="blogPost" itemscope itemtype="https://schema.org/BlogPosting">
   <div class="article-meta">
     <a href="/2026/08/02/C%E8%AF%AD%E8%A8%80%E5%9F%BA%E7%A1%80%E7%9F%A5%E8%AF%86%E7%82%B9%E8%AF%A6%E8%A7%A3/" class="article-date">
@@ -415,7 +762,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2026/08/02/C%E8%AF%AD%E8%A8%80%E5%9F%BA%E7%A1%80%E7%9F%A5%E8%AF%86%E7%82%B9%E8%AF%A6%E8%A7%A3/" data-id="cmsbjlr9700012rlm65jhaxqy" data-title="C语言基础知识点详解" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2026/08/02/C%E8%AF%AD%E8%A8%80%E5%9F%BA%E7%A1%80%E7%9F%A5%E8%AF%86%E7%82%B9%E8%AF%A6%E8%A7%A3/" data-id="cmsbjq3jh000127lmdmwtcm9x" data-title="C语言基础知识点详解" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
@@ -988,7 +1335,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2026/08/02/C%E8%AF%AD%E8%A8%80%E8%BF%9B%E9%98%B6%E7%9F%A5%E8%AF%86%E7%82%B9%E8%AF%A6%E8%A7%A3/" data-id="cmsbjlr9d00052rlmgsllapom" data-title="C语言进阶知识点详解" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2026/08/02/C%E8%AF%AD%E8%A8%80%E8%BF%9B%E9%98%B6%E7%9F%A5%E8%AF%86%E7%82%B9%E8%AF%A6%E8%A7%A3/" data-id="cmsbjq3jm000427lm01ukgmu4" data-title="C语言进阶知识点详解" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
@@ -1471,7 +1818,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2026/08/02/%E6%B1%87%E7%BC%96%E8%AF%AD%E8%A8%80%E7%9F%A5%E8%AF%86%E7%82%B9%E8%AF%A6%E8%A7%A3/" data-id="cmsbjlr9j000d2rlm5ssmhomf" data-title="汇编语言知识点详解" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2026/08/02/%E6%B1%87%E7%BC%96%E8%AF%AD%E8%A8%80%E7%9F%A5%E8%AF%86%E7%82%B9%E8%AF%A6%E8%A7%A3/" data-id="cmsbjq3jv000g27lm3qs3g8x7" data-title="汇编语言知识点详解" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
@@ -2131,7 +2478,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2026/08/02/%E5%B5%8C%E5%85%A5%E5%BC%8F%E5%9B%BA%E4%BB%B6%E5%9C%B0%E5%9D%80%E4%B8%89%E4%BB%B6%E5%A5%97-LMA-VMA-XIP%E4%B8%8EPIC/" data-id="cmsbjlr9l000e2rlmd2hi9fbv" data-title="嵌入式固件地址三件套：加载地址、运行时地址、XIP 与 PIC" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2026/08/02/%E5%B5%8C%E5%85%A5%E5%BC%8F%E5%9B%BA%E4%BB%B6%E5%9C%B0%E5%9D%80%E4%B8%89%E4%BB%B6%E5%A5%97-LMA-VMA-XIP%E4%B8%8EPIC/" data-id="cmsbjq3js000d27lm931m1yr9" data-title="嵌入式固件地址三件套：加载地址、运行时地址、XIP 与 PIC" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
@@ -2177,7 +2524,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2026/08/01/%E5%B5%8C%E5%85%A5%E5%BC%8F%E9%93%BE%E6%8E%A5%E8%84%9A%E6%9C%AC%E8%AF%A6%E8%A7%A3%EF%BC%9A%E4%BB%8E%E9%9B%B6%E7%90%86%E8%A7%A3Linker-Script/" data-id="cmsbjlr9m000g2rlmevzud6up" data-title="嵌入式链接脚本详解：以英飞凌TC375为例" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2026/08/01/%E5%B5%8C%E5%85%A5%E5%BC%8F%E9%93%BE%E6%8E%A5%E8%84%9A%E6%9C%AC%E8%AF%A6%E8%A7%A3%EF%BC%9A%E4%BB%8E%E9%9B%B6%E7%90%86%E8%A7%A3Linker-Script/" data-id="cmsbjq3jt000e27lmclkw42aa" data-title="嵌入式链接脚本详解：以英飞凌TC375为例" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
@@ -2374,7 +2721,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2026/08/01/Linux%E8%BD%AF%E4%BB%B6%E5%90%AF%E5%8A%A8%E8%BF%87%E7%A8%8B%E8%AF%A6%E8%A7%A3/" data-id="cmsbjlr9b00042rlmdtatdz5x" data-title="Linux软件启动过程详解" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2026/08/01/Linux%E8%BD%AF%E4%BB%B6%E5%90%AF%E5%8A%A8%E8%BF%87%E7%A8%8B%E8%AF%A6%E8%A7%A3/" data-id="cmsbjq3jo000727lmatxob0y8" data-title="Linux软件启动过程详解" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
@@ -2516,7 +2863,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2026/08/01/%E5%A6%82%E4%BD%95%E5%BC%80%E5%8F%91%E9%83%A8%E7%BD%B2AUTOSAR-Agent/" data-id="cmsbjlr9g000a2rlmao4x6f1e" data-title="如何开发部署AUTOSAR-Agent" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2026/08/01/%E5%A6%82%E4%BD%95%E5%BC%80%E5%8F%91%E9%83%A8%E7%BD%B2AUTOSAR-Agent/" data-id="cmsbjq3jr000b27lm8qqr7zr9" data-title="如何开发部署AUTOSAR-Agent" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
@@ -3241,7 +3588,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2026/08/01/%E7%94%B5%E6%9C%BA%E6%8E%A7%E5%88%B6%E7%9F%A5%E8%AF%86%E4%BD%93%E7%B3%BB%E5%85%A5%E9%97%A8%EF%BC%9A%E4%BB%8E%E7%94%B5%E6%9C%BA%E5%8E%9F%E7%90%86%E5%88%B0FOC%E5%AE%9E%E6%88%98/" data-id="cmsbjlrad00422rlm4iss3ynk" data-title="电机控制知识体系入门：从电机原理到FOC实战" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2026/08/01/%E7%94%B5%E6%9C%BA%E6%8E%A7%E5%88%B6%E7%9F%A5%E8%AF%86%E4%BD%93%E7%B3%BB%E5%85%A5%E9%97%A8%EF%BC%9A%E4%BB%8E%E7%94%B5%E6%9C%BA%E5%8E%9F%E7%90%86%E5%88%B0FOC%E5%AE%9E%E6%88%98/" data-id="cmsbjq3ks004i27lmajehbo38" data-title="电机控制知识体系入门：从电机原理到FOC实战" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
@@ -3487,174 +3834,11 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2026/08/01/%E4%BD%BF%E7%94%A8-Ventoy-%E5%88%B6%E4%BD%9C-U-%E7%9B%98%E5%90%AF%E5%8A%A8%E7%9B%98%E5%AE%8C%E5%85%A8%E6%8C%87%E5%8D%97/" data-id="cmsbjlr9f00082rlmaywy3y2z" data-title="使用 Ventoy 制作 U 盘启动盘完全指南" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2026/08/01/%E4%BD%BF%E7%94%A8-Ventoy-%E5%88%B6%E4%BD%9C-U-%E7%9B%98%E5%90%AF%E5%8A%A8%E7%9B%98%E5%AE%8C%E5%85%A8%E6%8C%87%E5%8D%97/" data-id="cmsbjq3jq000a27lmgx2he93s" data-title="使用 Ventoy 制作 U 盘启动盘完全指南" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
   <ul class="article-tag-list" itemprop="keywords"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Linux/" rel="tag">Linux</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/U%E7%9B%98%E5%90%AF%E5%8A%A8%E7%9B%98/" rel="tag">U盘启动盘</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Ventoy/" rel="tag">Ventoy</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/%E7%B3%BB%E7%BB%9F%E5%AE%89%E8%A3%85/" rel="tag">系统安装</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/%E8%A3%85%E6%9C%BA%E5%B7%A5%E5%85%B7/" rel="tag">装机工具</a></li></ul>
-
-    </footer>
-  </div>
-  
-</article>
-
-
-
-  
-    <article id="post-用飞书连接AUTOSAR-Agent-手机远程操控指南" class="h-entry article article-type-post" itemprop="blogPost" itemscope itemtype="https://schema.org/BlogPosting">
-  <div class="article-meta">
-    <a href="/2026/07/31/%E7%94%A8%E9%A3%9E%E4%B9%A6%E8%BF%9E%E6%8E%A5AUTOSAR-Agent-%E6%89%8B%E6%9C%BA%E8%BF%9C%E7%A8%8B%E6%93%8D%E6%8E%A7%E6%8C%87%E5%8D%97/" class="article-date">
-  <time class="dt-published" datetime="2026-07-31T11:02:05.000Z" itemprop="datePublished">2026-07-31</time>
-</a>
-    
-  </div>
-  <div class="article-inner">
-    
-    
-      <header class="article-header">
-        
-  
-    <h1 itemprop="name">
-      <a class="p-name article-title" href="/2026/07/31/%E7%94%A8%E9%A3%9E%E4%B9%A6%E8%BF%9E%E6%8E%A5AUTOSAR-Agent-%E6%89%8B%E6%9C%BA%E8%BF%9C%E7%A8%8B%E6%93%8D%E6%8E%A7%E6%8C%87%E5%8D%97/">用飞书连接AUTOSAR-Agent-手机远程操控指南</a>
-    </h1>
-  
-
-      </header>
-    
-    <div class="e-content article-entry" itemprop="articleBody">
-      
-        <h1 id="用飞书连接-AUTOSAR-Agent：手机远程操控指南"><a href="#用飞书连接-AUTOSAR-Agent：手机远程操控指南" class="headerlink" title="用飞书连接 AUTOSAR Agent：手机远程操控指南"></a>用飞书连接 AUTOSAR Agent：手机远程操控指南</h1><blockquote>
-<p>需求：电脑上跑着一个 AUTOSAR 架构专家 Agent（基于 opencode），想用手机飞书和它对话——在地铁上让它写个 SWC 骨架、验证 ARXML、查 BSW 配置。</p>
-</blockquote>
-<p>这篇文章记录完整的接入方案：<strong>飞书长连接 + 本地桥接服务 + opencode HTTP API</strong>，以及过程中踩过的坑。</p>
-<h2 id="一、方案选型"><a href="#一、方案选型" class="headerlink" title="一、方案选型"></a>一、方案选型</h2><h3 id="核心约束"><a href="#核心约束" class="headerlink" title="核心约束"></a>核心约束</h3><p>家用电脑没有公网 IP，也懒得搞域名和 HTTPS 证书。很多机器人接入方案要求配置「事件回调 URL」，直接卡死。</p>
-<h3 id="解决方案：飞书「长连接」模式"><a href="#解决方案：飞书「长连接」模式" class="headerlink" title="解决方案：飞书「长连接」模式"></a>解决方案：飞书「长连接」模式</h3><p>飞书开放平台的事件订阅支持 <strong>WebSocket 长连接</strong>：飞书服务器主动把事件推到你的电脑，<strong>不需要公网 IP、不需要域名、不需要内网穿透</strong>，手机和电脑在任意网络下都可用。这是本方案能成立的关键。</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">手机飞书 ──▶ 飞书开放平台 ──WebSocket长连接──▶ 本机桥接服务(Python)</span><br><span class="line">    ▲                                            │  HTTP</span><br><span class="line">    └──────────── 飞书API 回复消息 ◀─────────────┘</span><br><span class="line">                                          opencode serve :4096</span><br><span class="line">                                              └─▶ autosar agent</span><br></pre></td></tr></table></figure>
-
-<ul>
-<li>每个飞书会话（chat_id）映射一个 opencode session → <strong>多轮对话上下文连续</strong></li>
-<li><code>/new</code> 命令强制开启新 session → 清空上下文</li>
-<li>回复超长自动分段（飞书单条消息有长度限制）</li>
-<li>长连接断开后 SDK 自动重连</li>
-</ul>
-<h2 id="二、opencode-serve-驱动的关键发现"><a href="#二、opencode-serve-驱动的关键发现" class="headerlink" title="二、opencode serve 驱动的关键发现"></a>二、opencode serve 驱动的关键发现</h2><h3 id="正确的-API-路由"><a href="#正确的-API-路由" class="headerlink" title="正确的 API 路由"></a>正确的 API 路由</h3><p>opencode 的 <code>serve</code> 命令启动 headless HTTP 服务（默认 127.0.0.1:0，可指定端口），暴露 OpenAPI 文档。驱动 Agent 的核心是 <strong>v1 同步执行路由</strong>：</p>
-<table>
-<thead>
-<tr>
-<th>操作</th>
-<th>请求</th>
-<th>说明</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>建会话</td>
-<td><code>POST /session</code></td>
-<td>body: <code>&#123;&quot;agent&quot;:&quot;autosar&quot;,&quot;title&quot;:&quot;...&quot;&#125;</code></td>
-</tr>
-<tr>
-<td>发消息</td>
-<td><code>POST /session/&#123;id&#125;/message</code></td>
-<td>body: <code>&#123;&quot;parts&quot;:[&#123;&quot;type&quot;:&quot;text&quot;,&quot;text&quot;:&quot;...&quot;&#125;],&quot;agent&quot;:&quot;autosar&quot;&#125;</code>，<strong>同步阻塞直到一轮推理完成</strong></td>
-</tr>
-<tr>
-<td>读记录</td>
-<td><code>GET /session/&#123;id&#125;/message</code></td>
-<td>获取会话消息列表</td>
-</tr>
-</tbody></table>
-<p>⚠️ 注意：文档里 <code>/api/session/&#123;id&#125;/prompt</code> 那条路径是「入队」路由，不会真的执行模型推理；真正干活的是不带 <code>/api</code> 前缀的 <code>/session/&#123;id&#125;/message</code>。</p>
-<h3 id="访问鉴权"><a href="#访问鉴权" class="headerlink" title="访问鉴权"></a>访问鉴权</h3><p>启动时设置环境变量 <code>OPENCODE_SERVER_PASSWORD</code> 即可启用 Basic Auth（用户名默认 <code>opencode</code>）。桥接服务请求时带上 <code>Authorization: Basic ...</code> 头。没有密码直接访问会返回 <code>401</code>。</p>
-<h3 id="排坑：Agent-配置的模型失效"><a href="#排坑：Agent-配置的模型失效" class="headerlink" title="排坑：Agent 配置的模型失效"></a>排坑：Agent 配置的模型失效</h3><p>桥接服务第一次调试时，发消息始终返回 500，查日志发现：</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ProviderModelNotFoundError: Model not found: anthropic/claude-sonnet-4</span><br></pre></td></tr></table></figure>
-
-<p>原来 agent 定义（<code>.opencode/agents/autosar/agent.md</code>）里写的模型 ID 在 models.dev 目录里已经下架了。查询当前可用的模型列表：</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">curl http://127.0.0.1:4096/api/model | python3 -m json.tool</span><br></pre></td></tr></table></figure>
-
-<p>把 <code>model:</code> 改为当前 <code>status=active</code> 的模型（示例用了 <code>opencode/deepseek-v4-flash-free</code>）后恢复正常。<strong>教训：模型 ID 会过期，Agent 报 500 时先查模型目录。</strong></p>
-<h2 id="三、桥接服务实现要点"><a href="#三、桥接服务实现要点" class="headerlink" title="三、桥接服务实现要点"></a>三、桥接服务实现要点</h2><h3 id="技术栈"><a href="#技术栈" class="headerlink" title="技术栈"></a>技术栈</h3><ul>
-<li>Python 3 + <code>lark-oapi</code>（飞书官方 SDK，支持 WS 长连接客户端）</li>
-<li>标准库 <code>urllib</code> 调 opencode API（零额外依赖）</li>
-</ul>
-<h3 id="核心流程"><a href="#核心流程" class="headerlink" title="核心流程"></a>核心流程</h3><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 飞书长连接客户端</span></span><br><span class="line"><span class="keyword">from</span> lark_oapi.ws <span class="keyword">import</span> Client <span class="keyword">as</span> WSClient</span><br><span class="line"><span class="keyword">from</span> lark_oapi.event.dispatcher_handler <span class="keyword">import</span> EventDispatcherHandler</span><br><span class="line"></span><br><span class="line">handler = (EventDispatcherHandler.builder(<span class="string">&quot;&quot;</span>, verification_token)</span><br><span class="line">    .register_p2_im_message_receive_v1(on_message)   <span class="comment"># 订阅消息事件</span></span><br><span class="line">    .build())</span><br><span class="line">ws_client = WSClient(app_id, app_secret, event_handler=handler)</span><br><span class="line">ws_client.start()   <span class="comment"># 阻塞，自动重连</span></span><br></pre></td></tr></table></figure>
-
-<p>收到消息后的处理：</p>
-<ol>
-<li><strong>回执</strong>：立即回复「⏳ 已收到，agent 处理中…」（模型推理可能要几十秒，先给用户反馈）</li>
-<li><strong>异步执行</strong>：起后台线程调用 opencode API，<code>POST /session/&#123;id&#125;/message</code> 同步等待</li>
-<li><strong>回复</strong>：用 <code>im/v1/messages/&#123;message_id&#125;/reply</code> 接口把结果作为「回复消息」发回去</li>
-</ol>
-<h3 id="细节处理"><a href="#细节处理" class="headerlink" title="细节处理"></a>细节处理</h3><ul>
-<li><strong>群聊 @ 识别</strong>：只有被 @ 才响应。注意飞书事件里 <code>content</code> 是 JSON 字符串，内部引号是转义的（<code>\&quot;</code>），要<strong>先 JSON 反序列化再匹配</strong> <code>&lt;at user_id=&quot;...&quot;&gt;</code>，否则正则永远匹配不到（踩过的坑）。</li>
-<li><strong>消息类型过滤</strong>：目前只处理 <code>text</code>，图片&#x2F;富文本回提示。</li>
-<li><strong>白名单</strong>：按 <code>open_id</code>&#x2F;<code>union_id</code> 过滤可用用户，首次使用从日志里取 sender 值。</li>
-<li><strong>会话持久化</strong>：<code>chat_id → session_id</code> 映射存 JSON 文件，桥接服务重启后对话上下文不丢。</li>
-<li><strong>长文本分段</strong>：单条 &gt;3500 字符按行切分，超长单行硬切。</li>
-</ul>
-<h2 id="四、配置步骤（概览）"><a href="#四、配置步骤（概览）" class="headerlink" title="四、配置步骤（概览）"></a>四、配置步骤（概览）</h2><h3 id="第-1-步：飞书开放平台（网页操作，约-10-分钟）"><a href="#第-1-步：飞书开放平台（网页操作，约-10-分钟）" class="headerlink" title="第 1 步：飞书开放平台（网页操作，约 10 分钟）"></a>第 1 步：飞书开放平台（网页操作，约 10 分钟）</h3><ol>
-<li><a target="_blank" rel="noopener" href="https://open.feishu.cn/app">open.feishu.cn&#x2F;app</a> 创建<strong>企业自建应用</strong>（个人用可选「仅自己可用」免审批）</li>
-<li>添加<strong>机器人</strong>能力</li>
-<li><strong>权限管理</strong>开通：<code>im:message</code>（读取单聊消息）+ <code>im:message:send_as_bot</code>（以机器人身份发消息）</li>
-<li><strong>事件与回调</strong> → 选「<strong>使用长连接接收事件</strong>」→ 订阅 <code>im.message.receive_v1</code></li>
-<li><strong>版本管理与发布</strong> → 创建版本 → 发布</li>
-<li>手机飞书搜索应用名即可找到机器人</li>
-</ol>
-<h3 id="第-2-步：本机配置"><a href="#第-2-步：本机配置" class="headerlink" title="第 2 步：本机配置"></a>第 2 步：本机配置</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 1. 启动 opencode headless 服务（带鉴权）</span></span><br><span class="line"><span class="built_in">export</span> OPENCODE_SERVER_PASSWORD=<span class="string">&#x27;你的密码&#x27;</span></span><br><span class="line"><span class="built_in">nohup</span> opencode serve --hostname 127.0.0.1 --port 4096 &amp;</span><br><span class="line"></span><br><span class="line"><span class="comment"># 2. 配置桥接服务</span></span><br><span class="line"><span class="built_in">cd</span> ~/opencode-project/feishu</span><br><span class="line"><span class="built_in">cp</span> .env.example .<span class="built_in">env</span>        <span class="comment"># 填入 App ID / App Secret / 密码</span></span><br><span class="line">./start.sh --daemon         <span class="comment"># 后台启动</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 3. 查看状态</span></span><br><span class="line">./start.sh status           <span class="comment"># stop 停止</span></span><br></pre></td></tr></table></figure>
-
-<p>启动成功后日志里能看到两条关键信息：</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">opencode 服务连通: HTTP 200</span><br><span class="line">connected to wss://msg-frontier.feishu.cn/ws/v2?...</span><br></pre></td></tr></table></figure>
-
-<p>第二条说明长连接已建立，链路打通。</p>
-<h3 id="日常使用"><a href="#日常使用" class="headerlink" title="日常使用"></a>日常使用</h3><ul>
-<li>发普通消息 &#x3D; 和 Agent 对话（ARXML 验证、SWC 设计、RTE&#x2F;BSW 配置、代码生成等）</li>
-<li><code>/status</code> 查看桥接状态</li>
-<li><code>/new</code> 清空上下文</li>
-</ul>
-<h2 id="五、踩坑清单"><a href="#五、踩坑清单" class="headerlink" title="五、踩坑清单"></a>五、踩坑清单</h2><table>
-<thead>
-<tr>
-<th>现象</th>
-<th>原因</th>
-<th>解决</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>Agent 返回 500</td>
-<td>agent.md 里模型 ID 已下架</td>
-<td>查 <code>/api/model</code>，改有效模型</td>
-</tr>
-<tr>
-<td>群聊不响应</td>
-<td>事件 content 是转义 JSON，正则匹配失败</td>
-<td>先反序列化再匹配 @</td>
-</tr>
-<tr>
-<td>桥接启动自检 401</td>
-<td>健康检查没带 Basic Auth 头</td>
-<td>自检请求也带上鉴权头</td>
-</tr>
-<tr>
-<td><code>POST /session</code> 报错</td>
-<td>请求带了 schema 之外的字段</td>
-<td>严格按 OpenAPI 文档构造 body</td>
-</tr>
-</tbody></table>
-<h2 id="六、总结"><a href="#六、总结" class="headerlink" title="六、总结"></a>六、总结</h2><ul>
-<li><strong>飞书长连接</strong>让家用电脑免公网 IP 接入机器人，体验接近微信机器人</li>
-<li><strong>opencode serve</strong> 提供完整 HTTP API，任何语言都能驱动 Agent，是头less 化的标准入口</li>
-<li>桥接层 200 行 Python 搞定，核心是「事件接入 + 会话映射 + 异步回执」</li>
-</ul>
-<p>从此 AUTOSAR 架构师随身携带，手机上发条消息就能让它干活。</p>
-<hr>
-<p><em>本文是实操记录，代码与脚本仅作示意。部署前请务必做好鉴权与白名单配置。</em></p>
-
-      
-    </div>
-    <footer class="article-footer">
-      <a data-url="http://example.com/2026/07/31/%E7%94%A8%E9%A3%9E%E4%B9%A6%E8%BF%9E%E6%8E%A5AUTOSAR-Agent-%E6%89%8B%E6%9C%BA%E8%BF%9C%E7%A8%8B%E6%93%8D%E6%8E%A7%E6%8C%87%E5%8D%97/" data-id="cmsbjlr9n000i2rlmhb1yg9tm" data-title="用飞书连接AUTOSAR-Agent-手机远程操控指南" class="article-share-link"><span class="fa fa-share">Share</span></a>
-      
-      
-      
-  <ul class="article-tag-list" itemprop="keywords"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/AI-Agent/" rel="tag">AI Agent</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/AUTOSAR/" rel="tag">AUTOSAR</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/opencode/" rel="tag">opencode</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/%E6%95%88%E7%8E%87%E5%B7%A5%E5%85%B7/" rel="tag">效率工具</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/%E9%A3%9E%E4%B9%A6/" rel="tag">飞书</a></li></ul>
 
     </footer>
   </div>
@@ -3682,7 +3866,7 @@
   <div class="widget-wrap">
     <h3 class="widget-title">Tags</h3>
     <div class="widget">
-      <ul class="tag-list" itemprop="keywords"><li class="tag-list-item"><a class="tag-list-link" href="/tags/AI-Agent/" rel="tag">AI Agent</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/ARM/" rel="tag">ARM</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/AURIX/" rel="tag">AURIX</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/AUTOSAR/" rel="tag">AUTOSAR</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/CANoe/" rel="tag">CANoe</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/CAPL/" rel="tag">CAPL</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/C%E8%AF%AD%E8%A8%80/" rel="tag">C语言</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/FOC/" rel="tag">FOC</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/GCC/" rel="tag">GCC</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/LMA/" rel="tag">LMA</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Linker-Script/" rel="tag">Linker Script</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Linux/" rel="tag">Linux</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/PIC/" rel="tag">PIC</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/RISC-V/" rel="tag">RISC-V</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/RT-Thread/" rel="tag">RT-Thread</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/SOTA/" rel="tag">SOTA</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/TC375/" rel="tag">TC375</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/TriCore/" rel="tag">TriCore</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/U%E7%9B%98%E5%90%AF%E5%8A%A8%E7%9B%98/" rel="tag">U盘启动盘</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/VMA/" rel="tag">VMA</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Ventoy/" rel="tag">Ventoy</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/XIP/" rel="tag">XIP</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/opencode/" rel="tag">opencode</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/x86/" rel="tag">x86</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%85%A5%E9%97%A8/" rel="tag">入门</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86/" rel="tag">内存管理</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%86%85%E6%A0%B8/" rel="tag">内核</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%90%AF%E5%8A%A8%E8%BF%87%E7%A8%8B/" rel="tag">启动过程</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%9F%BA%E7%A1%80/" rel="tag">基础</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/" rel="tag">学习笔记</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%B5%8C%E5%85%A5%E5%BC%8F/" rel="tag">嵌入式</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%BA%95%E5%B1%82%E5%8E%9F%E7%90%86/" rel="tag">底层原理</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%BC%80%E5%8F%91/" rel="tag">开发</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%BC%95%E5%AF%BC/" rel="tag">引导</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E6%8C%87%E9%92%88/" rel="tag">指针</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E6%95%88%E7%8E%87%E5%B7%A5%E5%85%B7/" rel="tag">效率工具</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E6%B1%87%E7%BC%96/" rel="tag">汇编</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E6%B1%87%E7%BC%96%E8%AF%AD%E8%A8%80/" rel="tag">汇编语言</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E6%B1%BD%E8%BD%A6%E7%94%B5%E5%AD%90/" rel="tag">汽车电子</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E6%B5%8B%E8%AF%95/" rel="tag">测试</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E7%94%B5%E5%8A%9B%E7%94%B5%E5%AD%90/" rel="tag">电力电子</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E7%94%B5%E6%9C%BA%E6%8E%A7%E5%88%B6/" rel="tag">电机控制</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E7%B3%BB%E7%BB%9F%E5%AE%89%E8%A3%85/" rel="tag">系统安装</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E7%BC%96%E8%AF%91%E9%93%BE%E6%8E%A5/" rel="tag">编译链接</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E8%8B%B1%E9%A3%9E%E5%87%8C/" rel="tag">英飞凌</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E8%A3%85%E6%9C%BA%E5%B7%A5%E5%85%B7/" rel="tag">装机工具</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E8%AF%AD%E6%B3%95/" rel="tag">语法</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E8%BF%9B%E9%98%B6/" rel="tag">进阶</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E9%83%A8%E7%BD%B2/" rel="tag">部署</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E9%93%BE%E6%8E%A5%E8%84%9A%E6%9C%AC/" rel="tag">链接脚本</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E9%A3%9E%E4%B9%A6/" rel="tag">飞书</a></li></ul>
+      <ul class="tag-list" itemprop="keywords"><li class="tag-list-item"><a class="tag-list-link" href="/tags/AI-Agent/" rel="tag">AI Agent</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/ARM/" rel="tag">ARM</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/AURIX/" rel="tag">AURIX</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/AUTOSAR/" rel="tag">AUTOSAR</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/CANoe/" rel="tag">CANoe</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/CAPL/" rel="tag">CAPL</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/C%E8%AF%AD%E8%A8%80/" rel="tag">C语言</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/FOC/" rel="tag">FOC</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/GCC/" rel="tag">GCC</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/LMA/" rel="tag">LMA</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Linker-Script/" rel="tag">Linker Script</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Linux/" rel="tag">Linux</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/PIC/" rel="tag">PIC</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/RISC-V/" rel="tag">RISC-V</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/RT-Thread/" rel="tag">RT-Thread</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/SOTA/" rel="tag">SOTA</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/TC375/" rel="tag">TC375</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/TriCore/" rel="tag">TriCore</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/U%E7%9B%98%E5%90%AF%E5%8A%A8%E7%9B%98/" rel="tag">U盘启动盘</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/VMA/" rel="tag">VMA</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Ventoy/" rel="tag">Ventoy</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/XIP/" rel="tag">XIP</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/opencode/" rel="tag">opencode</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/x86/" rel="tag">x86</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%85%A5%E9%97%A8/" rel="tag">入门</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86/" rel="tag">内存管理</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%86%85%E6%A0%B8/" rel="tag">内核</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%86%85%E8%81%94%E6%B1%87%E7%BC%96/" rel="tag">内联汇编</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%90%AF%E5%8A%A8%E8%BF%87%E7%A8%8B/" rel="tag">启动过程</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%9F%BA%E7%A1%80/" rel="tag">基础</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/" rel="tag">学习笔记</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%B5%8C%E5%85%A5%E5%BC%8F/" rel="tag">嵌入式</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%B5%8C%E5%85%A5%E5%BC%8F%E6%B1%87%E7%BC%96/" rel="tag">嵌入式汇编</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%BA%95%E5%B1%82%E5%8E%9F%E7%90%86/" rel="tag">底层原理</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%BC%80%E5%8F%91/" rel="tag">开发</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%BC%95%E5%AF%BC/" rel="tag">引导</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E6%8C%87%E9%92%88/" rel="tag">指针</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E6%95%88%E7%8E%87%E5%B7%A5%E5%85%B7/" rel="tag">效率工具</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E6%B1%87%E7%BC%96/" rel="tag">汇编</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E6%B1%87%E7%BC%96%E8%AF%AD%E8%A8%80/" rel="tag">汇编语言</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E6%B1%BD%E8%BD%A6%E7%94%B5%E5%AD%90/" rel="tag">汽车电子</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E6%B5%8B%E8%AF%95/" rel="tag">测试</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E7%94%B5%E5%8A%9B%E7%94%B5%E5%AD%90/" rel="tag">电力电子</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E7%94%B5%E6%9C%BA%E6%8E%A7%E5%88%B6/" rel="tag">电机控制</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E7%B3%BB%E7%BB%9F%E5%AE%89%E8%A3%85/" rel="tag">系统安装</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E7%BC%96%E8%AF%91%E9%93%BE%E6%8E%A5/" rel="tag">编译链接</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E8%8B%B1%E9%A3%9E%E5%87%8C/" rel="tag">英飞凌</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E8%A3%85%E6%9C%BA%E5%B7%A5%E5%85%B7/" rel="tag">装机工具</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E8%AF%AD%E6%B3%95/" rel="tag">语法</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E8%BF%9B%E9%98%B6/" rel="tag">进阶</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E9%83%A8%E7%BD%B2/" rel="tag">部署</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E9%93%BE%E6%8E%A5%E8%84%9A%E6%9C%AC/" rel="tag">链接脚本</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E9%A3%9E%E4%B9%A6/" rel="tag">飞书</a></li></ul>
     </div>
   </div>
 
@@ -3692,7 +3876,7 @@
   <div class="widget-wrap">
     <h3 class="widget-title">Tag Cloud</h3>
     <div class="widget tagcloud">
-      <a href="/tags/AI-Agent/" style="font-size: 15px;">AI Agent</a> <a href="/tags/ARM/" style="font-size: 10px;">ARM</a> <a href="/tags/AURIX/" style="font-size: 15px;">AURIX</a> <a href="/tags/AUTOSAR/" style="font-size: 15px;">AUTOSAR</a> <a href="/tags/CANoe/" style="font-size: 10px;">CANoe</a> <a href="/tags/CAPL/" style="font-size: 10px;">CAPL</a> <a href="/tags/C%E8%AF%AD%E8%A8%80/" style="font-size: 15px;">C语言</a> <a href="/tags/FOC/" style="font-size: 10px;">FOC</a> <a href="/tags/GCC/" style="font-size: 10px;">GCC</a> <a href="/tags/LMA/" style="font-size: 10px;">LMA</a> <a href="/tags/Linker-Script/" style="font-size: 15px;">Linker Script</a> <a href="/tags/Linux/" style="font-size: 20px;">Linux</a> <a href="/tags/PIC/" style="font-size: 10px;">PIC</a> <a href="/tags/RISC-V/" style="font-size: 10px;">RISC-V</a> <a href="/tags/RT-Thread/" style="font-size: 10px;">RT-Thread</a> <a href="/tags/SOTA/" style="font-size: 10px;">SOTA</a> <a href="/tags/TC375/" style="font-size: 15px;">TC375</a> <a href="/tags/TriCore/" style="font-size: 15px;">TriCore</a> <a href="/tags/U%E7%9B%98%E5%90%AF%E5%8A%A8%E7%9B%98/" style="font-size: 10px;">U盘启动盘</a> <a href="/tags/VMA/" style="font-size: 10px;">VMA</a> <a href="/tags/Ventoy/" style="font-size: 10px;">Ventoy</a> <a href="/tags/XIP/" style="font-size: 10px;">XIP</a> <a href="/tags/opencode/" style="font-size: 15px;">opencode</a> <a href="/tags/x86/" style="font-size: 10px;">x86</a> <a href="/tags/%E5%85%A5%E9%97%A8/" style="font-size: 10px;">入门</a> <a href="/tags/%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86/" style="font-size: 15px;">内存管理</a> <a href="/tags/%E5%86%85%E6%A0%B8/" style="font-size: 15px;">内核</a> <a href="/tags/%E5%90%AF%E5%8A%A8%E8%BF%87%E7%A8%8B/" style="font-size: 10px;">启动过程</a> <a href="/tags/%E5%9F%BA%E7%A1%80/" style="font-size: 10px;">基础</a> <a href="/tags/%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/" style="font-size: 15px;">学习笔记</a> <a href="/tags/%E5%B5%8C%E5%85%A5%E5%BC%8F/" style="font-size: 20px;">嵌入式</a> <a href="/tags/%E5%BA%95%E5%B1%82%E5%8E%9F%E7%90%86/" style="font-size: 15px;">底层原理</a> <a href="/tags/%E5%BC%80%E5%8F%91/" style="font-size: 10px;">开发</a> <a href="/tags/%E5%BC%95%E5%AF%BC/" style="font-size: 10px;">引导</a> <a href="/tags/%E6%8C%87%E9%92%88/" style="font-size: 10px;">指针</a> <a href="/tags/%E6%95%88%E7%8E%87%E5%B7%A5%E5%85%B7/" style="font-size: 15px;">效率工具</a> <a href="/tags/%E6%B1%87%E7%BC%96/" style="font-size: 15px;">汇编</a> <a href="/tags/%E6%B1%87%E7%BC%96%E8%AF%AD%E8%A8%80/" style="font-size: 10px;">汇编语言</a> <a href="/tags/%E6%B1%BD%E8%BD%A6%E7%94%B5%E5%AD%90/" style="font-size: 10px;">汽车电子</a> <a href="/tags/%E6%B5%8B%E8%AF%95/" style="font-size: 15px;">测试</a> <a href="/tags/%E7%94%B5%E5%8A%9B%E7%94%B5%E5%AD%90/" style="font-size: 10px;">电力电子</a> <a href="/tags/%E7%94%B5%E6%9C%BA%E6%8E%A7%E5%88%B6/" style="font-size: 10px;">电机控制</a> <a href="/tags/%E7%B3%BB%E7%BB%9F%E5%AE%89%E8%A3%85/" style="font-size: 10px;">系统安装</a> <a href="/tags/%E7%BC%96%E8%AF%91%E9%93%BE%E6%8E%A5/" style="font-size: 10px;">编译链接</a> <a href="/tags/%E8%8B%B1%E9%A3%9E%E5%87%8C/" style="font-size: 15px;">英飞凌</a> <a href="/tags/%E8%A3%85%E6%9C%BA%E5%B7%A5%E5%85%B7/" style="font-size: 10px;">装机工具</a> <a href="/tags/%E8%AF%AD%E6%B3%95/" style="font-size: 10px;">语法</a> <a href="/tags/%E8%BF%9B%E9%98%B6/" style="font-size: 10px;">进阶</a> <a href="/tags/%E9%83%A8%E7%BD%B2/" style="font-size: 10px;">部署</a> <a href="/tags/%E9%93%BE%E6%8E%A5%E8%84%9A%E6%9C%AC/" style="font-size: 15px;">链接脚本</a> <a href="/tags/%E9%A3%9E%E4%B9%A6/" style="font-size: 10px;">飞书</a>
+      <a href="/tags/AI-Agent/" style="font-size: 15px;">AI Agent</a> <a href="/tags/ARM/" style="font-size: 15px;">ARM</a> <a href="/tags/AURIX/" style="font-size: 15px;">AURIX</a> <a href="/tags/AUTOSAR/" style="font-size: 15px;">AUTOSAR</a> <a href="/tags/CANoe/" style="font-size: 10px;">CANoe</a> <a href="/tags/CAPL/" style="font-size: 10px;">CAPL</a> <a href="/tags/C%E8%AF%AD%E8%A8%80/" style="font-size: 20px;">C语言</a> <a href="/tags/FOC/" style="font-size: 10px;">FOC</a> <a href="/tags/GCC/" style="font-size: 15px;">GCC</a> <a href="/tags/LMA/" style="font-size: 10px;">LMA</a> <a href="/tags/Linker-Script/" style="font-size: 15px;">Linker Script</a> <a href="/tags/Linux/" style="font-size: 20px;">Linux</a> <a href="/tags/PIC/" style="font-size: 10px;">PIC</a> <a href="/tags/RISC-V/" style="font-size: 10px;">RISC-V</a> <a href="/tags/RT-Thread/" style="font-size: 10px;">RT-Thread</a> <a href="/tags/SOTA/" style="font-size: 10px;">SOTA</a> <a href="/tags/TC375/" style="font-size: 15px;">TC375</a> <a href="/tags/TriCore/" style="font-size: 15px;">TriCore</a> <a href="/tags/U%E7%9B%98%E5%90%AF%E5%8A%A8%E7%9B%98/" style="font-size: 10px;">U盘启动盘</a> <a href="/tags/VMA/" style="font-size: 10px;">VMA</a> <a href="/tags/Ventoy/" style="font-size: 10px;">Ventoy</a> <a href="/tags/XIP/" style="font-size: 10px;">XIP</a> <a href="/tags/opencode/" style="font-size: 15px;">opencode</a> <a href="/tags/x86/" style="font-size: 10px;">x86</a> <a href="/tags/%E5%85%A5%E9%97%A8/" style="font-size: 10px;">入门</a> <a href="/tags/%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86/" style="font-size: 15px;">内存管理</a> <a href="/tags/%E5%86%85%E6%A0%B8/" style="font-size: 15px;">内核</a> <a href="/tags/%E5%86%85%E8%81%94%E6%B1%87%E7%BC%96/" style="font-size: 10px;">内联汇编</a> <a href="/tags/%E5%90%AF%E5%8A%A8%E8%BF%87%E7%A8%8B/" style="font-size: 10px;">启动过程</a> <a href="/tags/%E5%9F%BA%E7%A1%80/" style="font-size: 10px;">基础</a> <a href="/tags/%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/" style="font-size: 15px;">学习笔记</a> <a href="/tags/%E5%B5%8C%E5%85%A5%E5%BC%8F/" style="font-size: 20px;">嵌入式</a> <a href="/tags/%E5%B5%8C%E5%85%A5%E5%BC%8F%E6%B1%87%E7%BC%96/" style="font-size: 10px;">嵌入式汇编</a> <a href="/tags/%E5%BA%95%E5%B1%82%E5%8E%9F%E7%90%86/" style="font-size: 20px;">底层原理</a> <a href="/tags/%E5%BC%80%E5%8F%91/" style="font-size: 10px;">开发</a> <a href="/tags/%E5%BC%95%E5%AF%BC/" style="font-size: 10px;">引导</a> <a href="/tags/%E6%8C%87%E9%92%88/" style="font-size: 10px;">指针</a> <a href="/tags/%E6%95%88%E7%8E%87%E5%B7%A5%E5%85%B7/" style="font-size: 15px;">效率工具</a> <a href="/tags/%E6%B1%87%E7%BC%96/" style="font-size: 15px;">汇编</a> <a href="/tags/%E6%B1%87%E7%BC%96%E8%AF%AD%E8%A8%80/" style="font-size: 15px;">汇编语言</a> <a href="/tags/%E6%B1%BD%E8%BD%A6%E7%94%B5%E5%AD%90/" style="font-size: 10px;">汽车电子</a> <a href="/tags/%E6%B5%8B%E8%AF%95/" style="font-size: 15px;">测试</a> <a href="/tags/%E7%94%B5%E5%8A%9B%E7%94%B5%E5%AD%90/" style="font-size: 10px;">电力电子</a> <a href="/tags/%E7%94%B5%E6%9C%BA%E6%8E%A7%E5%88%B6/" style="font-size: 10px;">电机控制</a> <a href="/tags/%E7%B3%BB%E7%BB%9F%E5%AE%89%E8%A3%85/" style="font-size: 10px;">系统安装</a> <a href="/tags/%E7%BC%96%E8%AF%91%E9%93%BE%E6%8E%A5/" style="font-size: 10px;">编译链接</a> <a href="/tags/%E8%8B%B1%E9%A3%9E%E5%87%8C/" style="font-size: 15px;">英飞凌</a> <a href="/tags/%E8%A3%85%E6%9C%BA%E5%B7%A5%E5%85%B7/" style="font-size: 10px;">装机工具</a> <a href="/tags/%E8%AF%AD%E6%B3%95/" style="font-size: 10px;">语法</a> <a href="/tags/%E8%BF%9B%E9%98%B6/" style="font-size: 10px;">进阶</a> <a href="/tags/%E9%83%A8%E7%BD%B2/" style="font-size: 10px;">部署</a> <a href="/tags/%E9%93%BE%E6%8E%A5%E8%84%9A%E6%9C%AC/" style="font-size: 15px;">链接脚本</a> <a href="/tags/%E9%A3%9E%E4%B9%A6/" style="font-size: 10px;">飞书</a>
     </div>
   </div>
 
@@ -3714,6 +3898,10 @@
       <ul>
         
           <li>
+            <a href="/2026/08/02/C%E8%AF%AD%E8%A8%80%E5%B5%8C%E5%85%A5%E5%BC%8F%E6%B1%87%E7%BC%96%E8%AF%A6%E8%A7%A3/">C语言嵌入式汇编详解</a>
+          </li>
+        
+          <li>
             <a href="/2026/08/02/C%E8%AF%AD%E8%A8%80%E5%9F%BA%E7%A1%80%E7%9F%A5%E8%AF%86%E7%82%B9%E8%AF%A6%E8%A7%A3/">C语言基础知识点详解</a>
           </li>
         
@@ -3727,10 +3915,6 @@
         
           <li>
             <a href="/2026/08/02/%E5%B5%8C%E5%85%A5%E5%BC%8F%E5%9B%BA%E4%BB%B6%E5%9C%B0%E5%9D%80%E4%B8%89%E4%BB%B6%E5%A5%97-LMA-VMA-XIP%E4%B8%8EPIC/">嵌入式固件地址三件套：加载地址、运行时地址、XIP 与 PIC</a>
-          </li>
-        
-          <li>
-            <a href="/2026/08/01/%E5%B5%8C%E5%85%A5%E5%BC%8F%E9%93%BE%E6%8E%A5%E8%84%9A%E6%9C%AC%E8%AF%A6%E8%A7%A3%EF%BC%9A%E4%BB%8E%E9%9B%B6%E7%90%86%E8%A7%A3Linker-Script/">嵌入式链接脚本详解：以英飞凌TC375为例</a>
           </li>
         
       </ul>

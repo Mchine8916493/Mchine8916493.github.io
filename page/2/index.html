@@ -71,6 +71,169 @@
       <div class="outer">
         <section id="main">
   
+    <article id="post-用飞书连接AUTOSAR-Agent-手机远程操控指南" class="h-entry article article-type-post" itemprop="blogPost" itemscope itemtype="https://schema.org/BlogPosting">
+  <div class="article-meta">
+    <a href="/2026/07/31/%E7%94%A8%E9%A3%9E%E4%B9%A6%E8%BF%9E%E6%8E%A5AUTOSAR-Agent-%E6%89%8B%E6%9C%BA%E8%BF%9C%E7%A8%8B%E6%93%8D%E6%8E%A7%E6%8C%87%E5%8D%97/" class="article-date">
+  <time class="dt-published" datetime="2026-07-31T11:02:05.000Z" itemprop="datePublished">2026-07-31</time>
+</a>
+    
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 itemprop="name">
+      <a class="p-name article-title" href="/2026/07/31/%E7%94%A8%E9%A3%9E%E4%B9%A6%E8%BF%9E%E6%8E%A5AUTOSAR-Agent-%E6%89%8B%E6%9C%BA%E8%BF%9C%E7%A8%8B%E6%93%8D%E6%8E%A7%E6%8C%87%E5%8D%97/">用飞书连接AUTOSAR-Agent-手机远程操控指南</a>
+    </h1>
+  
+
+      </header>
+    
+    <div class="e-content article-entry" itemprop="articleBody">
+      
+        <h1 id="用飞书连接-AUTOSAR-Agent：手机远程操控指南"><a href="#用飞书连接-AUTOSAR-Agent：手机远程操控指南" class="headerlink" title="用飞书连接 AUTOSAR Agent：手机远程操控指南"></a>用飞书连接 AUTOSAR Agent：手机远程操控指南</h1><blockquote>
+<p>需求：电脑上跑着一个 AUTOSAR 架构专家 Agent（基于 opencode），想用手机飞书和它对话——在地铁上让它写个 SWC 骨架、验证 ARXML、查 BSW 配置。</p>
+</blockquote>
+<p>这篇文章记录完整的接入方案：<strong>飞书长连接 + 本地桥接服务 + opencode HTTP API</strong>，以及过程中踩过的坑。</p>
+<h2 id="一、方案选型"><a href="#一、方案选型" class="headerlink" title="一、方案选型"></a>一、方案选型</h2><h3 id="核心约束"><a href="#核心约束" class="headerlink" title="核心约束"></a>核心约束</h3><p>家用电脑没有公网 IP，也懒得搞域名和 HTTPS 证书。很多机器人接入方案要求配置「事件回调 URL」，直接卡死。</p>
+<h3 id="解决方案：飞书「长连接」模式"><a href="#解决方案：飞书「长连接」模式" class="headerlink" title="解决方案：飞书「长连接」模式"></a>解决方案：飞书「长连接」模式</h3><p>飞书开放平台的事件订阅支持 <strong>WebSocket 长连接</strong>：飞书服务器主动把事件推到你的电脑，<strong>不需要公网 IP、不需要域名、不需要内网穿透</strong>，手机和电脑在任意网络下都可用。这是本方案能成立的关键。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">手机飞书 ──▶ 飞书开放平台 ──WebSocket长连接──▶ 本机桥接服务(Python)</span><br><span class="line">    ▲                                            │  HTTP</span><br><span class="line">    └──────────── 飞书API 回复消息 ◀─────────────┘</span><br><span class="line">                                          opencode serve :4096</span><br><span class="line">                                              └─▶ autosar agent</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li>每个飞书会话（chat_id）映射一个 opencode session → <strong>多轮对话上下文连续</strong></li>
+<li><code>/new</code> 命令强制开启新 session → 清空上下文</li>
+<li>回复超长自动分段（飞书单条消息有长度限制）</li>
+<li>长连接断开后 SDK 自动重连</li>
+</ul>
+<h2 id="二、opencode-serve-驱动的关键发现"><a href="#二、opencode-serve-驱动的关键发现" class="headerlink" title="二、opencode serve 驱动的关键发现"></a>二、opencode serve 驱动的关键发现</h2><h3 id="正确的-API-路由"><a href="#正确的-API-路由" class="headerlink" title="正确的 API 路由"></a>正确的 API 路由</h3><p>opencode 的 <code>serve</code> 命令启动 headless HTTP 服务（默认 127.0.0.1:0，可指定端口），暴露 OpenAPI 文档。驱动 Agent 的核心是 <strong>v1 同步执行路由</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>操作</th>
+<th>请求</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>建会话</td>
+<td><code>POST /session</code></td>
+<td>body: <code>&#123;&quot;agent&quot;:&quot;autosar&quot;,&quot;title&quot;:&quot;...&quot;&#125;</code></td>
+</tr>
+<tr>
+<td>发消息</td>
+<td><code>POST /session/&#123;id&#125;/message</code></td>
+<td>body: <code>&#123;&quot;parts&quot;:[&#123;&quot;type&quot;:&quot;text&quot;,&quot;text&quot;:&quot;...&quot;&#125;],&quot;agent&quot;:&quot;autosar&quot;&#125;</code>，<strong>同步阻塞直到一轮推理完成</strong></td>
+</tr>
+<tr>
+<td>读记录</td>
+<td><code>GET /session/&#123;id&#125;/message</code></td>
+<td>获取会话消息列表</td>
+</tr>
+</tbody></table>
+<p>⚠️ 注意：文档里 <code>/api/session/&#123;id&#125;/prompt</code> 那条路径是「入队」路由，不会真的执行模型推理；真正干活的是不带 <code>/api</code> 前缀的 <code>/session/&#123;id&#125;/message</code>。</p>
+<h3 id="访问鉴权"><a href="#访问鉴权" class="headerlink" title="访问鉴权"></a>访问鉴权</h3><p>启动时设置环境变量 <code>OPENCODE_SERVER_PASSWORD</code> 即可启用 Basic Auth（用户名默认 <code>opencode</code>）。桥接服务请求时带上 <code>Authorization: Basic ...</code> 头。没有密码直接访问会返回 <code>401</code>。</p>
+<h3 id="排坑：Agent-配置的模型失效"><a href="#排坑：Agent-配置的模型失效" class="headerlink" title="排坑：Agent 配置的模型失效"></a>排坑：Agent 配置的模型失效</h3><p>桥接服务第一次调试时，发消息始终返回 500，查日志发现：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ProviderModelNotFoundError: Model not found: anthropic/claude-sonnet-4</span><br></pre></td></tr></table></figure>
+
+<p>原来 agent 定义（<code>.opencode/agents/autosar/agent.md</code>）里写的模型 ID 在 models.dev 目录里已经下架了。查询当前可用的模型列表：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">curl http://127.0.0.1:4096/api/model | python3 -m json.tool</span><br></pre></td></tr></table></figure>
+
+<p>把 <code>model:</code> 改为当前 <code>status=active</code> 的模型（示例用了 <code>opencode/deepseek-v4-flash-free</code>）后恢复正常。<strong>教训：模型 ID 会过期，Agent 报 500 时先查模型目录。</strong></p>
+<h2 id="三、桥接服务实现要点"><a href="#三、桥接服务实现要点" class="headerlink" title="三、桥接服务实现要点"></a>三、桥接服务实现要点</h2><h3 id="技术栈"><a href="#技术栈" class="headerlink" title="技术栈"></a>技术栈</h3><ul>
+<li>Python 3 + <code>lark-oapi</code>（飞书官方 SDK，支持 WS 长连接客户端）</li>
+<li>标准库 <code>urllib</code> 调 opencode API（零额外依赖）</li>
+</ul>
+<h3 id="核心流程"><a href="#核心流程" class="headerlink" title="核心流程"></a>核心流程</h3><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 飞书长连接客户端</span></span><br><span class="line"><span class="keyword">from</span> lark_oapi.ws <span class="keyword">import</span> Client <span class="keyword">as</span> WSClient</span><br><span class="line"><span class="keyword">from</span> lark_oapi.event.dispatcher_handler <span class="keyword">import</span> EventDispatcherHandler</span><br><span class="line"></span><br><span class="line">handler = (EventDispatcherHandler.builder(<span class="string">&quot;&quot;</span>, verification_token)</span><br><span class="line">    .register_p2_im_message_receive_v1(on_message)   <span class="comment"># 订阅消息事件</span></span><br><span class="line">    .build())</span><br><span class="line">ws_client = WSClient(app_id, app_secret, event_handler=handler)</span><br><span class="line">ws_client.start()   <span class="comment"># 阻塞，自动重连</span></span><br></pre></td></tr></table></figure>
+
+<p>收到消息后的处理：</p>
+<ol>
+<li><strong>回执</strong>：立即回复「⏳ 已收到，agent 处理中…」（模型推理可能要几十秒，先给用户反馈）</li>
+<li><strong>异步执行</strong>：起后台线程调用 opencode API，<code>POST /session/&#123;id&#125;/message</code> 同步等待</li>
+<li><strong>回复</strong>：用 <code>im/v1/messages/&#123;message_id&#125;/reply</code> 接口把结果作为「回复消息」发回去</li>
+</ol>
+<h3 id="细节处理"><a href="#细节处理" class="headerlink" title="细节处理"></a>细节处理</h3><ul>
+<li><strong>群聊 @ 识别</strong>：只有被 @ 才响应。注意飞书事件里 <code>content</code> 是 JSON 字符串，内部引号是转义的（<code>\&quot;</code>），要<strong>先 JSON 反序列化再匹配</strong> <code>&lt;at user_id=&quot;...&quot;&gt;</code>，否则正则永远匹配不到（踩过的坑）。</li>
+<li><strong>消息类型过滤</strong>：目前只处理 <code>text</code>，图片&#x2F;富文本回提示。</li>
+<li><strong>白名单</strong>：按 <code>open_id</code>&#x2F;<code>union_id</code> 过滤可用用户，首次使用从日志里取 sender 值。</li>
+<li><strong>会话持久化</strong>：<code>chat_id → session_id</code> 映射存 JSON 文件，桥接服务重启后对话上下文不丢。</li>
+<li><strong>长文本分段</strong>：单条 &gt;3500 字符按行切分，超长单行硬切。</li>
+</ul>
+<h2 id="四、配置步骤（概览）"><a href="#四、配置步骤（概览）" class="headerlink" title="四、配置步骤（概览）"></a>四、配置步骤（概览）</h2><h3 id="第-1-步：飞书开放平台（网页操作，约-10-分钟）"><a href="#第-1-步：飞书开放平台（网页操作，约-10-分钟）" class="headerlink" title="第 1 步：飞书开放平台（网页操作，约 10 分钟）"></a>第 1 步：飞书开放平台（网页操作，约 10 分钟）</h3><ol>
+<li><a target="_blank" rel="noopener" href="https://open.feishu.cn/app">open.feishu.cn&#x2F;app</a> 创建<strong>企业自建应用</strong>（个人用可选「仅自己可用」免审批）</li>
+<li>添加<strong>机器人</strong>能力</li>
+<li><strong>权限管理</strong>开通：<code>im:message</code>（读取单聊消息）+ <code>im:message:send_as_bot</code>（以机器人身份发消息）</li>
+<li><strong>事件与回调</strong> → 选「<strong>使用长连接接收事件</strong>」→ 订阅 <code>im.message.receive_v1</code></li>
+<li><strong>版本管理与发布</strong> → 创建版本 → 发布</li>
+<li>手机飞书搜索应用名即可找到机器人</li>
+</ol>
+<h3 id="第-2-步：本机配置"><a href="#第-2-步：本机配置" class="headerlink" title="第 2 步：本机配置"></a>第 2 步：本机配置</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 1. 启动 opencode headless 服务（带鉴权）</span></span><br><span class="line"><span class="built_in">export</span> OPENCODE_SERVER_PASSWORD=<span class="string">&#x27;你的密码&#x27;</span></span><br><span class="line"><span class="built_in">nohup</span> opencode serve --hostname 127.0.0.1 --port 4096 &amp;</span><br><span class="line"></span><br><span class="line"><span class="comment"># 2. 配置桥接服务</span></span><br><span class="line"><span class="built_in">cd</span> ~/opencode-project/feishu</span><br><span class="line"><span class="built_in">cp</span> .env.example .<span class="built_in">env</span>        <span class="comment"># 填入 App ID / App Secret / 密码</span></span><br><span class="line">./start.sh --daemon         <span class="comment"># 后台启动</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 3. 查看状态</span></span><br><span class="line">./start.sh status           <span class="comment"># stop 停止</span></span><br></pre></td></tr></table></figure>
+
+<p>启动成功后日志里能看到两条关键信息：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">opencode 服务连通: HTTP 200</span><br><span class="line">connected to wss://msg-frontier.feishu.cn/ws/v2?...</span><br></pre></td></tr></table></figure>
+
+<p>第二条说明长连接已建立，链路打通。</p>
+<h3 id="日常使用"><a href="#日常使用" class="headerlink" title="日常使用"></a>日常使用</h3><ul>
+<li>发普通消息 &#x3D; 和 Agent 对话（ARXML 验证、SWC 设计、RTE&#x2F;BSW 配置、代码生成等）</li>
+<li><code>/status</code> 查看桥接状态</li>
+<li><code>/new</code> 清空上下文</li>
+</ul>
+<h2 id="五、踩坑清单"><a href="#五、踩坑清单" class="headerlink" title="五、踩坑清单"></a>五、踩坑清单</h2><table>
+<thead>
+<tr>
+<th>现象</th>
+<th>原因</th>
+<th>解决</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Agent 返回 500</td>
+<td>agent.md 里模型 ID 已下架</td>
+<td>查 <code>/api/model</code>，改有效模型</td>
+</tr>
+<tr>
+<td>群聊不响应</td>
+<td>事件 content 是转义 JSON，正则匹配失败</td>
+<td>先反序列化再匹配 @</td>
+</tr>
+<tr>
+<td>桥接启动自检 401</td>
+<td>健康检查没带 Basic Auth 头</td>
+<td>自检请求也带上鉴权头</td>
+</tr>
+<tr>
+<td><code>POST /session</code> 报错</td>
+<td>请求带了 schema 之外的字段</td>
+<td>严格按 OpenAPI 文档构造 body</td>
+</tr>
+</tbody></table>
+<h2 id="六、总结"><a href="#六、总结" class="headerlink" title="六、总结"></a>六、总结</h2><ul>
+<li><strong>飞书长连接</strong>让家用电脑免公网 IP 接入机器人，体验接近微信机器人</li>
+<li><strong>opencode serve</strong> 提供完整 HTTP API，任何语言都能驱动 Agent，是头less 化的标准入口</li>
+<li>桥接层 200 行 Python 搞定，核心是「事件接入 + 会话映射 + 异步回执」</li>
+</ul>
+<p>从此 AUTOSAR 架构师随身携带，手机上发条消息就能让它干活。</p>
+<hr>
+<p><em>本文是实操记录，代码与脚本仅作示意。部署前请务必做好鉴权与白名单配置。</em></p>
+
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="http://example.com/2026/07/31/%E7%94%A8%E9%A3%9E%E4%B9%A6%E8%BF%9E%E6%8E%A5AUTOSAR-Agent-%E6%89%8B%E6%9C%BA%E8%BF%9C%E7%A8%8B%E6%93%8D%E6%8E%A7%E6%8C%87%E5%8D%97/" data-id="cmsbjq3jx000n27lm86582j87" data-title="用飞书连接AUTOSAR-Agent-手机远程操控指南" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      
+      
+      
+  <ul class="article-tag-list" itemprop="keywords"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/AI-Agent/" rel="tag">AI Agent</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/AUTOSAR/" rel="tag">AUTOSAR</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/opencode/" rel="tag">opencode</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/%E6%95%88%E7%8E%87%E5%B7%A5%E5%85%B7/" rel="tag">效率工具</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/%E9%A3%9E%E4%B9%A6/" rel="tag">飞书</a></li></ul>
+
+    </footer>
+  </div>
+  
+</article>
+
+
+
+  
     <article id="post-CANoe-CAPL脚本测试入门与实践" class="h-entry article article-type-post" itemprop="blogPost" itemscope itemtype="https://schema.org/BlogPosting">
   <div class="article-meta">
     <a href="/2026/07/31/CANoe-CAPL%E8%84%9A%E6%9C%AC%E6%B5%8B%E8%AF%95%E5%85%A5%E9%97%A8%E4%B8%8E%E5%AE%9E%E8%B7%B5/" class="article-date">
@@ -811,7 +974,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2026/07/31/CANoe-CAPL%E8%84%9A%E6%9C%AC%E6%B5%8B%E8%AF%95%E5%85%A5%E9%97%A8%E4%B8%8E%E5%AE%9E%E8%B7%B5/" data-id="cmsbjlr9100002rlm0201ff45" data-title="CANoe CAPL脚本测试入门与实践" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2026/07/31/CANoe-CAPL%E8%84%9A%E6%9C%AC%E6%B5%8B%E8%AF%95%E5%85%A5%E9%97%A8%E4%B8%8E%E5%AE%9E%E8%B7%B5/" data-id="cmsbjq3jb000027lmcc2dgdci" data-title="CANoe CAPL脚本测试入门与实践" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
@@ -1162,7 +1325,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2026/07/31/Linux%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86%E8%AF%A6%E8%A7%A3/" data-id="cmsbjlr9b00032rlm3nkjaux7" data-title="Linux内存管理详解" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2026/07/31/Linux%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86%E8%AF%A6%E8%A7%A3/" data-id="cmsbjq3jn000527lm3kje7hws" data-title="Linux内存管理详解" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
@@ -1208,7 +1371,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2026/07/31/%E6%B5%8B%E8%AF%95%E6%96%87%E7%AB%A0-%E8%87%AA%E5%8A%A8%E9%83%A8%E7%BD%B2%E9%AA%8C%E8%AF%81/" data-id="cmsbjlrad00412rlmaa85ei2w" data-title="测试文章-自动部署验证" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2026/07/31/%E6%B5%8B%E8%AF%95%E6%96%87%E7%AB%A0-%E8%87%AA%E5%8A%A8%E9%83%A8%E7%BD%B2%E9%AA%8C%E8%AF%81/" data-id="cmsbjq3jw000k27lma2sn1i7w" data-title="测试文章-自动部署验证" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
@@ -1261,7 +1424,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2026/07/31/hello-world/" data-id="cmsbjlr9e00072rlm7a6he9xg" data-title="Hello World" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2026/07/31/hello-world/" data-id="cmsbjq3jp000827lm6ku19py7" data-title="Hello World" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
@@ -1299,7 +1462,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2026/05/01/%E6%B1%BD%E8%BD%A6%E7%94%B5%E5%AD%90%E5%9B%BA%E4%BB%B6%E5%AE%89%E5%85%A8%E5%AD%A6%E4%B9%A0%E8%B7%AF%E7%BA%BF/" data-id="cmsbjlr9i000b2rlm3xyn50p8" data-title="汽车电子固件安全学习路线" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2026/05/01/%E6%B1%BD%E8%BD%A6%E7%94%B5%E5%AD%90%E5%9B%BA%E4%BB%B6%E5%AE%89%E5%85%A8%E5%AD%A6%E4%B9%A0%E8%B7%AF%E7%BA%BF/" data-id="cmsbjq3jw000i27lmd6cg6gmn" data-title="汽车电子固件安全学习路线" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
@@ -1329,7 +1492,7 @@
   <div class="widget-wrap">
     <h3 class="widget-title">Tags</h3>
     <div class="widget">
-      <ul class="tag-list" itemprop="keywords"><li class="tag-list-item"><a class="tag-list-link" href="/tags/AI-Agent/" rel="tag">AI Agent</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/ARM/" rel="tag">ARM</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/AURIX/" rel="tag">AURIX</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/AUTOSAR/" rel="tag">AUTOSAR</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/CANoe/" rel="tag">CANoe</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/CAPL/" rel="tag">CAPL</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/C%E8%AF%AD%E8%A8%80/" rel="tag">C语言</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/FOC/" rel="tag">FOC</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/GCC/" rel="tag">GCC</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/LMA/" rel="tag">LMA</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Linker-Script/" rel="tag">Linker Script</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Linux/" rel="tag">Linux</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/PIC/" rel="tag">PIC</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/RISC-V/" rel="tag">RISC-V</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/RT-Thread/" rel="tag">RT-Thread</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/SOTA/" rel="tag">SOTA</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/TC375/" rel="tag">TC375</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/TriCore/" rel="tag">TriCore</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/U%E7%9B%98%E5%90%AF%E5%8A%A8%E7%9B%98/" rel="tag">U盘启动盘</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/VMA/" rel="tag">VMA</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Ventoy/" rel="tag">Ventoy</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/XIP/" rel="tag">XIP</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/opencode/" rel="tag">opencode</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/x86/" rel="tag">x86</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%85%A5%E9%97%A8/" rel="tag">入门</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86/" rel="tag">内存管理</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%86%85%E6%A0%B8/" rel="tag">内核</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%90%AF%E5%8A%A8%E8%BF%87%E7%A8%8B/" rel="tag">启动过程</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%9F%BA%E7%A1%80/" rel="tag">基础</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/" rel="tag">学习笔记</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%B5%8C%E5%85%A5%E5%BC%8F/" rel="tag">嵌入式</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%BA%95%E5%B1%82%E5%8E%9F%E7%90%86/" rel="tag">底层原理</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%BC%80%E5%8F%91/" rel="tag">开发</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%BC%95%E5%AF%BC/" rel="tag">引导</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E6%8C%87%E9%92%88/" rel="tag">指针</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E6%95%88%E7%8E%87%E5%B7%A5%E5%85%B7/" rel="tag">效率工具</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E6%B1%87%E7%BC%96/" rel="tag">汇编</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E6%B1%87%E7%BC%96%E8%AF%AD%E8%A8%80/" rel="tag">汇编语言</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E6%B1%BD%E8%BD%A6%E7%94%B5%E5%AD%90/" rel="tag">汽车电子</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E6%B5%8B%E8%AF%95/" rel="tag">测试</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E7%94%B5%E5%8A%9B%E7%94%B5%E5%AD%90/" rel="tag">电力电子</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E7%94%B5%E6%9C%BA%E6%8E%A7%E5%88%B6/" rel="tag">电机控制</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E7%B3%BB%E7%BB%9F%E5%AE%89%E8%A3%85/" rel="tag">系统安装</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E7%BC%96%E8%AF%91%E9%93%BE%E6%8E%A5/" rel="tag">编译链接</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E8%8B%B1%E9%A3%9E%E5%87%8C/" rel="tag">英飞凌</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E8%A3%85%E6%9C%BA%E5%B7%A5%E5%85%B7/" rel="tag">装机工具</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E8%AF%AD%E6%B3%95/" rel="tag">语法</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E8%BF%9B%E9%98%B6/" rel="tag">进阶</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E9%83%A8%E7%BD%B2/" rel="tag">部署</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E9%93%BE%E6%8E%A5%E8%84%9A%E6%9C%AC/" rel="tag">链接脚本</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E9%A3%9E%E4%B9%A6/" rel="tag">飞书</a></li></ul>
+      <ul class="tag-list" itemprop="keywords"><li class="tag-list-item"><a class="tag-list-link" href="/tags/AI-Agent/" rel="tag">AI Agent</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/ARM/" rel="tag">ARM</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/AURIX/" rel="tag">AURIX</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/AUTOSAR/" rel="tag">AUTOSAR</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/CANoe/" rel="tag">CANoe</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/CAPL/" rel="tag">CAPL</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/C%E8%AF%AD%E8%A8%80/" rel="tag">C语言</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/FOC/" rel="tag">FOC</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/GCC/" rel="tag">GCC</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/LMA/" rel="tag">LMA</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Linker-Script/" rel="tag">Linker Script</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Linux/" rel="tag">Linux</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/PIC/" rel="tag">PIC</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/RISC-V/" rel="tag">RISC-V</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/RT-Thread/" rel="tag">RT-Thread</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/SOTA/" rel="tag">SOTA</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/TC375/" rel="tag">TC375</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/TriCore/" rel="tag">TriCore</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/U%E7%9B%98%E5%90%AF%E5%8A%A8%E7%9B%98/" rel="tag">U盘启动盘</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/VMA/" rel="tag">VMA</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Ventoy/" rel="tag">Ventoy</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/XIP/" rel="tag">XIP</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/opencode/" rel="tag">opencode</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/x86/" rel="tag">x86</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%85%A5%E9%97%A8/" rel="tag">入门</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86/" rel="tag">内存管理</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%86%85%E6%A0%B8/" rel="tag">内核</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%86%85%E8%81%94%E6%B1%87%E7%BC%96/" rel="tag">内联汇编</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%90%AF%E5%8A%A8%E8%BF%87%E7%A8%8B/" rel="tag">启动过程</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%9F%BA%E7%A1%80/" rel="tag">基础</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/" rel="tag">学习笔记</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%B5%8C%E5%85%A5%E5%BC%8F/" rel="tag">嵌入式</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%B5%8C%E5%85%A5%E5%BC%8F%E6%B1%87%E7%BC%96/" rel="tag">嵌入式汇编</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%BA%95%E5%B1%82%E5%8E%9F%E7%90%86/" rel="tag">底层原理</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%BC%80%E5%8F%91/" rel="tag">开发</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%BC%95%E5%AF%BC/" rel="tag">引导</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E6%8C%87%E9%92%88/" rel="tag">指针</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E6%95%88%E7%8E%87%E5%B7%A5%E5%85%B7/" rel="tag">效率工具</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E6%B1%87%E7%BC%96/" rel="tag">汇编</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E6%B1%87%E7%BC%96%E8%AF%AD%E8%A8%80/" rel="tag">汇编语言</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E6%B1%BD%E8%BD%A6%E7%94%B5%E5%AD%90/" rel="tag">汽车电子</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E6%B5%8B%E8%AF%95/" rel="tag">测试</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E7%94%B5%E5%8A%9B%E7%94%B5%E5%AD%90/" rel="tag">电力电子</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E7%94%B5%E6%9C%BA%E6%8E%A7%E5%88%B6/" rel="tag">电机控制</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E7%B3%BB%E7%BB%9F%E5%AE%89%E8%A3%85/" rel="tag">系统安装</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E7%BC%96%E8%AF%91%E9%93%BE%E6%8E%A5/" rel="tag">编译链接</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E8%8B%B1%E9%A3%9E%E5%87%8C/" rel="tag">英飞凌</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E8%A3%85%E6%9C%BA%E5%B7%A5%E5%85%B7/" rel="tag">装机工具</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E8%AF%AD%E6%B3%95/" rel="tag">语法</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E8%BF%9B%E9%98%B6/" rel="tag">进阶</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E9%83%A8%E7%BD%B2/" rel="tag">部署</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E9%93%BE%E6%8E%A5%E8%84%9A%E6%9C%AC/" rel="tag">链接脚本</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E9%A3%9E%E4%B9%A6/" rel="tag">飞书</a></li></ul>
     </div>
   </div>
 
@@ -1339,7 +1502,7 @@
   <div class="widget-wrap">
     <h3 class="widget-title">Tag Cloud</h3>
     <div class="widget tagcloud">
-      <a href="/tags/AI-Agent/" style="font-size: 15px;">AI Agent</a> <a href="/tags/ARM/" style="font-size: 10px;">ARM</a> <a href="/tags/AURIX/" style="font-size: 15px;">AURIX</a> <a href="/tags/AUTOSAR/" style="font-size: 15px;">AUTOSAR</a> <a href="/tags/CANoe/" style="font-size: 10px;">CANoe</a> <a href="/tags/CAPL/" style="font-size: 10px;">CAPL</a> <a href="/tags/C%E8%AF%AD%E8%A8%80/" style="font-size: 15px;">C语言</a> <a href="/tags/FOC/" style="font-size: 10px;">FOC</a> <a href="/tags/GCC/" style="font-size: 10px;">GCC</a> <a href="/tags/LMA/" style="font-size: 10px;">LMA</a> <a href="/tags/Linker-Script/" style="font-size: 15px;">Linker Script</a> <a href="/tags/Linux/" style="font-size: 20px;">Linux</a> <a href="/tags/PIC/" style="font-size: 10px;">PIC</a> <a href="/tags/RISC-V/" style="font-size: 10px;">RISC-V</a> <a href="/tags/RT-Thread/" style="font-size: 10px;">RT-Thread</a> <a href="/tags/SOTA/" style="font-size: 10px;">SOTA</a> <a href="/tags/TC375/" style="font-size: 15px;">TC375</a> <a href="/tags/TriCore/" style="font-size: 15px;">TriCore</a> <a href="/tags/U%E7%9B%98%E5%90%AF%E5%8A%A8%E7%9B%98/" style="font-size: 10px;">U盘启动盘</a> <a href="/tags/VMA/" style="font-size: 10px;">VMA</a> <a href="/tags/Ventoy/" style="font-size: 10px;">Ventoy</a> <a href="/tags/XIP/" style="font-size: 10px;">XIP</a> <a href="/tags/opencode/" style="font-size: 15px;">opencode</a> <a href="/tags/x86/" style="font-size: 10px;">x86</a> <a href="/tags/%E5%85%A5%E9%97%A8/" style="font-size: 10px;">入门</a> <a href="/tags/%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86/" style="font-size: 15px;">内存管理</a> <a href="/tags/%E5%86%85%E6%A0%B8/" style="font-size: 15px;">内核</a> <a href="/tags/%E5%90%AF%E5%8A%A8%E8%BF%87%E7%A8%8B/" style="font-size: 10px;">启动过程</a> <a href="/tags/%E5%9F%BA%E7%A1%80/" style="font-size: 10px;">基础</a> <a href="/tags/%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/" style="font-size: 15px;">学习笔记</a> <a href="/tags/%E5%B5%8C%E5%85%A5%E5%BC%8F/" style="font-size: 20px;">嵌入式</a> <a href="/tags/%E5%BA%95%E5%B1%82%E5%8E%9F%E7%90%86/" style="font-size: 15px;">底层原理</a> <a href="/tags/%E5%BC%80%E5%8F%91/" style="font-size: 10px;">开发</a> <a href="/tags/%E5%BC%95%E5%AF%BC/" style="font-size: 10px;">引导</a> <a href="/tags/%E6%8C%87%E9%92%88/" style="font-size: 10px;">指针</a> <a href="/tags/%E6%95%88%E7%8E%87%E5%B7%A5%E5%85%B7/" style="font-size: 15px;">效率工具</a> <a href="/tags/%E6%B1%87%E7%BC%96/" style="font-size: 15px;">汇编</a> <a href="/tags/%E6%B1%87%E7%BC%96%E8%AF%AD%E8%A8%80/" style="font-size: 10px;">汇编语言</a> <a href="/tags/%E6%B1%BD%E8%BD%A6%E7%94%B5%E5%AD%90/" style="font-size: 10px;">汽车电子</a> <a href="/tags/%E6%B5%8B%E8%AF%95/" style="font-size: 15px;">测试</a> <a href="/tags/%E7%94%B5%E5%8A%9B%E7%94%B5%E5%AD%90/" style="font-size: 10px;">电力电子</a> <a href="/tags/%E7%94%B5%E6%9C%BA%E6%8E%A7%E5%88%B6/" style="font-size: 10px;">电机控制</a> <a href="/tags/%E7%B3%BB%E7%BB%9F%E5%AE%89%E8%A3%85/" style="font-size: 10px;">系统安装</a> <a href="/tags/%E7%BC%96%E8%AF%91%E9%93%BE%E6%8E%A5/" style="font-size: 10px;">编译链接</a> <a href="/tags/%E8%8B%B1%E9%A3%9E%E5%87%8C/" style="font-size: 15px;">英飞凌</a> <a href="/tags/%E8%A3%85%E6%9C%BA%E5%B7%A5%E5%85%B7/" style="font-size: 10px;">装机工具</a> <a href="/tags/%E8%AF%AD%E6%B3%95/" style="font-size: 10px;">语法</a> <a href="/tags/%E8%BF%9B%E9%98%B6/" style="font-size: 10px;">进阶</a> <a href="/tags/%E9%83%A8%E7%BD%B2/" style="font-size: 10px;">部署</a> <a href="/tags/%E9%93%BE%E6%8E%A5%E8%84%9A%E6%9C%AC/" style="font-size: 15px;">链接脚本</a> <a href="/tags/%E9%A3%9E%E4%B9%A6/" style="font-size: 10px;">飞书</a>
+      <a href="/tags/AI-Agent/" style="font-size: 15px;">AI Agent</a> <a href="/tags/ARM/" style="font-size: 15px;">ARM</a> <a href="/tags/AURIX/" style="font-size: 15px;">AURIX</a> <a href="/tags/AUTOSAR/" style="font-size: 15px;">AUTOSAR</a> <a href="/tags/CANoe/" style="font-size: 10px;">CANoe</a> <a href="/tags/CAPL/" style="font-size: 10px;">CAPL</a> <a href="/tags/C%E8%AF%AD%E8%A8%80/" style="font-size: 20px;">C语言</a> <a href="/tags/FOC/" style="font-size: 10px;">FOC</a> <a href="/tags/GCC/" style="font-size: 15px;">GCC</a> <a href="/tags/LMA/" style="font-size: 10px;">LMA</a> <a href="/tags/Linker-Script/" style="font-size: 15px;">Linker Script</a> <a href="/tags/Linux/" style="font-size: 20px;">Linux</a> <a href="/tags/PIC/" style="font-size: 10px;">PIC</a> <a href="/tags/RISC-V/" style="font-size: 10px;">RISC-V</a> <a href="/tags/RT-Thread/" style="font-size: 10px;">RT-Thread</a> <a href="/tags/SOTA/" style="font-size: 10px;">SOTA</a> <a href="/tags/TC375/" style="font-size: 15px;">TC375</a> <a href="/tags/TriCore/" style="font-size: 15px;">TriCore</a> <a href="/tags/U%E7%9B%98%E5%90%AF%E5%8A%A8%E7%9B%98/" style="font-size: 10px;">U盘启动盘</a> <a href="/tags/VMA/" style="font-size: 10px;">VMA</a> <a href="/tags/Ventoy/" style="font-size: 10px;">Ventoy</a> <a href="/tags/XIP/" style="font-size: 10px;">XIP</a> <a href="/tags/opencode/" style="font-size: 15px;">opencode</a> <a href="/tags/x86/" style="font-size: 10px;">x86</a> <a href="/tags/%E5%85%A5%E9%97%A8/" style="font-size: 10px;">入门</a> <a href="/tags/%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86/" style="font-size: 15px;">内存管理</a> <a href="/tags/%E5%86%85%E6%A0%B8/" style="font-size: 15px;">内核</a> <a href="/tags/%E5%86%85%E8%81%94%E6%B1%87%E7%BC%96/" style="font-size: 10px;">内联汇编</a> <a href="/tags/%E5%90%AF%E5%8A%A8%E8%BF%87%E7%A8%8B/" style="font-size: 10px;">启动过程</a> <a href="/tags/%E5%9F%BA%E7%A1%80/" style="font-size: 10px;">基础</a> <a href="/tags/%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/" style="font-size: 15px;">学习笔记</a> <a href="/tags/%E5%B5%8C%E5%85%A5%E5%BC%8F/" style="font-size: 20px;">嵌入式</a> <a href="/tags/%E5%B5%8C%E5%85%A5%E5%BC%8F%E6%B1%87%E7%BC%96/" style="font-size: 10px;">嵌入式汇编</a> <a href="/tags/%E5%BA%95%E5%B1%82%E5%8E%9F%E7%90%86/" style="font-size: 20px;">底层原理</a> <a href="/tags/%E5%BC%80%E5%8F%91/" style="font-size: 10px;">开发</a> <a href="/tags/%E5%BC%95%E5%AF%BC/" style="font-size: 10px;">引导</a> <a href="/tags/%E6%8C%87%E9%92%88/" style="font-size: 10px;">指针</a> <a href="/tags/%E6%95%88%E7%8E%87%E5%B7%A5%E5%85%B7/" style="font-size: 15px;">效率工具</a> <a href="/tags/%E6%B1%87%E7%BC%96/" style="font-size: 15px;">汇编</a> <a href="/tags/%E6%B1%87%E7%BC%96%E8%AF%AD%E8%A8%80/" style="font-size: 15px;">汇编语言</a> <a href="/tags/%E6%B1%BD%E8%BD%A6%E7%94%B5%E5%AD%90/" style="font-size: 10px;">汽车电子</a> <a href="/tags/%E6%B5%8B%E8%AF%95/" style="font-size: 15px;">测试</a> <a href="/tags/%E7%94%B5%E5%8A%9B%E7%94%B5%E5%AD%90/" style="font-size: 10px;">电力电子</a> <a href="/tags/%E7%94%B5%E6%9C%BA%E6%8E%A7%E5%88%B6/" style="font-size: 10px;">电机控制</a> <a href="/tags/%E7%B3%BB%E7%BB%9F%E5%AE%89%E8%A3%85/" style="font-size: 10px;">系统安装</a> <a href="/tags/%E7%BC%96%E8%AF%91%E9%93%BE%E6%8E%A5/" style="font-size: 10px;">编译链接</a> <a href="/tags/%E8%8B%B1%E9%A3%9E%E5%87%8C/" style="font-size: 15px;">英飞凌</a> <a href="/tags/%E8%A3%85%E6%9C%BA%E5%B7%A5%E5%85%B7/" style="font-size: 10px;">装机工具</a> <a href="/tags/%E8%AF%AD%E6%B3%95/" style="font-size: 10px;">语法</a> <a href="/tags/%E8%BF%9B%E9%98%B6/" style="font-size: 10px;">进阶</a> <a href="/tags/%E9%83%A8%E7%BD%B2/" style="font-size: 10px;">部署</a> <a href="/tags/%E9%93%BE%E6%8E%A5%E8%84%9A%E6%9C%AC/" style="font-size: 15px;">链接脚本</a> <a href="/tags/%E9%A3%9E%E4%B9%A6/" style="font-size: 10px;">飞书</a>
     </div>
   </div>
 
@@ -1361,6 +1524,10 @@
       <ul>
         
           <li>
+            <a href="/2026/08/02/C%E8%AF%AD%E8%A8%80%E5%B5%8C%E5%85%A5%E5%BC%8F%E6%B1%87%E7%BC%96%E8%AF%A6%E8%A7%A3/">C语言嵌入式汇编详解</a>
+          </li>
+        
+          <li>
             <a href="/2026/08/02/C%E8%AF%AD%E8%A8%80%E5%9F%BA%E7%A1%80%E7%9F%A5%E8%AF%86%E7%82%B9%E8%AF%A6%E8%A7%A3/">C语言基础知识点详解</a>
           </li>
         
@@ -1374,10 +1541,6 @@
         
           <li>
             <a href="/2026/08/02/%E5%B5%8C%E5%85%A5%E5%BC%8F%E5%9B%BA%E4%BB%B6%E5%9C%B0%E5%9D%80%E4%B8%89%E4%BB%B6%E5%A5%97-LMA-VMA-XIP%E4%B8%8EPIC/">嵌入式固件地址三件套：加载地址、运行时地址、XIP 与 PIC</a>
-          </li>
-        
-          <li>
-            <a href="/2026/08/01/%E5%B5%8C%E5%85%A5%E5%BC%8F%E9%93%BE%E6%8E%A5%E8%84%9A%E6%9C%AC%E8%AF%A6%E8%A7%A3%EF%BC%9A%E4%BB%8E%E9%9B%B6%E7%90%86%E8%A7%A3Linker-Script/">嵌入式链接脚本详解：以英飞凌TC375为例</a>
           </li>
         
       </ul>
