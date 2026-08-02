@@ -379,6 +379,17 @@ NRC（Negative Response Code，否定响应码）按 ISO 14229-1 定义，配合
 | 0x7F | serviceNotSupportedInActiveSession | **服务在当前会话不支持** |
 | 0x80 | wrongModel | **型号错误** |
 
+### 车辆制造商特定类（0x9x）
+
+| NRC | 英文名 | 含义 |
+|---|---|---|
+| 0x90 | vehicleManufacturerSpecificStatusCodeNotAvailable | **状态码不可用**：整车厂定义的旧版状态 |
+| 0x91 | vehicleManufacturerSpecificStatusCodeAvailable | **状态码可用** |
+| 0x92 | vehicleManufacturerSpecificConditionsNotCorrect | **整车厂特定条件不正确**：请求的某个整车厂自定前提未满足（等价于"整车厂版的 0x22/0x31"） |
+| 0x93 | vehicleManufacturerSpecificRequestSequenceError | **整车厂特定请求序列错误**：请求顺序不符合整车厂私下规定（等价于"整车厂版的 0x24"） |
+
+> 0x90-0x9F 是 ISO 14229 保留给**整车厂自定义**的 NRC 区间，其中最常用的是 **0x92**（条件不满足）和 **0x93**（请求序列错误）。它们通常用来区分"标准条件"与"OEM 私有条件"——例如某整车的刷写流程要求在 0x34 前必须先发一个私有服务，否则就返回 0x93。**这两个码的含义由各 OEM 自行定义，手册里查不到统一标准**。
+>
 > 表中 0x7E / 0x7F 是"当前会话不支持"的两个常见变体，和 0x11 / 0x12（"根本不支持"）的区别在于：**前者换了会话就能用，后者任何会话都不能用**。
 
 ### NRC 使用要点
