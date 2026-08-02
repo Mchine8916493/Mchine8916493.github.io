@@ -716,7 +716,37 @@
 <td><strong>型号错误</strong></td>
 </tr>
 </tbody></table>
+<h3 id="车辆制造商特定类（0x9x）"><a href="#车辆制造商特定类（0x9x）" class="headerlink" title="车辆制造商特定类（0x9x）"></a>车辆制造商特定类（0x9x）</h3><table>
+<thead>
+<tr>
+<th>NRC</th>
+<th>英文名</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>0x90</td>
+<td>vehicleManufacturerSpecificStatusCodeNotAvailable</td>
+<td><strong>状态码不可用</strong>：整车厂定义的旧版状态</td>
+</tr>
+<tr>
+<td>0x91</td>
+<td>vehicleManufacturerSpecificStatusCodeAvailable</td>
+<td><strong>状态码可用</strong></td>
+</tr>
+<tr>
+<td>0x92</td>
+<td>vehicleManufacturerSpecificConditionsNotCorrect</td>
+<td><strong>整车厂特定条件不正确</strong>：请求的某个整车厂自定前提未满足（等价于”整车厂版的 0x22&#x2F;0x31”）</td>
+</tr>
+<tr>
+<td>0x93</td>
+<td>vehicleManufacturerSpecificRequestSequenceError</td>
+<td><strong>整车厂特定请求序列错误</strong>：请求顺序不符合整车厂私下规定（等价于”整车厂版的 0x24”）</td>
+</tr>
+</tbody></table>
 <blockquote>
+<p>0x90-0x9F 是 ISO 14229 保留给<strong>整车厂自定义</strong>的 NRC 区间，其中最常用的是 <strong>0x92</strong>（条件不满足）和 <strong>0x93</strong>（请求序列错误）。它们通常用来区分”标准条件”与”OEM 私有条件”——例如某整车的刷写流程要求在 0x34 前必须先发一个私有服务，否则就返回 0x93。<strong>这两个码的含义由各 OEM 自行定义，手册里查不到统一标准</strong>。</p>
 <p>表中 0x7E &#x2F; 0x7F 是”当前会话不支持”的两个常见变体，和 0x11 &#x2F; 0x12（”根本不支持”）的区别在于：<strong>前者换了会话就能用，后者任何会话都不能用</strong>。</p>
 </blockquote>
 <h3 id="NRC-使用要点"><a href="#NRC-使用要点" class="headerlink" title="NRC 使用要点"></a>NRC 使用要点</h3><ol>
@@ -861,7 +891,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2026/08/02/UDS%E8%AF%8A%E6%96%AD%E5%8D%8F%E8%AE%AE%E8%AF%A6%E8%A7%A3/" data-id="cmsbkx7od000bwmlmexkq6173" data-title="UDS诊断协议详解" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2026/08/02/UDS%E8%AF%8A%E6%96%AD%E5%8D%8F%E8%AE%AE%E8%AF%A6%E8%A7%A3/" data-id="cmsbl4w8u000bltlmfu8hav7u" data-title="UDS诊断协议详解" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
@@ -1202,7 +1232,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2026/08/02/Bootloader%E4%B8%8EFOTA%E5%8D%87%E7%BA%A7%E8%AF%A6%E8%A7%A3/" data-id="cmsbkx7o30001wmlm65biewiz" data-title="Bootloader与FOTA升级详解" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2026/08/02/Bootloader%E4%B8%8EFOTA%E5%8D%87%E7%BA%A7%E8%AF%A6%E8%A7%A3/" data-id="cmsbl4w8i0001ltlm5po55jxq" data-title="Bootloader与FOTA升级详解" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
@@ -1817,7 +1847,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2026/08/02/%E4%BF%A1%E6%81%AF%E5%AE%89%E5%85%A8%E5%9B%BA%E4%BB%B6%E5%BC%80%E5%8F%91%E8%AF%A6%E8%A7%A3/" data-id="cmsbkx7oh000gwmlmc4q54cgu" data-title="信息安全固件开发详解" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2026/08/02/%E4%BF%A1%E6%81%AF%E5%AE%89%E5%85%A8%E5%9B%BA%E4%BB%B6%E5%BC%80%E5%8F%91%E8%AF%A6%E8%A7%A3/" data-id="cmsbl4w8x000gltlmfbzl2omx" data-title="信息安全固件开发详解" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
@@ -2424,7 +2454,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2026/08/02/AUTOSAR%E5%9F%BA%E7%A1%80%E8%BD%AF%E4%BB%B6%E5%BC%80%E5%8F%91%E8%AF%A6%E8%A7%A3/" data-id="cmsbkx7nw0000wmlm7euy2mrt" data-title="AUTOSAR基础软件开发详解" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2026/08/02/AUTOSAR%E5%9F%BA%E7%A1%80%E8%BD%AF%E4%BB%B6%E5%BC%80%E5%8F%91%E8%AF%A6%E8%A7%A3/" data-id="cmsbl4w8a0000ltlmel1u7m87" data-title="AUTOSAR基础软件开发详解" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
@@ -2771,7 +2801,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2026/08/02/C%E8%AF%AD%E8%A8%80%E5%B5%8C%E5%85%A5%E5%BC%8F%E6%B1%87%E7%BC%96%E8%AF%A6%E8%A7%A3/" data-id="cmsbkx7o90005wmlm4dj35elm" data-title="C语言嵌入式汇编详解" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2026/08/02/C%E8%AF%AD%E8%A8%80%E5%B5%8C%E5%85%A5%E5%BC%8F%E6%B1%87%E7%BC%96%E8%AF%A6%E8%A7%A3/" data-id="cmsbl4w8p0005ltlm6xf4e6mw" data-title="C语言嵌入式汇编详解" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
@@ -3129,7 +3159,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2026/08/02/C%E8%AF%AD%E8%A8%80%E5%9F%BA%E7%A1%80%E7%9F%A5%E8%AF%86%E7%82%B9%E8%AF%A6%E8%A7%A3/" data-id="cmsbkx7o80004wmlm9gx3ee99" data-title="C语言基础知识点详解" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2026/08/02/C%E8%AF%AD%E8%A8%80%E5%9F%BA%E7%A1%80%E7%9F%A5%E8%AF%86%E7%82%B9%E8%AF%A6%E8%A7%A3/" data-id="cmsbl4w8o0004ltlmecx54ve1" data-title="C语言基础知识点详解" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
@@ -3702,7 +3732,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2026/08/02/C%E8%AF%AD%E8%A8%80%E8%BF%9B%E9%98%B6%E7%9F%A5%E8%AF%86%E7%82%B9%E8%AF%A6%E8%A7%A3/" data-id="cmsbkx7oa0007wmlmbhe28ryn" data-title="C语言进阶知识点详解" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2026/08/02/C%E8%AF%AD%E8%A8%80%E8%BF%9B%E9%98%B6%E7%9F%A5%E8%AF%86%E7%82%B9%E8%AF%A6%E8%A7%A3/" data-id="cmsbl4w8q0007ltlm2xwh0ult" data-title="C语言进阶知识点详解" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
@@ -4185,7 +4215,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2026/08/02/%E6%B1%87%E7%BC%96%E8%AF%AD%E8%A8%80%E7%9F%A5%E8%AF%86%E7%82%B9%E8%AF%A6%E8%A7%A3/" data-id="cmsbkx7ol000lwmlm70gndmaj" data-title="汇编语言知识点详解" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2026/08/02/%E6%B1%87%E7%BC%96%E8%AF%AD%E8%A8%80%E7%9F%A5%E8%AF%86%E7%82%B9%E8%AF%A6%E8%A7%A3/" data-id="cmsbl4w92000lltlm90ajhrkc" data-title="汇编语言知识点详解" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
@@ -4845,7 +4875,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2026/08/02/%E5%B5%8C%E5%85%A5%E5%BC%8F%E5%9B%BA%E4%BB%B6%E5%9C%B0%E5%9D%80%E4%B8%89%E4%BB%B6%E5%A5%97-LMA-VMA-XIP%E4%B8%8EPIC/" data-id="cmsbkx7oj000iwmlmhaf79b3f" data-title="嵌入式固件地址三件套：加载地址、运行时地址、XIP 与 PIC" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2026/08/02/%E5%B5%8C%E5%85%A5%E5%BC%8F%E5%9B%BA%E4%BB%B6%E5%9C%B0%E5%9D%80%E4%B8%89%E4%BB%B6%E5%A5%97-LMA-VMA-XIP%E4%B8%8EPIC/" data-id="cmsbl4w90000iltlm1m1t7xgz" data-title="嵌入式固件地址三件套：加载地址、运行时地址、XIP 与 PIC" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
@@ -4891,7 +4921,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2026/08/01/%E5%B5%8C%E5%85%A5%E5%BC%8F%E9%93%BE%E6%8E%A5%E8%84%9A%E6%9C%AC%E8%AF%A6%E8%A7%A3%EF%BC%9A%E4%BB%8E%E9%9B%B6%E7%90%86%E8%A7%A3Linker-Script/" data-id="cmsbkx7ok000kwmlme5dre8l4" data-title="嵌入式链接脚本详解：以英飞凌TC375为例" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2026/08/01/%E5%B5%8C%E5%85%A5%E5%BC%8F%E9%93%BE%E6%8E%A5%E8%84%9A%E6%9C%AC%E8%AF%A6%E8%A7%A3%EF%BC%9A%E4%BB%8E%E9%9B%B6%E7%90%86%E8%A7%A3Linker-Script/" data-id="cmsbl4w91000kltlmd4gjc9r3" data-title="嵌入式链接脚本详解：以英飞凌TC375为例" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
