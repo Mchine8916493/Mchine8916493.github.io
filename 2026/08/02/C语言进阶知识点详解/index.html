@@ -1,0 +1,775 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  
+  
+  <title>C语言进阶知识点详解 | Hexo</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <meta name="description" content="C 语言是嵌入式开发、操作系统、底层驱动与高性能计算的事实标准。入门阶段掌握语法，进阶阶段则要理解内存模型、指针本质、编译链接过程与 UB（未定义行为）。本文系统整理 C 语言进阶的核心知识点。 一、指针进阶1.1 指针的本质指针就是”存放地址的变量”。理解指针的关键是区分三个概念： 12int x &#x3D; 10;int *p &#x3D; &amp;x;    &#x2F;&#x2F; p 存的是 x 的地址   p：指针变量本">
+<meta property="og:type" content="article">
+<meta property="og:title" content="C语言进阶知识点详解">
+<meta property="og:url" content="http://example.com/2026/08/02/C%E8%AF%AD%E8%A8%80%E8%BF%9B%E9%98%B6%E7%9F%A5%E8%AF%86%E7%82%B9%E8%AF%A6%E8%A7%A3/index.html">
+<meta property="og:site_name" content="Hexo">
+<meta property="og:description" content="C 语言是嵌入式开发、操作系统、底层驱动与高性能计算的事实标准。入门阶段掌握语法，进阶阶段则要理解内存模型、指针本质、编译链接过程与 UB（未定义行为）。本文系统整理 C 语言进阶的核心知识点。 一、指针进阶1.1 指针的本质指针就是”存放地址的变量”。理解指针的关键是区分三个概念： 12int x &#x3D; 10;int *p &#x3D; &amp;x;    &#x2F;&#x2F; p 存的是 x 的地址   p：指针变量本">
+<meta property="og:locale" content="en_US">
+<meta property="article:published_time" content="2026-08-02T08:27:00.000Z">
+<meta property="article:modified_time" content="2026-08-02T08:28:10.766Z">
+<meta property="article:author" content="John Doe">
+<meta property="article:tag" content="C语言">
+<meta property="article:tag" content="指针">
+<meta property="article:tag" content="内存管理">
+<meta property="article:tag" content="编译链接">
+<meta property="article:tag" content="进阶">
+<meta property="article:tag" content="底层原理">
+<meta name="twitter:card" content="summary">
+  
+    <link rel="alternate" href="/atom.xml" title="Hexo" type="application/atom+xml">
+  
+  
+    <link rel="shortcut icon" href="/favicon.png">
+  
+  
+  
+<link rel="stylesheet" href="/css/style.css">
+
+  
+    
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.min.css">
+
+  
+  
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fork-awesome@1.2.0/css/fork-awesome.min.css">
+
+<meta name="generator" content="Hexo 7.3.0"></head>
+
+<body>
+  <div id="container">
+    <div id="wrap">
+      <header id="header">
+  <div id="banner"></div>
+  <div id="header-outer" class="outer">
+    <div id="header-title" class="inner">
+      <h1 id="logo-wrap">
+        <a href="/" id="logo">Hexo</a>
+      </h1>
+      
+    </div>
+    <div id="header-inner" class="inner">
+      <nav id="main-nav">
+        <a id="main-nav-toggle" class="nav-icon"><span class="fa fa-bars"></span></a>
+        
+          <a class="main-nav-link" href="/">Home</a>
+        
+          <a class="main-nav-link" href="/archives">Archives</a>
+        
+      </nav>
+      <nav id="sub-nav">
+        
+        
+          <a class="nav-icon" href="/atom.xml" title="RSS Feed"><span class="fa fa-rss"></span></a>
+        
+        <a class="nav-icon nav-search-btn" title="Search"><span class="fa fa-search"></span></a>
+      </nav>
+      <div id="search-form-wrap">
+        <form action="//google.com/search" method="get" accept-charset="UTF-8" class="search-form"><input type="search" name="q" class="search-form-input" placeholder="Search"><button type="submit" class="search-form-submit">&#xF002;</button><input type="hidden" name="sitesearch" value="http://example.com"></form>
+      </div>
+    </div>
+  </div>
+</header>
+
+      <div class="outer">
+        <section id="main"><article id="post-C语言进阶知识点详解" class="h-entry article article-type-post" itemprop="blogPost" itemscope itemtype="https://schema.org/BlogPosting">
+  <div class="article-meta">
+    <a href="/2026/08/02/C%E8%AF%AD%E8%A8%80%E8%BF%9B%E9%98%B6%E7%9F%A5%E8%AF%86%E7%82%B9%E8%AF%A6%E8%A7%A3/" class="article-date">
+  <time class="dt-published" datetime="2026-08-02T08:27:00.000Z" itemprop="datePublished">2026-08-02</time>
+</a>
+    
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 class="p-name article-title" itemprop="headline name">
+      C语言进阶知识点详解
+    </h1>
+  
+
+      </header>
+    
+    <div class="e-content article-entry" itemprop="articleBody">
+      
+        <p>C 语言是嵌入式开发、操作系统、底层驱动与高性能计算的事实标准。入门阶段掌握语法，进阶阶段则要理解内存模型、指针本质、编译链接过程与 UB（未定义行为）。本文系统整理 C 语言进阶的核心知识点。</p>
+<h1 id="一、指针进阶"><a href="#一、指针进阶" class="headerlink" title="一、指针进阶"></a>一、指针进阶</h1><h2 id="1-1-指针的本质"><a href="#1-1-指针的本质" class="headerlink" title="1.1 指针的本质"></a>1.1 指针的本质</h2><p>指针就是”存放地址的变量”。理解指针的关键是区分三个概念：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">int</span> x = <span class="number">10</span>;</span><br><span class="line"><span class="type">int</span> *p = &amp;x;    <span class="comment">// p 存的是 x 的地址</span></span><br></pre></td></tr></table></figure>
+
+<ul>
+<li><code>p</code>：指针变量本身（其值是一个内存地址）</li>
+<li><code>*p</code>：解引用，访问 p 指向的那个对象</li>
+<li><code>&amp;x</code>：取 x 的地址（类型是 <code>int*</code>）</li>
+</ul>
+<blockquote>
+<p>任何指针类型，在 64 位平台上本身占 8 字节（32 位平台占 4 字节），<strong>指针的大小与指向的类型无关</strong>。<code>sizeof(char*) == sizeof(int*) == sizeof(void*)</code>。</p>
+</blockquote>
+<h2 id="1-2-指针与数组的微妙关系"><a href="#1-2-指针与数组的微妙关系" class="headerlink" title="1.2 指针与数组的微妙关系"></a>1.2 指针与数组的微妙关系</h2><p>数组名在大多数表达式中会<strong>退化为指向首元素的指针</strong>，但在 <code>sizeof</code> 和 <code>&amp;</code> 操作符下保持数组身份：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">int</span> a[<span class="number">5</span>];</span><br><span class="line"></span><br><span class="line">a       <span class="comment">// int*，退化为 &amp;a[0]</span></span><br><span class="line">&amp;a      <span class="comment">// int(*)[5]，指向整个数组的指针（类型不同！）</span></span><br><span class="line"><span class="keyword">sizeof</span>(a)   <span class="comment">// 20（5*4），数组身份</span></span><br><span class="line"><span class="keyword">sizeof</span>(a)   <span class="comment">// 不是 sizeof(&amp;a[0])！</span></span><br><span class="line"></span><br><span class="line"><span class="type">int</span> *p = a;       <span class="comment">// 合法：退化</span></span><br><span class="line"><span class="type">int</span> (*pa)[<span class="number">5</span>] = &amp;a; <span class="comment">// 指向整个数组的指针</span></span><br><span class="line">pa++;             <span class="comment">// 跨过整个数组（+20 字节），而 p++ 只 +4</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>指针运算的步长取决于指向类型</strong>：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">p + <span class="number">1</span>     <span class="comment">// 地址 + sizeof(*p)</span></span><br><span class="line">p - p2    <span class="comment">// 两个指针之间的元素个数（而非字节差）</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="1-3-指针与-const-的组合"><a href="#1-3-指针与-const-的组合" class="headerlink" title="1.3 指针与 const 的组合"></a>1.3 指针与 const 的组合</h2><p><code>const</code> 的位置决定了”指针本身”还是”指向对象”是常量：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">const</span> <span class="type">int</span> *p;     <span class="comment">// p 指向 const int：不能通过 p 改 *p，但 p 可以改</span></span><br><span class="line"><span class="type">int</span> <span class="type">const</span> *p;     <span class="comment">// 同上（两者等价）</span></span><br><span class="line"><span class="type">int</span> *<span class="type">const</span> p;     <span class="comment">// p 本身是 const：p 不能改，但 *p 可以改</span></span><br><span class="line"><span class="type">const</span> <span class="type">int</span> *<span class="type">const</span> p;  <span class="comment">// 两者都不可改</span></span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p>记忆技巧：**<code>const</code> 修饰它左边最近的那个东西**（如果没有左边则修饰右边）。</p>
+</blockquote>
+<h2 id="1-4-多级指针"><a href="#1-4-多级指针" class="headerlink" title="1.4 多级指针"></a>1.4 多级指针</h2><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">int</span> x = <span class="number">5</span>;</span><br><span class="line"><span class="type">int</span> *p = &amp;x;      <span class="comment">// 一层：p → int</span></span><br><span class="line"><span class="type">int</span> **pp = &amp;p;    <span class="comment">// 两层：pp → p → int</span></span><br><span class="line"><span class="type">int</span> ***ppp = &amp;pp; <span class="comment">// 三层</span></span><br></pre></td></tr></table></figure>
+
+<p>多级指针常见于：</p>
+<ul>
+<li>函数要<strong>修改调用者的指针</strong>（传指针的地址）：<code>int **p</code></li>
+<li>二维数组的动态分配</li>
+<li>函数指针数组</li>
+</ul>
+<h2 id="1-5-指向函数的指针"><a href="#1-5-指向函数的指针" class="headerlink" title="1.5 指向函数的指针"></a>1.5 指向函数的指针</h2><p>函数名即函数地址。函数指针是实现回调、分发表、状态机的利器：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">int</span> <span class="title function_">add</span><span class="params">(<span class="type">int</span> a, <span class="type">int</span> b)</span> &#123; <span class="keyword">return</span> a + b; &#125;</span><br><span class="line"><span class="type">int</span> <span class="title function_">sub</span><span class="params">(<span class="type">int</span> a, <span class="type">int</span> b)</span> &#123; <span class="keyword">return</span> a - b; &#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 函数指针声明：int (*fp)(int, int)</span></span><br><span class="line"><span class="type">int</span> (*fp)(<span class="type">int</span>, <span class="type">int</span>) = add;</span><br><span class="line">fp(<span class="number">3</span>, <span class="number">4</span>);            <span class="comment">// 调用 add，结果为 7</span></span><br><span class="line"></span><br><span class="line"><span class="comment">// 函数指针数组（分发表）</span></span><br><span class="line"><span class="type">int</span> (*ops[])(<span class="type">int</span>, <span class="type">int</span>) = &#123;add, sub&#125;;</span><br><span class="line">ops[<span class="number">0</span>](<span class="number">1</span>, <span class="number">2</span>);        <span class="comment">// 调用 add</span></span><br><span class="line"></span><br><span class="line"><span class="comment">// 用 typedef 简化</span></span><br><span class="line"><span class="keyword">typedef</span> <span class="title function_">int</span> <span class="params">(*binop)</span><span class="params">(<span class="type">int</span>, <span class="type">int</span>)</span>;</span><br><span class="line">binop op = add;</span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p>辨析：<code>int *f()</code> 是返回指针的<strong>函数</strong>；<code>int (*f)()</code> 是<strong>函数指针</strong>。</p>
+</blockquote>
+<h2 id="1-6-数组指针、指针数组与数组的数组"><a href="#1-6-数组指针、指针数组与数组的数组" class="headerlink" title="1.6 数组指针、指针数组与数组的数组"></a>1.6 数组指针、指针数组与数组的数组</h2><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">int</span> *p[<span class="number">5</span>];      <span class="comment">// 指针数组：5 个 int* 指针</span></span><br><span class="line"><span class="type">int</span> (*p)[<span class="number">5</span>];    <span class="comment">// 数组指针：指向含 5 个 int 的数组</span></span><br><span class="line"><span class="type">int</span> a[<span class="number">3</span>][<span class="number">4</span>];    <span class="comment">// 二维数组：3 行 × 4 列，内存连续</span></span><br></pre></td></tr></table></figure>
+
+<p>访问二维数组的等价写法：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">a[i][j]        <span class="comment">// 标准写法</span></span><br><span class="line">*(*(a+i)+j)    <span class="comment">// 完全等价</span></span><br><span class="line">*(a[i]+j)      <span class="comment">// 也等价</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="1-7-万能指针-void"><a href="#1-7-万能指针-void" class="headerlink" title="1.7 万能指针 void*"></a>1.7 万能指针 void*</h2><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">void</span> *p;    <span class="comment">// 无类型指针，可接收任何地址，但不能解引用/做算术</span></span><br></pre></td></tr></table></figure>
+
+<ul>
+<li>必须强转回原类型才能解引用</li>
+<li>C 标准不保证 <code>void*</code> 做指针运算（GCC 作为扩展允许按字节）</li>
+<li>常用于泛型接口，如 <code>memcpy</code>、<code>qsort</code>、回调参数</li>
+</ul>
+<h2 id="1-8-指针使用红线"><a href="#1-8-指针使用红线" class="headerlink" title="1.8 指针使用红线"></a>1.8 指针使用红线</h2><ol>
+<li><strong>野指针</strong>：未初始化的指针，值不确定，解引用 &#x3D; UB</li>
+<li><strong>悬垂指针</strong>：指向已释放&#x2F;已返回的局部变量</li>
+<li><strong>越界访问</strong>：数组下标越界不会报错，只有运行时崩溃或悄悄破坏数据</li>
+<li><strong>指针运算越界</strong>：超过数组边界一个元素以上是 UB</li>
+</ol>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">int</span> *<span class="title function_">bad</span><span class="params">(<span class="type">void</span>)</span> &#123;</span><br><span class="line">    <span class="type">int</span> local = <span class="number">10</span>;</span><br><span class="line">    <span class="keyword">return</span> &amp;local;   <span class="comment">// 返回局部变量地址，函数返回后即悬垂！UB</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h1 id="二、内存管理"><a href="#二、内存管理" class="headerlink" title="二、内存管理"></a>二、内存管理</h1><h2 id="2-1-内存布局"><a href="#2-1-内存布局" class="headerlink" title="2.1 内存布局"></a>2.1 内存布局</h2><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">高地址 ┌──────────────┐</span><br><span class="line">       │  栈 Stack    │ ← 自动变量、函数帧，向下增长</span><br><span class="line">       ├──────────────┤</span><br><span class="line">       │      ↓       │</span><br><span class="line">       │  空闲区      │</span><br><span class="line">       │      ↑       │</span><br><span class="line">       ├──────────────┤</span><br><span class="line">       │  堆 Heap     │ ← malloc/new，向上增长</span><br><span class="line">       ├──────────────┤</span><br><span class="line">       │  BSS         │ ← 未初始化全局/静态变量（自动清零）</span><br><span class="line">       ├──────────────┤</span><br><span class="line">       │  数据段      │ ← 已初始化全局/静态变量</span><br><span class="line">       ├──────────────┤</span><br><span class="line">       │  只读数据    │ ← 字符串字面量、const</span><br><span class="line">       ├──────────────┤</span><br><span class="line">       │  代码段      │ ← 函数代码</span><br><span class="line">低地址 └──────────────┘</span><br></pre></td></tr></table></figure>
+
+<h2 id="2-2-三大存储期"><a href="#2-2-三大存储期" class="headerlink" title="2.2 三大存储期"></a>2.2 三大存储期</h2><table>
+<thead>
+<tr>
+<th>存储期</th>
+<th>存放位置</th>
+<th>生命周期</th>
+<th>初始化</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>自动（auto）</td>
+<td>栈</td>
+<td>进入作用域→离开作用域</td>
+<td>不自动初始化（垃圾值！）</td>
+</tr>
+<tr>
+<td>静态（static）</td>
+<td>数据段&#x2F;BSS</td>
+<td>程序启动→结束</td>
+<td>自动清零</td>
+</tr>
+<tr>
+<td>动态（malloc）</td>
+<td>堆</td>
+<td>malloc→free</td>
+<td>不自动初始化</td>
+</tr>
+</tbody></table>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">int</span> global;      <span class="comment">// BSS，自动清零</span></span><br><span class="line"><span class="type">int</span> gi = <span class="number">5</span>;      <span class="comment">// 数据段</span></span><br><span class="line"><span class="type">void</span> <span class="title function_">f</span><span class="params">(<span class="type">void</span>)</span> &#123;</span><br><span class="line">    <span class="type">static</span> <span class="type">int</span> s;    <span class="comment">// 静态局部：只初始化一次，跨调用保留</span></span><br><span class="line">    <span class="type">int</span> a;           <span class="comment">// 栈上，垃圾值</span></span><br><span class="line">    <span class="type">char</span> *str = <span class="string">&quot;hello&quot;</span>; <span class="comment">// &quot;hello&quot; 在只读段，str 指向它</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="2-3-堆内存管理函数"><a href="#2-3-堆内存管理函数" class="headerlink" title="2.3 堆内存管理函数"></a>2.3 堆内存管理函数</h2><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;stdlib.h&gt;</span></span></span><br><span class="line"><span class="type">void</span> *<span class="title function_">malloc</span><span class="params">(<span class="type">size_t</span> n)</span>;    <span class="comment">// 分配 n 字节，内容未初始化</span></span><br><span class="line"><span class="type">void</span> *<span class="title function_">calloc</span><span class="params">(<span class="type">size_t</span> nmemb, <span class="type">size_t</span> size)</span>; <span class="comment">// 分配并清零</span></span><br><span class="line"><span class="type">void</span> *<span class="title function_">realloc</span><span class="params">(<span class="type">void</span> *p, <span class="type">size_t</span> n)</span>;  <span class="comment">// 调整大小，尽量原地扩展</span></span><br><span class="line"><span class="type">void</span> <span class="title function_">free</span><span class="params">(<span class="type">void</span> *p)</span>;        <span class="comment">// 释放</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="分配与释放的黄金法则"><a href="#分配与释放的黄金法则" class="headerlink" title="分配与释放的黄金法则"></a>分配与释放的黄金法则</h3><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">int</span> *p = <span class="built_in">malloc</span>(<span class="number">10</span> * <span class="keyword">sizeof</span>(<span class="type">int</span>));</span><br><span class="line"><span class="keyword">if</span> (p == <span class="literal">NULL</span>) &#123; <span class="comment">/* 处理分配失败 */</span> &#125;</span><br><span class="line"><span class="comment">/* 使用 p */</span></span><br><span class="line"><span class="built_in">free</span>(p);</span><br><span class="line">p = <span class="literal">NULL</span>;      <span class="comment">// 防&quot;悬垂指针&quot;，养成习惯</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="2-4-常见内存错误"><a href="#2-4-常见内存错误" class="headerlink" title="2.4 常见内存错误"></a>2.4 常见内存错误</h2><table>
+<thead>
+<tr>
+<th>错误</th>
+<th>表现</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>内存泄漏</td>
+<td>malloc 后不 free，程序长期运行内存暴涨</td>
+</tr>
+<tr>
+<td>double free</td>
+<td>同一块内存 free 两次，堆崩溃</td>
+</tr>
+<tr>
+<td>use-after-free</td>
+<td>释放后继续访问，数据被篡改</td>
+</tr>
+<tr>
+<td>缓冲区溢出</td>
+<td>写越界，破坏相邻堆块元数据</td>
+</tr>
+<tr>
+<td>栈溢出</td>
+<td>递归太深&#x2F;局部数组过大，压垮栈</td>
+</tr>
+</tbody></table>
+<p><strong>检测工具</strong>：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">valgrind --leak-check=full ./prog     <span class="comment"># 内存检查神器</span></span><br><span class="line">-fsanitize=address                     <span class="comment"># GCC/Clang 地址消毒器（ASan）</span></span><br><span class="line">-fsanitize=undefined                   <span class="comment"># UB 消毒器</span></span><br></pre></td></tr></table></figure>
+
+<hr>
+<h1 id="三、结构体、联合体与位域"><a href="#三、结构体、联合体与位域" class="headerlink" title="三、结构体、联合体与位域"></a>三、结构体、联合体与位域</h1><h2 id="3-1-结构体对齐（Alignment）"><a href="#3-1-结构体对齐（Alignment）" class="headerlink" title="3.1 结构体对齐（Alignment）"></a>3.1 结构体对齐（Alignment）</h2><p>结构体大小不是简单字段相加，还要满足<strong>对齐要求</strong>：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">S</span> &#123;</span></span><br><span class="line">    <span class="type">char</span> c;      <span class="comment">// 偏移 0</span></span><br><span class="line">    <span class="type">int</span>  i;      <span class="comment">// 偏移 4（编译器插入 3 字节填充）</span></span><br><span class="line">    <span class="type">short</span> s;     <span class="comment">// 偏移 8</span></span><br><span class="line">&#125;;               <span class="comment">// 总大小 12（对齐到 4）</span></span><br></pre></td></tr></table></figure>
+
+<ul>
+<li>每个成员按自身对齐要求放置（<code>int</code> 对齐到 4，<code>double</code> 对齐到 8）</li>
+<li>结构体总大小是最大成员对齐的整数倍</li>
+<li>用 <code>offsetof</code> 查看偏移，<code>sizeof</code> 查看大小</li>
+</ul>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;stddef.h&gt;</span></span></span><br><span class="line"><span class="built_in">printf</span>(<span class="string">&quot;%zu %zu\n&quot;</span>, offsetof(<span class="keyword">struct</span> S, i), <span class="keyword">sizeof</span>(<span class="keyword">struct</span> S));</span><br></pre></td></tr></table></figure>
+
+<p><strong>排列技巧</strong>：按类型从大到小声明字段可减少填充：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">Bad</span> &#123;</span> <span class="type">char</span> c; <span class="type">double</span> d; <span class="type">char</span> c2; &#125;;   <span class="comment">// 可能占 24 字节</span></span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">Good</span> &#123;</span> <span class="type">double</span> d; <span class="type">char</span> c; <span class="type">char</span> c2; &#125;;  <span class="comment">// 可能占 16 字节</span></span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p>使用 <code>#pragma pack</code> &#x2F; <code>__attribute__((packed))</code> 可取消对齐（网络协议帧常用），但会降低访问性能并可能产生未对齐访问错误。</p>
+</blockquote>
+<h2 id="3-2-联合体（Union）"><a href="#3-2-联合体（Union）" class="headerlink" title="3.2 联合体（Union）"></a>3.2 联合体（Union）</h2><p>所有成员共享同一块内存，大小 &#x3D; 最大成员大小：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">union</span> <span class="title">U</span> &#123;</span></span><br><span class="line">    <span class="type">int</span>  i;</span><br><span class="line">    <span class="type">float</span> f;</span><br><span class="line">    <span class="type">char</span> bytes[<span class="number">4</span>];</span><br><span class="line">&#125;;</span><br><span class="line"><span class="comment">// sizeof(U) == 4，i / f / bytes 重叠存放</span></span><br></pre></td></tr></table></figure>
+
+<p>典型用途：</p>
+<ul>
+<li>类型双关（type punning）——注意这是 UB，标准做法用 <code>memcpy</code></li>
+<li>节省内存的变体记录</li>
+<li>网络字节序判断：</li>
+</ul>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">union</span> &#123;</span> <span class="type">int</span> i; <span class="type">char</span> c[<span class="number">4</span>]; &#125; u = &#123;<span class="number">1</span>&#125;;</span><br><span class="line"><span class="comment">// 若 u.c[0] == 1 则为小端（little-endian）</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="3-3-位域（Bit-field）"><a href="#3-3-位域（Bit-field）" class="headerlink" title="3.3 位域（Bit-field）"></a>3.3 位域（Bit-field）</h2><p>按位精确布局，常用于寄存器定义、协议解析：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">Reg</span> &#123;</span></span><br><span class="line">    <span class="type">unsigned</span> enable : <span class="number">1</span>;</span><br><span class="line">    <span class="type">unsigned</span> mode   : <span class="number">2</span>;</span><br><span class="line">    <span class="type">unsigned</span> resvd  : <span class="number">5</span>;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+
+<p>注意：</p>
+<ul>
+<li>位域的可移植性差（跨编译器布局不保证一致）</li>
+<li>不能取位域地址（<code>&amp;reg.enable</code> 非法）</li>
+<li>位域类型应为 <code>unsigned</code>&#x2F;<code>signed</code>&#x2F;<code>_Bool</code></li>
+</ul>
+<h2 id="3-4-柔性数组成员（Flexible-Array-Member）"><a href="#3-4-柔性数组成员（Flexible-Array-Member）" class="headerlink" title="3.4 柔性数组成员（Flexible Array Member）"></a>3.4 柔性数组成员（Flexible Array Member）</h2><p>结构体最后一个成员可以是<strong>不完整数组</strong>，实现变长结构：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">packet</span> &#123;</span></span><br><span class="line">    <span class="type">uint16_t</span> len;</span><br><span class="line">    <span class="type">uint8_t</span>  data[];   <span class="comment">// 柔性数组，不占空间</span></span><br><span class="line">&#125;;</span><br><span class="line"><span class="comment">// 分配 len 字节的数据</span></span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">packet</span> *<span class="title">p</span> =</span> <span class="built_in">malloc</span>(<span class="keyword">sizeof</span>(*p) + n);</span><br><span class="line">p-&gt;len = n;</span><br></pre></td></tr></table></figure>
+
+<h2 id="3-5-结构体指针与链表"><a href="#3-5-结构体指针与链表" class="headerlink" title="3.5 结构体指针与链表"></a>3.5 结构体指针与链表</h2><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">typedef</span> <span class="class"><span class="keyword">struct</span> <span class="title">Node</span> &#123;</span></span><br><span class="line">    <span class="type">int</span> data;</span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">Node</span> *<span class="title">next</span>;</span></span><br><span class="line">&#125; Node;</span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p>链表、二叉树、图等动态数据结构，靠的就是结构体中的自引用指针。</p>
+</blockquote>
+<hr>
+<h1 id="四、存储类说明符与作用域"><a href="#四、存储类说明符与作用域" class="headerlink" title="四、存储类说明符与作用域"></a>四、存储类说明符与作用域</h1><h2 id="4-1-auto-register-static-extern"><a href="#4-1-auto-register-static-extern" class="headerlink" title="4.1 auto &#x2F; register &#x2F; static &#x2F; extern"></a>4.1 auto &#x2F; register &#x2F; static &#x2F; extern</h2><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">auto</span> <span class="type">int</span> a;        <span class="comment">// 自动变量（默认就是，基本不用写）</span></span><br><span class="line"><span class="keyword">register</span> <span class="type">int</span> r;    <span class="comment">// 建议放进寄存器（现在编译器基本自动处理）</span></span><br><span class="line"><span class="type">static</span> <span class="type">int</span> s;      <span class="comment">// 静态：文件内可见 / 保持状态</span></span><br><span class="line"><span class="keyword">extern</span> <span class="type">int</span> g;      <span class="comment">// 声明外部全局变量（跨文件使用）</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>static 的三种语境</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>语境</th>
+<th>作用</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>局部变量</td>
+<td>生命周期变全程，只初始化一次，值跨调用保留</td>
+</tr>
+<tr>
+<td>全局变量&#x2F;函数</td>
+<td>限制<strong>翻译单元内可见</strong>（内部链接），避免命名冲突</td>
+</tr>
+<tr>
+<td>结构体成员</td>
+<td>不存在（无意义）</td>
+</tr>
+</tbody></table>
+<h2 id="4-2-内部链接与外部链接"><a href="#4-2-内部链接与外部链接" class="headerlink" title="4.2 内部链接与外部链接"></a>4.2 内部链接与外部链接</h2><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// a.c</span></span><br><span class="line"><span class="type">static</span> <span class="type">int</span> hidden = <span class="number">1</span>;   <span class="comment">// 内部链接：仅 a.c 可见</span></span><br><span class="line"><span class="type">int</span> global = <span class="number">2</span>;          <span class="comment">// 外部链接：全程序可见</span></span><br><span class="line"></span><br><span class="line"><span class="comment">// b.c</span></span><br><span class="line"><span class="keyword">extern</span> <span class="type">int</span> global;       <span class="comment">// 声明引用 a.c 中的 global</span></span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p>头文件中<strong>不要定义变量</strong>（会重复定义），应只放 <code>extern</code> 声明；定义放 .c 文件。</p>
+</blockquote>
+<h2 id="4-3-const-与-define-的区别"><a href="#4-3-const-与-define-的区别" class="headerlink" title="4.3 const 与 #define 的区别"></a>4.3 const 与 #define 的区别</h2><table>
+<thead>
+<tr>
+<th></th>
+<th><code>#define</code></th>
+<th><code>const</code></th>
+</tr>
+</thead>
+<tbody><tr>
+<td>时机</td>
+<td>预处理期文本替换</td>
+<td>编译期常量对象</td>
+</tr>
+<tr>
+<td>类型</td>
+<td>无类型</td>
+<td>有类型，可类型检查</td>
+</tr>
+<tr>
+<td>内存</td>
+<td>不占内存（除非被取址）</td>
+<td>通常占内存（可能在只读段）</td>
+</tr>
+<tr>
+<td>调试</td>
+<td>符号表中不可见</td>
+<td>调试器可见</td>
+</tr>
+<tr>
+<td>数组大小</td>
+<td>可用（编译期）</td>
+<td>文件作用域 const 不可用于数组维度（C99 前）</td>
+</tr>
+</tbody></table>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">define</span> MAX 100</span></span><br><span class="line"><span class="type">const</span> <span class="type">int</span> MAXC = <span class="number">100</span>;</span><br><span class="line"><span class="type">int</span> arr[MAX];      <span class="comment">// 合法</span></span><br><span class="line"><span class="type">int</span> arr2[MAXC];    <span class="comment">// C99 后文件作用域也合法（const 整数常量）</span></span><br></pre></td></tr></table></figure>
+
+<hr>
+<h1 id="五、字符串与字符处理"><a href="#五、字符串与字符处理" class="headerlink" title="五、字符串与字符处理"></a>五、字符串与字符处理</h1><h2 id="5-1-字符串的本质"><a href="#5-1-字符串的本质" class="headerlink" title="5.1 字符串的本质"></a>5.1 字符串的本质</h2><p>C 字符串 &#x3D; <code>char*</code> + 以 <code>&#39;\0&#39;</code> 结尾。没有内建 string 类型：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">char</span> s1[] = <span class="string">&quot;hello&quot;</span>;     <span class="comment">// 栈上 6 字节（含 &#x27;\0&#x27;），可修改</span></span><br><span class="line"><span class="type">char</span> *s2 = <span class="string">&quot;hello&quot;</span>;      <span class="comment">// 指向只读字符串字面量！修改是 UB</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>致命区别</strong>：<code>s2</code> 指向只读段，<code>s2[0]=&#39;H&#39;</code> 崩溃；<code>s1</code> 是拷贝，可修改。</p>
+<h2 id="5-2-字符串函数家族"><a href="#5-2-字符串函数家族" class="headerlink" title="5.2 字符串函数家族"></a>5.2 字符串函数家族</h2><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">strlen</span>(s)          <span class="comment">// 长度（不含 &#x27;\0&#x27;），O(n) 扫描</span></span><br><span class="line"><span class="built_in">strcpy</span>(dst, src)   <span class="comment">// 复制（危险！无边界检查）</span></span><br><span class="line"><span class="built_in">strncpy</span>(dst, src, n) <span class="comment">// 有界复制（但可能不补 &#x27;\0&#x27;）</span></span><br><span class="line"><span class="built_in">strcat</span>(dst, src)   <span class="comment">// 拼接（危险！）</span></span><br><span class="line"><span class="built_in">strcmp</span>(a, b)       <span class="comment">// 比较，返回 &lt;0/0/&gt;0</span></span><br><span class="line"><span class="built_in">strchr</span>(s, c)       <span class="comment">// 找字符</span></span><br><span class="line"><span class="built_in">strstr</span>(hay, ndl)   <span class="comment">// 找子串</span></span><br><span class="line">strtok(s, delim)   <span class="comment">// 分割（会修改原串）</span></span><br><span class="line"><span class="built_in">memcpy</span>(dst, src, n)   <span class="comment">// 按字节复制（不要用 strcpy 复制结构体）</span></span><br><span class="line">memmove(dst, src, n)  <span class="comment">// 重叠安全的复制</span></span><br><span class="line"><span class="built_in">memset</span>(p, <span class="number">0</span>, n)    <span class="comment">// 清零</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="危险：缓冲区溢出"><a href="#危险：缓冲区溢出" class="headerlink" title="危险：缓冲区溢出"></a>危险：缓冲区溢出</h3><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">char</span> buf[<span class="number">10</span>];</span><br><span class="line"><span class="built_in">strcpy</span>(buf, <span class="string">&quot;this is too long!!&quot;</span>);  <span class="comment">// 溢出！UB</span></span><br></pre></td></tr></table></figure>
+
+<p>安全建议：</p>
+<ul>
+<li>用 <code>snprintf</code> 代替 <code>sprintf</code></li>
+<li>用 <code>strncpy</code>&#x2F;<code>strncat</code>&#x2F;<code>strlcpy</code>（BSD）并手动保证 <code>&#39;\0&#39;</code></li>
+<li>编译加 <code>-fstack-protector-all</code> 检测栈溢出</li>
+</ul>
+<h2 id="5-3-字符串字面量拼接"><a href="#5-3-字符串字面量拼接" class="headerlink" title="5.3 字符串字面量拼接"></a>5.3 字符串字面量拼接</h2><p>相邻字符串字面量自动拼接：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">printf</span>(<span class="string">&quot;Hello &quot;</span></span><br><span class="line">       <span class="string">&quot;World\n&quot;</span>);   <span class="comment">// 预处理期拼成一行</span></span><br></pre></td></tr></table></figure>
+
+<p>常用于构造长 SQL、正则表达式、日志格式。</p>
+<hr>
+<h1 id="六、位操作与位域应用"><a href="#六、位操作与位域应用" class="headerlink" title="六、位操作与位域应用"></a>六、位操作与位域应用</h1><h2 id="6-1-位运算符"><a href="#6-1-位运算符" class="headerlink" title="6.1 位运算符"></a>6.1 位运算符</h2><table>
+<thead>
+<tr>
+<th>运算符</th>
+<th>含义</th>
+<th>示例</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>&amp;</code></td>
+<td>按位与</td>
+<td>清零指定位</td>
+</tr>
+<tr>
+<td><code>|</code></td>
+<td>按位或</td>
+<td>置位</td>
+</tr>
+<tr>
+<td><code>^</code></td>
+<td>按位异或</td>
+<td>翻转</td>
+</tr>
+<tr>
+<td><code>~</code></td>
+<td>取反</td>
+<td>全位翻转</td>
+</tr>
+<tr>
+<td><code>&lt;&lt;</code> &#x2F; <code>&gt;&gt;</code></td>
+<td>左移&#x2F;右移</td>
+<td>乘&#x2F;除 2 的幂</td>
+</tr>
+</tbody></table>
+<h2 id="6-2-经典位操作技巧"><a href="#6-2-经典位操作技巧" class="headerlink" title="6.2 经典位操作技巧"></a>6.2 经典位操作技巧</h2><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">x &amp; (x<span class="number">-1</span>)      <span class="comment">// 清除最低位的 1</span></span><br><span class="line">x &amp; -x         <span class="comment">// 取出最低位的 1</span></span><br><span class="line">x | (x<span class="number">-1</span>)      <span class="comment">// 把低位的 0 全变 1</span></span><br><span class="line">x &amp; <span class="number">1</span>          <span class="comment">// 判断奇偶</span></span><br><span class="line">(x &gt;&gt; n) &amp; <span class="number">1</span>   <span class="comment">// 取出第 n 位</span></span><br><span class="line">x | (<span class="number">1</span> &lt;&lt; n)   <span class="comment">// 置第 n 位为 1</span></span><br><span class="line">x &amp; ~(<span class="number">1</span> &lt;&lt; n)  <span class="comment">// 清第 n 位</span></span><br><span class="line">x ^ (<span class="number">1</span> &lt;&lt; n)   <span class="comment">// 翻转第 n 位</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="6-3-位掩码与寄存器操作（嵌入式）"><a href="#6-3-位掩码与寄存器操作（嵌入式）" class="headerlink" title="6.3 位掩码与寄存器操作（嵌入式）"></a>6.3 位掩码与寄存器操作（嵌入式）</h2><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">define</span> REG  (*(volatile uint32_t*)0x40021000)</span></span><br><span class="line"></span><br><span class="line">REG |= (<span class="number">1</span> &lt;&lt; <span class="number">5</span>);         <span class="comment">// 置位（不影响其他位）</span></span><br><span class="line">REG &amp;= ~(<span class="number">0x3</span> &lt;&lt; <span class="number">10</span>);     <span class="comment">// 清 10~11 位</span></span><br><span class="line">REG = (REG &amp; ~<span class="number">0xFF</span>) | (<span class="number">0x5A</span>); <span class="comment">// 替换低 8 位</span></span><br><span class="line">REG ^= (<span class="number">1</span> &lt;&lt; <span class="number">7</span>);         <span class="comment">// 翻转第 7 位</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="6-4-位计数（popcount）"><a href="#6-4-位计数（popcount）" class="headerlink" title="6.4 位计数（popcount）"></a>6.4 位计数（popcount）</h2><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 内置函数（最快）</span></span><br><span class="line">__builtin_popcount(x);     <span class="comment">// GCC/Clang</span></span><br><span class="line"><span class="comment">// 汉明重量（手动版）</span></span><br><span class="line"><span class="type">int</span> count = <span class="number">0</span>;</span><br><span class="line"><span class="keyword">while</span> (x) &#123; x &amp;= x<span class="number">-1</span>; count++; &#125;</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h1 id="七、编译、链接与预处理"><a href="#七、编译、链接与预处理" class="headerlink" title="七、编译、链接与预处理"></a>七、编译、链接与预处理</h1><h2 id="7-1-四阶段编译流程"><a href="#7-1-四阶段编译流程" class="headerlink" title="7.1 四阶段编译流程"></a>7.1 四阶段编译流程</h2><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">源文件.c ─→ 预处理(.i) ─→ 编译(.s) ─→ 汇编(.o) ─→ 链接(可执行文件)</span><br></pre></td></tr></table></figure>
+
+<table>
+<thead>
+<tr>
+<th>阶段</th>
+<th>工具</th>
+<th>产物</th>
+<th>工作</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>预处理</td>
+<td>cpp</td>
+<td><code>.i</code></td>
+<td>展开宏、处理 #include、条件编译</td>
+</tr>
+<tr>
+<td>编译</td>
+<td>gcc</td>
+<td><code>.s</code></td>
+<td>C → 汇编，语法&#x2F;语义检查、优化</td>
+</tr>
+<tr>
+<td>汇编</td>
+<td>as</td>
+<td><code>.o</code></td>
+<td>汇编 → 机器码（含重定位信息）</td>
+</tr>
+<tr>
+<td>链接</td>
+<td>ld</td>
+<td>可执行</td>
+<td>合并目标文件、符号解析、地址分配</td>
+</tr>
+</tbody></table>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">gcc -E main.c -o main.i   <span class="comment"># 只看预处理结果</span></span><br><span class="line">gcc -S main.c -o main.s   <span class="comment"># 看汇编</span></span><br><span class="line">gcc -c main.c -o main.o   <span class="comment"># 生成目标文件</span></span><br><span class="line">gcc main.o -o main        <span class="comment"># 链接</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="7-2-宏的陷阱"><a href="#7-2-宏的陷阱" class="headerlink" title="7.2 宏的陷阱"></a>7.2 宏的陷阱</h2><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">define</span> SQUARE(x) (x)*(x)        <span class="comment">// 危险！SQUARE(a+b) 展开错误</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> SQUARE(x) ((x)*(x))      <span class="comment">// 正确：外层必须加括号</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> MAX(a,b) ((a)&gt;(b)?(a):(b)) <span class="comment">// 仍可能多次求值副作用！</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> MAX(a,b) (&#123; typeof(a) _a=(a); typeof(b) _b=(b); _a&gt;_b?_a:_b; &#125;) <span class="comment">// GCC 扩展</span></span></span><br></pre></td></tr></table></figure>
+
+<p>宏 vs 函数 vs 内联：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="keyword">inline</span> <span class="type">int</span> <span class="title function_">max</span><span class="params">(<span class="type">int</span> a, <span class="type">int</span> b)</span> &#123; <span class="keyword">return</span> a &gt; b ? a : b; &#125;</span><br><span class="line"><span class="comment">// inline 有类型检查、只求值一次、不污染命名空间，优先于宏</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="7-3-条件编译"><a href="#7-3-条件编译" class="headerlink" title="7.3 条件编译"></a>7.3 条件编译</h2><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">ifdef</span> DEBUG</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> LOG(...) fprintf(stderr, __VA_ARGS__)</span></span><br><span class="line"><span class="meta">#<span class="keyword">else</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> LOG(...) ((void)0)</span></span><br><span class="line"><span class="meta">#<span class="keyword">endif</span></span></span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="keyword">if</span> defined(__GNUC__) &amp;&amp; __GNUC__ &gt;= 4</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> UNUSED __attribute__((unused))</span></span><br><span class="line"><span class="meta">#<span class="keyword">else</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> UNUSED</span></span><br><span class="line"><span class="meta">#<span class="keyword">endif</span></span></span><br></pre></td></tr></table></figure>
+
+<h2 id="7-4-头文件防重复包含"><a href="#7-4-头文件防重复包含" class="headerlink" title="7.4 头文件防重复包含"></a>7.4 头文件防重复包含</h2><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 方式一：include guard</span></span><br><span class="line"><span class="meta">#<span class="keyword">ifndef</span> MY_HEADER_H</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> MY_HEADER_H</span></span><br><span class="line"><span class="comment">/* 内容 */</span></span><br><span class="line"><span class="meta">#<span class="keyword">endif</span></span></span><br><span class="line"></span><br><span class="line"><span class="comment">// 方式二：#pragma once（非标准但广泛支持）</span></span><br><span class="line"><span class="meta">#<span class="keyword">pragma</span> once</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="7-5-链接期错误"><a href="#7-5-链接期错误" class="headerlink" title="7.5 链接期错误"></a>7.5 链接期错误</h2><table>
+<thead>
+<tr>
+<th>错误</th>
+<th>原因</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>undefined reference to &#39;xxx&#39;</code></td>
+<td>声明了但没定义&#x2F;没链接对应 .o</td>
+</tr>
+<tr>
+<td><code>multiple definition of &#39;xxx&#39;</code></td>
+<td>同一符号在多个 .c 中定义（头文件定义变量！）</td>
+</tr>
+<tr>
+<td>符号冲突</td>
+<td>全局变量重名，用 static 限制作用域</td>
+</tr>
+</tbody></table>
+<hr>
+<h1 id="八、类型系统与转换"><a href="#八、类型系统与转换" class="headerlink" title="八、类型系统与转换"></a>八、类型系统与转换</h1><h2 id="8-1-整数提升与算术转换"><a href="#8-1-整数提升与算术转换" class="headerlink" title="8.1 整数提升与算术转换"></a>8.1 整数提升与算术转换</h2><p>小类型（char&#x2F;short）参与运算时<strong>自动提升为 int</strong>：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">char</span> a = <span class="number">200</span>, b = <span class="number">100</span>;</span><br><span class="line"><span class="type">char</span> c = a + b;      <span class="comment">// a+b 在 int 域计算 = 300，截断回 char 可能溢出</span></span><br></pre></td></tr></table></figure>
+
+<p>整型提升可能导致隐蔽 bug：<code>(uint8_t)0xFF + 1</code> 是 <code>256</code>（int）而非 0。</p>
+<h2 id="8-2-有符号与无符号混用"><a href="#8-2-有符号与无符号混用" class="headerlink" title="8.2 有符号与无符号混用"></a>8.2 有符号与无符号混用</h2><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">if</span> (<span class="number">-1</span> &lt; <span class="number">1u</span>)   <span class="comment">// 假！-1 转换为无符号变成 4294967295</span></span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p><strong>规则</strong>：有符号与无符号混用时，有符号被转为无符号比较。这是最常见的隐晦 bug 之一。</p>
+</blockquote>
+<h2 id="8-3-隐式转换的方向"><a href="#8-3-隐式转换的方向" class="headerlink" title="8.3 隐式转换的方向"></a>8.3 隐式转换的方向</h2><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">char → short → int → long → long long</span><br><span class="line">                  ↑</span><br><span class="line">              unsigned int ...</span><br><span class="line">float → double → long double</span><br></pre></td></tr></table></figure>
+
+<h2 id="8-4-显式转换与类型重解释"><a href="#8-4-显式转换与类型重解释" class="headerlink" title="8.4 显式转换与类型重解释"></a>8.4 显式转换与类型重解释</h2><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">int</span> i = (<span class="type">int</span>)<span class="number">3.14</span>;     <span class="comment">// C 风格转换（截断）</span></span><br><span class="line"><span class="type">int</span> *p = (<span class="type">int</span>*)addr;   <span class="comment">// 指针转换</span></span><br><span class="line"><span class="comment">// C++ 推荐 static_cast / reinterpret_cast 等更精确的转换</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="8-5-类型定义-typedef"><a href="#8-5-类型定义-typedef" class="headerlink" title="8.5 类型定义 typedef"></a>8.5 类型定义 typedef</h2><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">typedef</span> <span class="type">unsigned</span> <span class="type">char</span> <span class="type">uint8_t</span>;</span><br><span class="line"><span class="keyword">typedef</span> <span class="title function_">int</span> <span class="params">(*handler)</span><span class="params">(<span class="type">void</span> *ctx)</span>;   <span class="comment">// 函数指针类型</span></span><br><span class="line"><span class="keyword">typedef</span> <span class="class"><span class="keyword">struct</span> &#123;</span> <span class="type">int</span> x, y; &#125; Point;  <span class="comment">// 匿名结构体</span></span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p>别名不创建新类型，只是原名的新名字，可与原名混用。</p>
+</blockquote>
+<hr>
+<h1 id="九、多文件工程组织"><a href="#九、多文件工程组织" class="headerlink" title="九、多文件工程组织"></a>九、多文件工程组织</h1><h2 id="9-1-头文件放声明、源文件放定义"><a href="#9-1-头文件放声明、源文件放定义" class="headerlink" title="9.1 头文件放声明、源文件放定义"></a>9.1 头文件放声明、源文件放定义</h2><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">project/</span><br><span class="line">├── inc/</span><br><span class="line">│   ├── utils.h      ← 函数声明、extern、typedef、宏</span><br><span class="line">│   └── config.h</span><br><span class="line">├── src/</span><br><span class="line">│   ├── utils.c      ← 函数定义</span><br><span class="line">│   ├── main.c</span><br><span class="line">└── Makefile</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/* utils.h */</span></span><br><span class="line"><span class="meta">#<span class="keyword">ifndef</span> UTILS_H</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> UTILS_H</span></span><br><span class="line"><span class="type">int</span> <span class="title function_">add</span><span class="params">(<span class="type">int</span> a, <span class="type">int</span> b)</span>;</span><br><span class="line"><span class="meta">#<span class="keyword">endif</span></span></span><br><span class="line"></span><br><span class="line"><span class="comment">/* utils.c */</span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&quot;utils.h&quot;</span></span></span><br><span class="line"><span class="type">int</span> <span class="title function_">add</span><span class="params">(<span class="type">int</span> a, <span class="type">int</span> b)</span> &#123; <span class="keyword">return</span> a + b; &#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">/* main.c */</span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&quot;utils.h&quot;</span></span></span><br><span class="line"><span class="type">int</span> <span class="title function_">main</span><span class="params">(<span class="type">void</span>)</span> &#123; <span class="keyword">return</span> add(<span class="number">1</span>, <span class="number">2</span>); &#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="9-2-使用-Makefile"><a href="#9-2-使用-Makefile" class="headerlink" title="9.2 使用 Makefile"></a>9.2 使用 Makefile</h2><figure class="highlight makefile"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">CC = gcc</span><br><span class="line">CFLAGS = -Wall -Wextra -O2 -std=c11</span><br><span class="line">TARGET = app</span><br><span class="line">OBJS = main.o utils.o</span><br><span class="line"></span><br><span class="line"><span class="variable">$(TARGET)</span>: <span class="variable">$(OBJS)</span></span><br><span class="line">	<span class="variable">$(CC)</span> <span class="variable">$^</span> -o <span class="variable">$@</span></span><br><span class="line"></span><br><span class="line"><span class="section">%.o: %.c</span></span><br><span class="line">	<span class="variable">$(CC)</span> <span class="variable">$(CFLAGS)</span> -c <span class="variable">$&lt;</span> -o <span class="variable">$@</span></span><br><span class="line"></span><br><span class="line"><span class="section">clean:</span></span><br><span class="line">	rm -f <span class="variable">$(OBJS)</span> <span class="variable">$(TARGET)</span></span><br><span class="line"></span><br><span class="line"><span class="meta"><span class="keyword">.PHONY</span>: clean</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="9-3-工程规范要点"><a href="#9-3-工程规范要点" class="headerlink" title="9.3 工程规范要点"></a>9.3 工程规范要点</h2><ul>
+<li>每个 .c 文件先 include 自己的头文件（自检声明与定义一致）</li>
+<li>头文件避免 include 不必要的头文件（用前置声明 <code>struct Foo;</code>）</li>
+<li>全局变量一律加 extern 到头文件，定义只留一处</li>
+<li>函数&#x2F;全局变量尽量 <code>static</code>，缩小作用域</li>
+</ul>
+<hr>
+<h1 id="十、未定义行为（UB）与可移植性"><a href="#十、未定义行为（UB）与可移植性" class="headerlink" title="十、未定义行为（UB）与可移植性"></a>十、未定义行为（UB）与可移植性</h1><h2 id="10-1-常见的-UB-清单"><a href="#10-1-常见的-UB-清单" class="headerlink" title="10.1 常见的 UB 清单"></a>10.1 常见的 UB 清单</h2><table>
+<thead>
+<tr>
+<th>UB 行为</th>
+<th>示例</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>有符号整数溢出</td>
+<td><code>INT_MAX + 1</code></td>
+</tr>
+<tr>
+<td>除零</td>
+<td><code>1 / 0</code></td>
+</tr>
+<tr>
+<td>越界访问数组</td>
+<td><code>a[10]</code>（数组只有 10 个）</td>
+</tr>
+<tr>
+<td>解引用野&#x2F;悬垂指针</td>
+<td>见 1.8</td>
+</tr>
+<tr>
+<td>修改字符串字面量</td>
+<td><code>char *s=&quot;hi&quot;; s[0]=&#39;H&#39;;</code></td>
+</tr>
+<tr>
+<td>有符号右移负值</td>
+<td><code>-1 &gt;&gt; 1</code>（实现定义）</td>
+</tr>
+<tr>
+<td>未初始化局部变量</td>
+<td><code>int x; use(x);</code></td>
+</tr>
+<tr>
+<td>多次修改同一对象而无顺序点</td>
+<td><code>i = i++ + i;</code></td>
+</tr>
+<tr>
+<td>返回局部变量地址</td>
+<td>见 1.8</td>
+</tr>
+</tbody></table>
+<h2 id="10-2-为什么-UB-危险"><a href="#10-2-为什么-UB-危险" class="headerlink" title="10.2 为什么 UB 危险"></a>10.2 为什么 UB 危险</h2><p>编译器<strong>假设代码没有 UB</strong>，会基于此做激进优化。比如：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">if</span> (x + <span class="number">1</span> &lt; x)  <span class="comment">// 编译器认为永远不会溢出，直接删掉整个 if！</span></span><br></pre></td></tr></table></figure>
+
+<p>再如：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">int</span> a[<span class="number">2</span>] = &#123;<span class="number">0</span>, <span class="number">0</span>&#125;;</span><br><span class="line">a[<span class="number">3</span>] = <span class="number">5</span>;   <span class="comment">// 越界写入，破坏相邻数据，看似&quot;能跑&quot;实则已 UB</span></span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p>用 <code>-fsanitize=undefined,address</code> 编译运行可在开发期捕捉。</p>
+</blockquote>
+<h2 id="10-3-可移植性注意"><a href="#10-3-可移植性注意" class="headerlink" title="10.3 可移植性注意"></a>10.3 可移植性注意</h2><ul>
+<li><code>char</code> 的符号性由平台决定：明确需要时用 <code>signed char</code>&#x2F;<code>unsigned char</code></li>
+<li><code>int</code> 至少 16 位，不同平台宽度可能不同：用 <code>&lt;stdint.h&gt;</code> 的 <code>int32_t</code> 等</li>
+<li>位域布局、结构体填充、字节序都是实现定义</li>
+<li>用 <code>sizeof</code> 而非硬编码大小</li>
+</ul>
+<hr>
+<h1 id="十一、进阶工具链"><a href="#十一、进阶工具链" class="headerlink" title="十一、进阶工具链"></a>十一、进阶工具链</h1><h2 id="11-1-常用编译器警告与消毒器"><a href="#11-1-常用编译器警告与消毒器" class="headerlink" title="11.1 常用编译器警告与消毒器"></a>11.1 常用编译器警告与消毒器</h2><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">gcc -Wall -Wextra -Werror -pedantic main.c     <span class="comment"># 严格警告</span></span><br><span class="line">gcc -fsanitize=address,undefined -g main.c     <span class="comment"># 运行时检测</span></span><br><span class="line">gcc -fstack-protector-all main.c               <span class="comment"># 栈保护</span></span><br><span class="line">gcc -march=native -O3 -funroll-loops main.c    <span class="comment"># 性能优化</span></span><br><span class="line">clang --analyze main.c                          <span class="comment"># 静态分析</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="11-2-静态分析工具"><a href="#11-2-静态分析工具" class="headerlink" title="11.2 静态分析工具"></a>11.2 静态分析工具</h2><table>
+<thead>
+<tr>
+<th>工具</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>cppcheck</code></td>
+<td>C&#x2F;C++ 静态分析</td>
+</tr>
+<tr>
+<td><code>clang-tidy</code></td>
+<td>Clang 生态的检查工具</td>
+</tr>
+<tr>
+<td><code>sparse</code></td>
+<td>内核使用的静态检查器</td>
+</tr>
+<tr>
+<td>GCC <code>-fanalyzer</code></td>
+<td>GCC 的路径分析</td>
+</tr>
+</tbody></table>
+<h2 id="11-3-动态分析"><a href="#11-3-动态分析" class="headerlink" title="11.3 动态分析"></a>11.3 动态分析</h2><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">valgrind ./app                <span class="comment"># 内存错误 + 泄漏</span></span><br><span class="line">valgrind --tool=helgrind ./app <span class="comment"># 线程竞争检测</span></span><br><span class="line">gdb ./app                     <span class="comment"># 调试</span></span><br><span class="line">strace ./app                  <span class="comment"># 跟踪系统调用</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="11-4-反汇编验证优化"><a href="#11-4-反汇编验证优化" class="headerlink" title="11.4 反汇编验证优化"></a>11.4 反汇编验证优化</h2><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">gcc -O2 -S main.c -o main.s</span><br><span class="line">objdump -d main</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h1 id="十二、C11-C17-C23-新特性要点"><a href="#十二、C11-C17-C23-新特性要点" class="headerlink" title="十二、C11 &#x2F; C17 &#x2F; C23 新特性要点"></a>十二、C11 &#x2F; C17 &#x2F; C23 新特性要点</h1><table>
+<thead>
+<tr>
+<th>版本</th>
+<th>重要特性</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>C99</td>
+<td>变长数组(VLA)、<code>//</code>注释、<code>stdint.h</code>、<code>inline</code>、<code>restrict</code>、指定初始化器</td>
+</tr>
+<tr>
+<td>C11</td>
+<td>匿名结构体&#x2F;联合体、<code>_Generic</code>、<code>_Static_assert</code>、多线程(<code>threads.h</code>)、原子操作(<code>stdatomic.h</code>)</td>
+</tr>
+<tr>
+<td>C17</td>
+<td>主要是缺陷修复</td>
+</tr>
+<tr>
+<td>C23</td>
+<td><code>nullptr</code>、<code>typeof</code>、<code>#embed</code>、<code>constexpr</code>、二进制字面量、匿名函数?（部分由编译器先支持）</td>
+</tr>
+</tbody></table>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// C11 _Generic：编译期类型分派</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> TYPE_NAME(x) _Generic((x), \</span></span><br><span class="line"><span class="meta">    int: <span class="string">&quot;int&quot;</span>, \</span></span><br><span class="line"><span class="meta">    double: <span class="string">&quot;double&quot;</span>, \</span></span><br><span class="line"><span class="meta">    default: <span class="string">&quot;other&quot;</span>)</span></span><br><span class="line"></span><br><span class="line"><span class="comment">// C11 _Static_assert：编译期断言</span></span><br><span class="line"><span class="keyword">_Static_assert</span>(<span class="keyword">sizeof</span>(<span class="type">int</span>) == <span class="number">4</span>, <span class="string">&quot;int must be 4 bytes&quot;</span>);</span><br><span class="line"></span><br><span class="line"><span class="comment">// 指定初始化器（C99+）</span></span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">Point</span> <span class="title">p</span> =</span> &#123; .y = <span class="number">10</span>, .x = <span class="number">5</span> &#125;;</span><br><span class="line"><span class="type">int</span> arr[<span class="number">10</span>] = &#123; [<span class="number">0</span>] = <span class="number">1</span>, [<span class="number">9</span>] = <span class="number">9</span> &#125;;</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h1 id="十三、工程实践建议"><a href="#十三、工程实践建议" class="headerlink" title="十三、工程实践建议"></a>十三、工程实践建议</h1><ol>
+<li><strong>编译警告当错误</strong>：<code>-Wall -Wextra -Werror</code> 起步，消灭所有警告</li>
+<li><strong>所有权清晰</strong>：谁 malloc 谁 free，或明确转移语义</li>
+<li><strong>指针参数原则</strong>：只读用 <code>const int *</code>；要改用 <code>int *</code>；避免多余解引用</li>
+<li><strong>边界检查</strong>：凡涉及数组&#x2F;字符串，先算长度再操作</li>
+<li><strong>防御性编程</strong>：malloc 后判空、memcpy 前判断重叠（用 memmove）、除零前检查</li>
+<li><strong>小步重构 + 测试</strong>：改一处编译一次，配合 sanitizer 与 valgrind</li>
+<li><strong>善用工具链</strong>：编译器警告、静态分析、sanitizer、调试器、反汇编形成完整闭环</li>
+</ol>
+<hr>
+<h1 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h1><p>C 语言进阶的核心可归纳为一条主线：</p>
+<blockquote>
+<p><strong>内存模型（栈&#x2F;堆&#x2F;静态区）→ 指针（地址与类型的结合）→ 结构体与位操作（数据布局）→ 编译链接（从源码到可执行文件）→ 避免 UB（可预期行为）</strong></p>
+</blockquote>
+<p>掌握这套体系，不仅能写出健壮高效的程序，也为深入学习 Linux 内核、嵌入式驱动、RTOS、逆向工程打下最坚实的基础。</p>
+<blockquote>
+<p><strong>一句话记住</strong>：初级 C 写”能编译通过的代码”，进阶 C 写”行为确定、内存可管理、跨平台可移植的代码”——理解内存与 UB，就是进阶的分水岭。</p>
+</blockquote>
+
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="http://example.com/2026/08/02/C%E8%AF%AD%E8%A8%80%E8%BF%9B%E9%98%B6%E7%9F%A5%E8%AF%86%E7%82%B9%E8%AF%A6%E8%A7%A3/" data-id="cmsbjfvg00001sglm7ffg0zdu" data-title="C语言进阶知识点详解" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      
+      
+      
+  <ul class="article-tag-list" itemprop="keywords"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/C%E8%AF%AD%E8%A8%80/" rel="tag">C语言</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86/" rel="tag">内存管理</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/%E5%BA%95%E5%B1%82%E5%8E%9F%E7%90%86/" rel="tag">底层原理</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/%E6%8C%87%E9%92%88/" rel="tag">指针</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/%E7%BC%96%E8%AF%91%E9%93%BE%E6%8E%A5/" rel="tag">编译链接</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/%E8%BF%9B%E9%98%B6/" rel="tag">进阶</a></li></ul>
+
+    </footer>
+  </div>
+  
+    
+<nav id="article-nav">
+  
+  
+    <a href="/2026/08/02/%E6%B1%87%E7%BC%96%E8%AF%AD%E8%A8%80%E7%9F%A5%E8%AF%86%E7%82%B9%E8%AF%A6%E8%A7%A3/" id="article-nav-older" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">Older</strong>
+      <div class="article-nav-title">汇编语言知识点详解</div>
+    </a>
+  
+</nav>
+
+  
+</article>
+
+
+</section>
+        
+          <aside id="sidebar">
+  
+    
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Tags</h3>
+    <div class="widget">
+      <ul class="tag-list" itemprop="keywords"><li class="tag-list-item"><a class="tag-list-link" href="/tags/AI-Agent/" rel="tag">AI Agent</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/ARM/" rel="tag">ARM</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/AURIX/" rel="tag">AURIX</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/AUTOSAR/" rel="tag">AUTOSAR</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/CANoe/" rel="tag">CANoe</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/CAPL/" rel="tag">CAPL</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/C%E8%AF%AD%E8%A8%80/" rel="tag">C语言</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/FOC/" rel="tag">FOC</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/GCC/" rel="tag">GCC</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/LMA/" rel="tag">LMA</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Linker-Script/" rel="tag">Linker Script</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Linux/" rel="tag">Linux</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/PIC/" rel="tag">PIC</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/RISC-V/" rel="tag">RISC-V</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/RT-Thread/" rel="tag">RT-Thread</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/SOTA/" rel="tag">SOTA</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/TC375/" rel="tag">TC375</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/TriCore/" rel="tag">TriCore</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/U%E7%9B%98%E5%90%AF%E5%8A%A8%E7%9B%98/" rel="tag">U盘启动盘</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/VMA/" rel="tag">VMA</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Ventoy/" rel="tag">Ventoy</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/XIP/" rel="tag">XIP</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/opencode/" rel="tag">opencode</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/x86/" rel="tag">x86</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86/" rel="tag">内存管理</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%86%85%E6%A0%B8/" rel="tag">内核</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%90%AF%E5%8A%A8%E8%BF%87%E7%A8%8B/" rel="tag">启动过程</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/" rel="tag">学习笔记</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%B5%8C%E5%85%A5%E5%BC%8F/" rel="tag">嵌入式</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%BA%95%E5%B1%82%E5%8E%9F%E7%90%86/" rel="tag">底层原理</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%BC%80%E5%8F%91/" rel="tag">开发</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%BC%95%E5%AF%BC/" rel="tag">引导</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E6%8C%87%E9%92%88/" rel="tag">指针</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E6%95%88%E7%8E%87%E5%B7%A5%E5%85%B7/" rel="tag">效率工具</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E6%B1%87%E7%BC%96/" rel="tag">汇编</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E6%B1%87%E7%BC%96%E8%AF%AD%E8%A8%80/" rel="tag">汇编语言</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E6%B1%BD%E8%BD%A6%E7%94%B5%E5%AD%90/" rel="tag">汽车电子</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E6%B5%8B%E8%AF%95/" rel="tag">测试</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E7%94%B5%E5%8A%9B%E7%94%B5%E5%AD%90/" rel="tag">电力电子</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E7%94%B5%E6%9C%BA%E6%8E%A7%E5%88%B6/" rel="tag">电机控制</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E7%B3%BB%E7%BB%9F%E5%AE%89%E8%A3%85/" rel="tag">系统安装</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E7%BC%96%E8%AF%91%E9%93%BE%E6%8E%A5/" rel="tag">编译链接</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E8%8B%B1%E9%A3%9E%E5%87%8C/" rel="tag">英飞凌</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E8%A3%85%E6%9C%BA%E5%B7%A5%E5%85%B7/" rel="tag">装机工具</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E8%BF%9B%E9%98%B6/" rel="tag">进阶</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E9%83%A8%E7%BD%B2/" rel="tag">部署</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E9%93%BE%E6%8E%A5%E8%84%9A%E6%9C%AC/" rel="tag">链接脚本</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E9%A3%9E%E4%B9%A6/" rel="tag">飞书</a></li></ul>
+    </div>
+  </div>
+
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Tag Cloud</h3>
+    <div class="widget tagcloud">
+      <a href="/tags/AI-Agent/" style="font-size: 15px;">AI Agent</a> <a href="/tags/ARM/" style="font-size: 10px;">ARM</a> <a href="/tags/AURIX/" style="font-size: 15px;">AURIX</a> <a href="/tags/AUTOSAR/" style="font-size: 15px;">AUTOSAR</a> <a href="/tags/CANoe/" style="font-size: 10px;">CANoe</a> <a href="/tags/CAPL/" style="font-size: 10px;">CAPL</a> <a href="/tags/C%E8%AF%AD%E8%A8%80/" style="font-size: 10px;">C语言</a> <a href="/tags/FOC/" style="font-size: 10px;">FOC</a> <a href="/tags/GCC/" style="font-size: 10px;">GCC</a> <a href="/tags/LMA/" style="font-size: 10px;">LMA</a> <a href="/tags/Linker-Script/" style="font-size: 15px;">Linker Script</a> <a href="/tags/Linux/" style="font-size: 20px;">Linux</a> <a href="/tags/PIC/" style="font-size: 10px;">PIC</a> <a href="/tags/RISC-V/" style="font-size: 10px;">RISC-V</a> <a href="/tags/RT-Thread/" style="font-size: 10px;">RT-Thread</a> <a href="/tags/SOTA/" style="font-size: 10px;">SOTA</a> <a href="/tags/TC375/" style="font-size: 15px;">TC375</a> <a href="/tags/TriCore/" style="font-size: 15px;">TriCore</a> <a href="/tags/U%E7%9B%98%E5%90%AF%E5%8A%A8%E7%9B%98/" style="font-size: 10px;">U盘启动盘</a> <a href="/tags/VMA/" style="font-size: 10px;">VMA</a> <a href="/tags/Ventoy/" style="font-size: 10px;">Ventoy</a> <a href="/tags/XIP/" style="font-size: 10px;">XIP</a> <a href="/tags/opencode/" style="font-size: 15px;">opencode</a> <a href="/tags/x86/" style="font-size: 10px;">x86</a> <a href="/tags/%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86/" style="font-size: 15px;">内存管理</a> <a href="/tags/%E5%86%85%E6%A0%B8/" style="font-size: 15px;">内核</a> <a href="/tags/%E5%90%AF%E5%8A%A8%E8%BF%87%E7%A8%8B/" style="font-size: 10px;">启动过程</a> <a href="/tags/%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/" style="font-size: 10px;">学习笔记</a> <a href="/tags/%E5%B5%8C%E5%85%A5%E5%BC%8F/" style="font-size: 20px;">嵌入式</a> <a href="/tags/%E5%BA%95%E5%B1%82%E5%8E%9F%E7%90%86/" style="font-size: 15px;">底层原理</a> <a href="/tags/%E5%BC%80%E5%8F%91/" style="font-size: 10px;">开发</a> <a href="/tags/%E5%BC%95%E5%AF%BC/" style="font-size: 10px;">引导</a> <a href="/tags/%E6%8C%87%E9%92%88/" style="font-size: 10px;">指针</a> <a href="/tags/%E6%95%88%E7%8E%87%E5%B7%A5%E5%85%B7/" style="font-size: 15px;">效率工具</a> <a href="/tags/%E6%B1%87%E7%BC%96/" style="font-size: 15px;">汇编</a> <a href="/tags/%E6%B1%87%E7%BC%96%E8%AF%AD%E8%A8%80/" style="font-size: 10px;">汇编语言</a> <a href="/tags/%E6%B1%BD%E8%BD%A6%E7%94%B5%E5%AD%90/" style="font-size: 10px;">汽车电子</a> <a href="/tags/%E6%B5%8B%E8%AF%95/" style="font-size: 15px;">测试</a> <a href="/tags/%E7%94%B5%E5%8A%9B%E7%94%B5%E5%AD%90/" style="font-size: 10px;">电力电子</a> <a href="/tags/%E7%94%B5%E6%9C%BA%E6%8E%A7%E5%88%B6/" style="font-size: 10px;">电机控制</a> <a href="/tags/%E7%B3%BB%E7%BB%9F%E5%AE%89%E8%A3%85/" style="font-size: 10px;">系统安装</a> <a href="/tags/%E7%BC%96%E8%AF%91%E9%93%BE%E6%8E%A5/" style="font-size: 10px;">编译链接</a> <a href="/tags/%E8%8B%B1%E9%A3%9E%E5%87%8C/" style="font-size: 15px;">英飞凌</a> <a href="/tags/%E8%A3%85%E6%9C%BA%E5%B7%A5%E5%85%B7/" style="font-size: 10px;">装机工具</a> <a href="/tags/%E8%BF%9B%E9%98%B6/" style="font-size: 10px;">进阶</a> <a href="/tags/%E9%83%A8%E7%BD%B2/" style="font-size: 10px;">部署</a> <a href="/tags/%E9%93%BE%E6%8E%A5%E8%84%9A%E6%9C%AC/" style="font-size: 15px;">链接脚本</a> <a href="/tags/%E9%A3%9E%E4%B9%A6/" style="font-size: 10px;">飞书</a>
+    </div>
+  </div>
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Archives</h3>
+    <div class="widget">
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2026/08/">August 2026</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2026/07/">July 2026</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2026/05/">May 2026</a></li></ul>
+    </div>
+  </div>
+
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Recent Posts</h3>
+    <div class="widget">
+      <ul>
+        
+          <li>
+            <a href="/2026/08/02/C%E8%AF%AD%E8%A8%80%E8%BF%9B%E9%98%B6%E7%9F%A5%E8%AF%86%E7%82%B9%E8%AF%A6%E8%A7%A3/">C语言进阶知识点详解</a>
+          </li>
+        
+          <li>
+            <a href="/2026/08/02/%E6%B1%87%E7%BC%96%E8%AF%AD%E8%A8%80%E7%9F%A5%E8%AF%86%E7%82%B9%E8%AF%A6%E8%A7%A3/">汇编语言知识点详解</a>
+          </li>
+        
+          <li>
+            <a href="/2026/08/02/%E5%B5%8C%E5%85%A5%E5%BC%8F%E5%9B%BA%E4%BB%B6%E5%9C%B0%E5%9D%80%E4%B8%89%E4%BB%B6%E5%A5%97-LMA-VMA-XIP%E4%B8%8EPIC/">嵌入式固件地址三件套：加载地址、运行时地址、XIP 与 PIC</a>
+          </li>
+        
+          <li>
+            <a href="/2026/08/01/%E5%B5%8C%E5%85%A5%E5%BC%8F%E9%93%BE%E6%8E%A5%E8%84%9A%E6%9C%AC%E8%AF%A6%E8%A7%A3%EF%BC%9A%E4%BB%8E%E9%9B%B6%E7%90%86%E8%A7%A3Linker-Script/">嵌入式链接脚本详解：以英飞凌TC375为例</a>
+          </li>
+        
+          <li>
+            <a href="/2026/08/01/Linux%E8%BD%AF%E4%BB%B6%E5%90%AF%E5%8A%A8%E8%BF%87%E7%A8%8B%E8%AF%A6%E8%A7%A3/">Linux软件启动过程详解</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+
+  
+</aside>
+        
+      </div>
+      <footer id="footer">
+  
+  <div class="outer">
+    <div id="footer-info" class="inner">
+      
+      &copy; 2026 John Doe<br>
+      Powered by <a href="https://hexo.io/" target="_blank">Hexo</a>
+    </div>
+  </div>
+</footer>
+
+    </div>
+    <nav id="mobile-nav">
+  
+    <a href="/" class="mobile-nav-link">Home</a>
+  
+    <a href="/archives" class="mobile-nav-link">Archives</a>
+  
+</nav>
+    
+
+
+<script src="/js/jquery-3.6.4.min.js"></script>
+
+
+
+  
+<script src="/fancybox/jquery.fancybox.min.js"></script>
+
+
+
+
+<script src="/js/script.js"></script>
+
+
+
+
+
+  </div>
+</body>
+</html>
