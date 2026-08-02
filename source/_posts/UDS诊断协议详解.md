@@ -283,24 +283,111 @@ DTC = 3 字节（如 0x123456）
 响应：03 7F 22 31     ← 服务 0x22 返回 NRC=0x31
 ```
 
-## 5.2 否定响应码（NRC）
+## 5.2 否定响应码（NRC）完整解析
 
-| NRC | 含义 |
-|---|---|
-| 0x10 | 一般拒绝 |
-| 0x11 | 服务不支持 |
-| 0x12 | 子功能不支持 |
-| 0x13 | 长度错误 |
-| 0x14 | 条件不满足 |
-| 0x22 | 条件不满足（相同） |
-| 0x24 | 请求序列错误 |
-| 0x31 | 请求超出范围 |
-| 0x33 | 安全访问被拒绝 |
-| 0x34 | 锁止（安全锁定） |
-| 0x72 | 内存不足 |
-| 0x78 | 响应待定（长任务） |
-| 0x7E | 子功能不支持 |
-| 0x7F | 服务在会话中不可用 |
+当 ECU 无法肯定响应时，返回否定响应：`0x7F + 请求服务号 + NRC`。
+
+```
+响应：03 7F 22 31     ← 服务 0x22 返回 NRC=0x31
+```
+
+NRC（Negative Response Code，否定响应码）按 ISO 14229-1 定义，配合请求服务号指明失败原因。完整含义如下：
+
+### 通用类（0x1x）
+
+| NRC | 英文名 | 含义 |
+|---|---|---|
+| 0x10 | generalReject | **一般拒绝**：请求在接收时被错误处理，无更具体原因 |
+| 0x11 | serviceNotSupported | **服务不支持**：请求的服务 ID 不存在（如未实现 0x2E） |
+| 0x12 | subFunctionNotSupported | **子功能不支持**：服务存在但该子功能不支持（如 0x19 02） |
+| 0x13 | incorrectMessageLengthOrInvalidFormat | **消息长度错误或格式无效**：长度与规定不符、无效字节 |
+| 0x14 | responseTooLong | **响应信息过长**：响应数据超出一帧/缓冲区容量 |
+| 0x15 | busyRepeatRequest | **忙，重复请求**：ECU 忙，请稍后重试 |
+| 0x16 | incorrectInactiveSession | **会话错误**：请求在不正确的会话中发出 |
+| 0x17 | requestNotCorrectlyReceived | **请求未正确接收**：接收时校验失败 |
+
+### 条件与序列类（0x2x）
+
+| NRC | 英文名 | 含义 |
+|---|---|---|
+| 0x21 | busyRepeatRequest | **忙碌，重复请求**：ECU 正在处理其他操作 |
+| 0x22 | conditionsNotCorrect | **条件不正确**：前置条件未满足（如未安全解锁就写数据） |
+| 0x23 | badSupportedFunction | **不支持/无效功能组合**：请求的功能不被当前配置支持 |
+| 0x24 | requestSequenceError | **请求序列错误**：违反规定的时序（如未 0x34 就发 0x36） |
+| 0x25 | noResponseFromSubnetComponent | **子网组件无响应**：子网内的组件没有响应 |
+| 0x26 | failurePreventsExecutionOfRequestedAction | **故障阻止执行**：因某故障无法执行请求动作 |
+| 0x27 | busyRequestedAction | **动作忙**：请求的动作当前正忙 |
+| 0x28 | conditionsNotCorrectForRequestedAction | **请求动作条件不满足** |
+| 0x29 | requestSequenceErrorForSubnetComponent | **子网组件请求序列错误** |
+| 0x2A | actionNotSupportedForClient | **不支持客户端动作** |
+| 0x2B | maxNumberOfReceivedPacketsExceeded | **接收包数超过上限** |
+| 0x2C | invalidFrameNumber | **无效帧号** |
+
+### 数据与范围类（0x3x）
+
+| NRC | 英文名 | 含义 |
+|---|---|---|
+| 0x31 | requestOutOfRange | **请求超出范围**：DID/DTC/参数超出有效范围（最常见错误之一） |
+| 0x32 | requestOutOfRangeSubnetComponent | **子网组件参数超出范围** |
+| 0x33 | securityAccessDenied | **安全访问被拒绝**：未解锁就执行需要安全的操作 |
+| 0x34 | authenticationFailed | **认证失败**：身份验证不通过 |
+| 0x35 | invalidKey | **密钥无效**：0x27 解锁回传的 Key 计算错误 |
+| 0x36 | exceedNumberOfAttempts | **超出尝试次数**：解锁尝试次数过多被锁定 |
+| 0x37 | requiredTimeDelayNotExpired | **时间延迟未过**：连续请求太频繁，需等待 |
+| 0x38 | secureDataTransmissionRequired | **需要安全传输**：要求加密/安全数据连接 |
+| 0x39 | secureDataTransmissionNotSupported | **不支持安全传输** |
+| 0x3A | secureDataTransmissionNotAllowed | **不允许安全传输** |
+| 0x3B | certificateVerificationFailed | **证书验证失败** |
+| 0x3C | certificateExpired | **证书已过期** |
+| 0x3D | certificateInvalid | **证书无效** |
+| 0x3E | certificateCouldNotBeUsed | **证书无法使用** |
+| 0x3F | certificateCouldNotBeFound | **找不到证书** |
+
+### 内部与硬件类（0x4x）
+
+| NRC | 英文名 | 含义 |
+|---|---|---|
+| 0x40 | softwareError | **软件内部错误**：内部逻辑异常 |
+| 0x41 | hardwareError | **硬件内部错误**：控制器硬件异常 |
+| 0x42 | externalTestEquipmentError | **外部测试设备错误** |
+| 0x43 | externalTestEquipmentOverloaded | **外部设备过载** |
+| 0x44 | errorDetectedByExternalTestEquipment | **外部设备检测到错误** |
+| 0x45 | targetNotPresent | **目标不存在** |
+| 0x46 | subComponentMissingOrFailed | **子组件缺失或失效** |
+| 0x47 | internalFlashError | **内部 Flash 错误** |
+| 0x48 | dataNotAvailable | **数据不可用** |
+
+### 编程/刷写类（0x7x）
+
+| NRC | 英文名 | 含义 |
+|---|---|---|
+| 0x70 | uploadDownloadNotAccepted | **上载/下载被拒绝**：刷写前置条件不满足 |
+| 0x71 | transferDataSuspended | **传输数据挂起** |
+| 0x72 | generalProgrammingFailure | **一般编程失败**：擦写 Flash 失败 |
+| 0x73 | wrongBlockSequenceCounter | **块序列计数器错误**：0x36 序号不连续（丢帧） |
+| 0x74 | requestCorrectlyReceived_ResponsePending | **已正确接收-响应待定**（处理中，稍后补发正式响应） |
+| 0x75 | incorrectCombinationMethod | **组合方法错误**：子功能与服务组合无效 |
+| 0x76 | sessionNotSupported | **会话不支持**：当前会话不允许该服务 |
+| 0x77 | serviceNotSupportedInActiveSession | **服务在当前会话不支持**（如默认会话下禁止刷写） |
+| 0x78 | rspPending | **响应待定/等待**：长任务进行中，需上位机等待并轮询 |
+| 0x79 | moduleIdentificationNotSupported | **模块识别不支持** |
+| 0x7A | missingIdentifier | **缺少标识符（ID）** |
+| 0x7B | unexpectedIdentifier | **意外的标识符** |
+| 0x7C | toMuchData | **数据过多**：超出允许范围 |
+| 0x7D | invalidDiagnosticMessageType | **无效诊断消息类型** |
+| 0x7E | subFunctionNotSupportedInActiveSession | **子功能在当前会话不支持** |
+| 0x7F | serviceNotSupportedInActiveSession | **服务在当前会话不支持** |
+| 0x80 | wrongModel | **型号错误** |
+
+> 表中 0x7E / 0x7F 是"当前会话不支持"的两个常见变体，和 0x11 / 0x12（"根本不支持"）的区别在于：**前者换了会话就能用，后者任何会话都不能用**。
+
+### NRC 使用要点
+
+1. **优先返回最具体的原因**：如既能返回 0x22 又能返回 0x31，选更贴合实际的那个
+2. **0x78 是"软响应"**：长任务（刷写、自检）用 0x78 先占位，避免上位机超时，完成后补发正常响应
+3. **0x33/0x35** 常与 0x27 解锁相关，连续 0x35 过多会触发 0x36 锁定
+4. **0x31 返回值排第一**：读/写不存在的 DID、参数超范围，几乎都会见到 0x31
+5. **刷写常见组合**：0x70（没解锁/前置不满足）→ 0x24（0x34/0x36 顺序错）→ 0x73（丢帧序号错）
 
 ---
 
