@@ -71,6 +71,579 @@
       <div class="outer">
         <section id="main">
   
+    <article id="post-嵌入式固件地址三件套-LMA-VMA-XIP与PIC" class="h-entry article article-type-post" itemprop="blogPost" itemscope itemtype="https://schema.org/BlogPosting">
+  <div class="article-meta">
+    <a href="/2026/08/02/%E5%B5%8C%E5%85%A5%E5%BC%8F%E5%9B%BA%E4%BB%B6%E5%9C%B0%E5%9D%80%E4%B8%89%E4%BB%B6%E5%A5%97-LMA-VMA-XIP%E4%B8%8EPIC/" class="article-date">
+  <time class="dt-published" datetime="2026-08-02T02:30:00.000Z" itemprop="datePublished">2026-08-02</time>
+</a>
+    
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 itemprop="name">
+      <a class="p-name article-title" href="/2026/08/02/%E5%B5%8C%E5%85%A5%E5%BC%8F%E5%9B%BA%E4%BB%B6%E5%9C%B0%E5%9D%80%E4%B8%89%E4%BB%B6%E5%A5%97-LMA-VMA-XIP%E4%B8%8EPIC/">嵌入式固件地址三件套：加载地址、运行时地址、XIP 与 PIC</a>
+    </h1>
+  
+
+      </header>
+    
+    <div class="e-content article-entry" itemprop="articleBody">
+      
+        <h1 id="嵌入式固件地址三件套：加载地址、运行时地址、XIP-与-PIC"><a href="#嵌入式固件地址三件套：加载地址、运行时地址、XIP-与-PIC" class="headerlink" title="嵌入式固件地址三件套：加载地址、运行时地址、XIP 与 PIC"></a>嵌入式固件地址三件套：加载地址、运行时地址、XIP 与 PIC</h1><blockquote>
+<p>嵌入式开发中最基础也最容易混淆的一组概念，几乎所有底层问题（启动流程、重定位、内存布局、OTA 升级）都跟它们有关。本文用一个 RT-Thread 真实工程和英飞凌 TC375 SOTA 方案把四件事讲透。</p>
+</blockquote>
+<h2 id="一、基本概念：加载地址与运行时地址"><a href="#一、基本概念：加载地址与运行时地址" class="headerlink" title="一、基本概念：加载地址与运行时地址"></a>一、基本概念：加载地址与运行时地址</h2><table>
+<thead>
+<tr>
+<th>概念</th>
+<th>英文</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>加载地址</strong></td>
+<td><strong>LMA</strong>（Load Memory Address）</td>
+<td>程序（代码&#x2F;数据）<strong>存放</strong>在非易失存储介质（Flash、ROM）中的物理位置，即”<strong>烧录进去时放在哪里</strong>“</td>
+</tr>
+<tr>
+<td><strong>运行时地址</strong></td>
+<td><strong>VMA</strong>（Virtual Memory Address）</td>
+<td>程序<strong>执行</strong>时，CPU 实际<strong>访问&#x2F;寻址</strong>的内存地址，即”<strong>跑起来时在哪里</strong>“</td>
+</tr>
+</tbody></table>
+<p>一句话总结：</p>
+<blockquote>
+<p><strong>加载地址 &#x3D; 睡觉的地方（存放），运行时地址 &#x3D; 干活的地方（执行）。</strong></p>
+</blockquote>
+<p>两者<strong>不一定相等</strong>，这是整个话题的核心。</p>
+<h2 id="二、为什么会有两套地址？"><a href="#二、为什么会有两套地址？" class="headerlink" title="二、为什么会有两套地址？"></a>二、为什么会有两套地址？</h2><table>
+<thead>
+<tr>
+<th>原因</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>存储介质运行太慢</strong></td>
+<td>Flash 读取速度远慢于 RAM，大程序直接在 Flash 执行会拖慢系统</td>
+</tr>
+<tr>
+<td><strong>存储介质不能随机访问</strong></td>
+<td>NAND Flash 按块&#x2F;页访问，<strong>根本无法直接取指执行</strong>，必须先把代码搬到 RAM</td>
+</tr>
+<tr>
+<td><strong>指令&#x2F;数据必须可写</strong></td>
+<td><code>.data</code>（有初值的全局变量）运行时<strong>要被修改</strong>，而 Flash 不可随机写</td>
+</tr>
+<tr>
+<td><strong>外设初始化依赖 RAM</strong></td>
+<td>SDRAM 初始化需要代码先运行，而代码本身又在 SDRAM 里 → 启动早期必须在片内 SRAM 里”借宿”</td>
+</tr>
+</tbody></table>
+<p>经典方案：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">+------------------ Flash (LMA) ------------------+</span><br><span class="line">|  .text (代码)  |  .rodata (常量) |  .data 初值  |</span><br><span class="line">+------------------------------------------------+</span><br><span class="line">        | 上电                    | 拷贝搬运</span><br><span class="line">        v                        v</span><br><span class="line">+------------------ RAM (VMA) --------------------+</span><br><span class="line">|        .text 执行区(可选)      |  .data | .bss |</span><br><span class="line">+-------------------------------------------------+</span><br></pre></td></tr></table></figure>
+
+<h3 id="程序段与-LMA-VMA-的关系"><a href="#程序段与-LMA-VMA-的关系" class="headerlink" title="程序段与 LMA&#x2F;VMA 的关系"></a>程序段与 LMA&#x2F;VMA 的关系</h3><table>
+<thead>
+<tr>
+<th>段</th>
+<th>内容</th>
+<th>初始值存在哪</th>
+<th>运行时在哪</th>
+<th>LMA&#x3D;&#x3D;VMA?</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>.text</code></td>
+<td>可执行代码</td>
+<td>Flash</td>
+<td>Flash（XIP）或 RAM（拷贝执行）</td>
+<td>看配置</td>
+</tr>
+<tr>
+<td><code>.rodata</code></td>
+<td>只读常量</td>
+<td>Flash</td>
+<td>Flash</td>
+<td>通常相等</td>
+</tr>
+<tr>
+<td><code>.data</code></td>
+<td><strong>已初始化</strong>的全局&#x2F;静态变量</td>
+<td><strong>初值存 Flash</strong></td>
+<td><strong>RAM</strong></td>
+<td><strong>不相等</strong></td>
+</tr>
+<tr>
+<td><code>.bss</code></td>
+<td><strong>未初始化</strong>的全局&#x2F;静态变量</td>
+<td>无</td>
+<td>RAM（上电清零）</td>
+<td>不相等</td>
+</tr>
+<tr>
+<td><code>.stack</code>&#x2F;<code>.heap</code></td>
+<td>栈&#x2F;堆</td>
+<td>无</td>
+<td>RAM</td>
+<td>不相等</td>
+</tr>
+</tbody></table>
+<p><strong>关键点</strong>：<code>.data</code> 段的 LMA 在 Flash、VMA 在 RAM，Flash 里存的是”初始值的备份”，启动时由代码拷到 RAM；<code>.bss</code> 段甚至不占 Flash 空间，只需清零。</p>
+<h2 id="三、链接脚本中的-LMA-VMA（GCC-语法）"><a href="#三、链接脚本中的-LMA-VMA（GCC-语法）" class="headerlink" title="三、链接脚本中的 LMA &#x2F; VMA（GCC 语法）"></a>三、链接脚本中的 LMA &#x2F; VMA（GCC 语法）</h2><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">SECTIONS</span><br><span class="line">&#123;</span><br><span class="line">    /* VMA 指向 Flash：代码直接在 Flash 执行 (XIP) */</span><br><span class="line">    .text : &#123;</span><br><span class="line">        *(.text)  *(.rodata*)</span><br><span class="line">    &#125; &gt; FLASH                /* 只写一个区段 -&gt; LMA==VMA */</span><br><span class="line"></span><br><span class="line">    /* VMA 指向 RAM，LMA 指向 Flash（AT&gt; 关键字） */</span><br><span class="line">    .data : &#123;</span><br><span class="line">        *(.data)</span><br><span class="line">    &#125; &gt; RAM AT&gt; FLASH        /* VMA 在 RAM，LMA 在 Flash */</span><br><span class="line"></span><br><span class="line">    /* BSS：只有 VMA，没有 LMA */</span><br><span class="line">    .bss : &#123; *(.bss) &#125; &gt; RAM</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li><code>&gt; FLASH</code> 后面定义的是 <strong>VMA</strong>（运行时地址）；</li>
+<li><code>AT&gt; FLASH</code> 专门指定 <strong>LMA</strong>（加载地址），没写 <code>AT&gt;</code> 时 LMA 默认等于 VMA；</li>
+<li>链接器生成 <code>ADDR(section)</code>（VMA）与 <code>LOADADDR(section)</code>（LMA）符号供启动代码使用。</li>
+</ul>
+<h3 id="启动代码负责”搬运”"><a href="#启动代码负责”搬运”" class="headerlink" title="启动代码负责”搬运”"></a>启动代码负责”搬运”</h3><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">extern</span> <span class="type">char</span> _sdata, _edata;   <span class="comment">/* .data 的 RAM 范围 (VMA) */</span></span><br><span class="line"><span class="keyword">extern</span> <span class="type">char</span> _sidata;          <span class="comment">/* .data 在 Flash 中的备份 (LMA) */</span></span><br><span class="line"><span class="keyword">extern</span> <span class="type">char</span> _sbss, _ebss;     <span class="comment">/* .bss 范围 */</span></span><br><span class="line"></span><br><span class="line"><span class="type">void</span> <span class="title function_">Reset_Handler</span><span class="params">(<span class="type">void</span>)</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="type">char</span> *src = &amp;_sidata;             <span class="comment">/* 加载地址 */</span></span><br><span class="line">    <span class="type">char</span> *dst = &amp;_sdata;              <span class="comment">/* 运行时地址 */</span></span><br><span class="line">    <span class="keyword">while</span> (dst &lt; &amp;_edata) *dst++ = *src++;   <span class="comment">/* 拷贝 .data */</span></span><br><span class="line">    <span class="keyword">for</span> (<span class="type">char</span> *p = &amp;_sbss; p &lt; &amp;_ebss; p++) *p = <span class="number">0</span>;   <span class="comment">/* 清零 .bss */</span></span><br><span class="line">    main();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="四、XIP：就地执行"><a href="#四、XIP：就地执行" class="headerlink" title="四、XIP：就地执行"></a>四、XIP：就地执行</h2><blockquote>
+<p><strong>XIP（Execute In Place）&#x3D; 代码”躺哪就干哪”，CPU 直接从 Flash&#x2F;ROM 取指执行</strong>，此时 <code>.text</code> 段 <strong>LMA &#x3D;&#x3D; VMA</strong>。</p>
+</blockquote>
+<h3 id="XIP-的前提条件"><a href="#XIP-的前提条件" class="headerlink" title="XIP 的前提条件"></a>XIP 的前提条件</h3><table>
+<thead>
+<tr>
+<th>条件</th>
+<th>说明</th>
+<th>反例</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>可随机访问</strong></td>
+<td>CPU 能按字节&#x2F;字随机寻址取指</td>
+<td><strong>NAND Flash</strong> 不行</td>
+</tr>
+<tr>
+<td><strong>可映射到统一地址空间</strong></td>
+<td>Flash 挂在系统总线上</td>
+<td>SD 卡、U 盘不行</td>
+</tr>
+<tr>
+<td><strong>读速度可接受</strong></td>
+<td>取指延迟不能拖垮 CPU</td>
+<td>慢速 SPI Flash 勉强</td>
+</tr>
+</tbody></table>
+<p>主流可 XIP 介质：<strong>NOR Flash</strong>（经典）、ROM、PSRAM&#x2F;SRAM、DDR SDRAM，以及部分 QSPI 的 Memory-Mapped 模式。</p>
+<h3 id="XIP-的优缺点"><a href="#XIP-的优缺点" class="headerlink" title="XIP 的优缺点"></a>XIP 的优缺点</h3><table>
+<thead>
+<tr>
+<th>优点</th>
+<th>缺点</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>省 RAM（代码不占宝贵 RAM）</td>
+<td>执行慢（Flash 读速度远低于 RAM）</td>
+</tr>
+<tr>
+<td>启动快（无需搬运大段代码）</td>
+<td>写操作不可 XIP（变量、堆栈仍要放 RAM）</td>
+</tr>
+<tr>
+<td>结构简单，无需重定位</td>
+<td>代码段不支持自修改</td>
+</tr>
+<tr>
+<td>OTA&#x2F;升级方便</td>
+<td>频繁访问 Flash 增加功耗磨损</td>
+</tr>
+</tbody></table>
+<h3 id="工程取舍"><a href="#工程取舍" class="headerlink" title="工程取舍"></a>工程取舍</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">代码量小 + RAM紧张       → 全 XIP（多数 MCU 默认，如 STM32）</span><br><span class="line">代码量小 + 性能关键       → 关键函数拷贝到 RAM（RAM-Function），其余 XIP</span><br><span class="line">代码量大 + 性能要求高     → 全量拷贝到 RAM 执行</span><br></pre></td></tr></table></figure>
+
+<p><strong>RAM-Function 经典用途</strong>：Flash 擦写&#x2F;升级过程中，代码如果还在 Flash 里跑会”自食”（一边跑一边擦自己）→ 擦写函数必须在 RAM 里执行。这就是后面 SOTA 里常见的 <code>copyFunctionsToPSPR()</code>。</p>
+<h3 id="XIP-的经典坑"><a href="#XIP-的经典坑" class="headerlink" title="XIP 的经典坑"></a>XIP 的经典坑</h3><ol>
+<li><strong>代码自修改</strong>：运行在 Flash 的代码写代码段 → 崩溃；</li>
+<li>**Flash 擦写期间 XIP 代码”自杀”**：擦写函数的代码在被擦的扇区里，擦到一半取指失败 → 解法是擦写函数放 RAM；</li>
+<li><strong>缓存一致性</strong>：Flash 被 DMA&#x2F;外设改写时需维护 I-Cache 失效；</li>
+<li><strong>取指等待周期</strong>：Flash 读速度 &lt; CPU 主频，需配置 Wait State + 指令缓存。</li>
+</ol>
+<h2 id="五、PIC：位置无关代码"><a href="#五、PIC：位置无关代码" class="headerlink" title="五、PIC：位置无关代码"></a>五、PIC：位置无关代码</h2><blockquote>
+<p><strong>PIC（Position Independent Code）&#x3D; 代码里不写死绝对地址，全部用相对寻址，搬到哪都能执行。</strong></p>
+</blockquote>
+<h3 id="问题的提出"><a href="#问题的提出" class="headerlink" title="问题的提出"></a>问题的提出</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">编译链接时：代码按 VMA = 0x30000000 编址（跳转、取变量都写绝对地址）</span><br><span class="line">实际运行前：代码在 SRAM 0x00000000 里（前 4KB 借宿阶段）</span><br><span class="line">问题：代码里写死 0x30000000 的跳转，在 0x00000000 执行 = 取不到指令 = 崩溃</span><br></pre></td></tr></table></figure>
+
+<p>两种解法：<strong>重定位（Relocation）</strong>——运行时按实际位置改写指令中的地址（需可写介质）；<strong>PIC</strong>——编译时根本不生成绝对地址，全部用 PC 相对寻址（无需改代码，牺牲少量性能&#x2F;体积）。</p>
+<h3 id="PIC-怎么做到”处处能跑”"><a href="#PIC-怎么做到”处处能跑”" class="headerlink" title="PIC 怎么做到”处处能跑”"></a>PIC 怎么做到”处处能跑”</h3><ol>
+<li><strong>跳转</strong> → 用 PC 相对分支指令（<code>B</code>&#x2F;<code>BL</code>），天然位置无关；</li>
+<li><strong>取立即数&#x2F;地址</strong> → PC 相对字面量池（Literal Pool）：<code>LDR r0, [PC, #0x1C]</code>；</li>
+<li><strong>访问全局变量&#x2F;函数指针</strong> → <strong>GOT（全局偏移表）</strong>：</li>
+</ol>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">                PIC 代码                       GOT 表（放 .data 区）</span><br><span class="line">LDR  r3, [PC, #offset]   ---------&gt;   GOT[0] = &amp;global_var</span><br><span class="line">                                       GOT[1] = &amp;func</span><br><span class="line">               相对 PC 取表项地址，       表里存运行时真实地址</span><br><span class="line">               再间接解引用</span><br></pre></td></tr></table></figure>
+
+<ol start="4">
+<li>x86-64 原生支持 <code>RIP-relative</code> 寻址，编译 PIC 几乎零额外开销；ARM64 同理（<code>adrp</code>+<code>ldr</code>）。</li>
+</ol>
+<h3 id="编译器开关"><a href="#编译器开关" class="headerlink" title="编译器开关"></a>编译器开关</h3><table>
+<thead>
+<tr>
+<th>选项</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>-fPIC</code> &#x2F; <code>-fpic</code></td>
+<td>位置无关代码（共享库用）</td>
+</tr>
+<tr>
+<td><code>-fPIE</code> &#x2F; <code>-fpie</code></td>
+<td>位置无关可执行文件（配合 ASLR 防漏洞）</td>
+</tr>
+<tr>
+<td><code>-shared</code></td>
+<td>配合 <code>-fPIC</code> 生成共享库</td>
+</tr>
+</tbody></table>
+<h3 id="三种方案横向对比"><a href="#三种方案横向对比" class="headerlink" title="三种方案横向对比"></a>三种方案横向对比</h3><table>
+<thead>
+<tr>
+<th></th>
+<th>绝对编址（默认）</th>
+<th>重定位（Relocation）</th>
+<th>PIC</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>指令中地址</td>
+<td>写死 VMA</td>
+<td>写死，但附补丁表</td>
+<td>只写偏移量</td>
+</tr>
+<tr>
+<td>换位置运行</td>
+<td>❌ 崩溃</td>
+<td>✅ 搬运后打补丁</td>
+<td>✅ 直接跑</td>
+</tr>
+<tr>
+<td>代码是否可写</td>
+<td>无所谓</td>
+<td><strong>必须 RAM 可写</strong></td>
+<td>可只读</td>
+</tr>
+<tr>
+<td>性能&#x2F;体积</td>
+<td>最优</td>
+<td>略逊</td>
+<td>最差（间接寻址）</td>
+</tr>
+<tr>
+<td>典型用途</td>
+<td>链接到固定地址的 App</td>
+<td>Bootloader 搬运后</td>
+<td>共享库、启动早期、双 bank</td>
+</tr>
+</tbody></table>
+<p><strong>一条主线总结</strong>：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">LMA≠VMA 时怎么跑？</span><br><span class="line">   ├─ 介质可写且地址确定 -&gt; 重定位打补丁</span><br><span class="line">   ├─ 介质不可写/位置不确定 -&gt; PIC</span><br><span class="line">   └─ 代码就地执行 -&gt; XIP（LMA==VMA）</span><br></pre></td></tr></table></figure>
+
+<h2 id="六、实战①：RT-Thread-RA2A1-EK-工程解析"><a href="#六、实战①：RT-Thread-RA2A1-EK-工程解析" class="headerlink" title="六、实战①：RT-Thread RA2A1-EK 工程解析"></a>六、实战①：RT-Thread RA2A1-EK 工程解析</h2><blockquote>
+<p>以 Renesas RA2A1（Cortex-M23）上运行 RT-Thread 的真实工程为例，用 <code>.map</code> 文件实测数据说话。</p>
+</blockquote>
+<h3 id="内存区域"><a href="#内存区域" class="headerlink" title="内存区域"></a>内存区域</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">0x00000000    0x400      FLASH_GAP（向量表 + 复位启动代码 + 链接器表）</span><br><span class="line">0x00000400    0x40       选项设置寄存器区 (OFS0/OFS1/SECMPU)</span><br><span class="line">0x00000440    0x3fbc0    FLASH 主区（真正的 .text / .rodata）</span><br><span class="line">0x20000000    0x8000     RAM（.data / .bss / 栈 / 堆）</span><br></pre></td></tr></table></figure>
+
+<h3 id="链接脚本关键段（fsp-gen-ld）"><a href="#链接脚本关键段（fsp-gen-ld）" class="headerlink" title="链接脚本关键段（fsp_gen.ld）"></a>链接脚本关键段（fsp_gen.ld）</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">/* ① 复位向量表 —— VMA=LMA=0x00000000（XIP） */</span><br><span class="line">__flash_vectors$$ : &#123; KEEP(*(.fixed_vectors)) ... &#125; &gt; FLASH_GAP</span><br><span class="line"></span><br><span class="line">/* ② 启动早期代码（Reset_Handler/SystemInit）—— XIP */</span><br><span class="line">__flash_readonly_gap$$ : &#123; ... &#125; &gt; FLASH_GAP</span><br><span class="line"></span><br><span class="line">/* ④ ★ 数据段：VMA 在 RAM，LMA 在 Flash —— 必须搬运 ★ */</span><br><span class="line">__ram_from_flash$$ : &#123; *(.data*) &#125; &gt; RAM AT &gt; FLASH</span><br><span class="line"></span><br><span class="line">/* ⑤ 零初始化段：NOLOAD 不占 Flash */</span><br><span class="line">__ram_zero$$ (NOLOAD) : &#123; *(.bss*) &#125; &gt; RAM</span><br><span class="line"></span><br><span class="line">/* ⑦ 全部应用代码 —— VMA=LMA，XIP */</span><br><span class="line">__flash_readonly$$ : &#123; *(.text*) *(.rodata*) &#125; &gt; FLASH</span><br></pre></td></tr></table></figure>
+
+<p><strong>规则</strong>：段只写 <code>&gt; FLASH</code> → LMA&#x3D;&#x3D;VMA（XIP）；写 <code>&gt; RAM AT&gt; FLASH</code> → VMA 在 RAM、LMA 在 Flash（搬运）；写 <code>NOLOAD</code> → 只有 VMA。</p>
+<h3 id="map-文件实测地址"><a href="#map-文件实测地址" class="headerlink" title=".map 文件实测地址"></a>.map 文件实测地址</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">__flash_vectors$$          VMA 0x00000000   LMA 0x00000000   size 0x50   ← XIP</span><br><span class="line">__flash_readonly_gap$$     VMA 0x00000050   LMA 0x00000050   size 0x364  ← XIP</span><br><span class="line">   .text.Reset_Handler               0x8c</span><br><span class="line">   .text.SystemRuntimeInit           0x9c</span><br><span class="line">__ram_from_flash$$ (.data) VMA 0x20000000   LMA 0x000004ec   size 0x334  ← 不等！要拷</span><br><span class="line">__ram_noinit$$ (栈/堆)     VMA 0x20000338   NOLOAD        size 0x414</span><br><span class="line">__ram_zero$$ (.bss)        VMA 0x20000750   NOLOAD        size 0xba4</span><br><span class="line">__flash_readonly$$ (主代码) VMA 0x00000820   LMA 0x00000820   size 0x119a0 ← XIP</span><br></pre></td></tr></table></figure>
+
+<p><strong>本工程关键事实</strong>：<code>.text/.rodata</code> 全部 XIP 就地执行（LMA&#x3D;&#x3D;VMA&#x3D;&#x3D;0x820），只有 <code>.data</code>（0x334 字节）从 Flash 0x4ec 拷到 RAM 0x20000000，<code>.bss</code> 清零。</p>
+<h3 id="启动流程"><a href="#启动流程" class="headerlink" title="启动流程"></a>启动流程</h3><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">void</span> <span class="title function_">Reset_Handler</span><span class="params">(<span class="type">void</span>)</span></span><br><span class="line">&#123;</span><br><span class="line">    SystemInit();      <span class="comment">/* 时钟/硬件初始化 + C 运行时初始化 */</span></span><br><span class="line">    entry();           <span class="comment">/* crt0 → main() → hal_entry() */</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>真正的搬运在 <code>SystemRuntimeInit()</code>，它读的是链接器生成的<strong>搬运表</strong>（bsp_linker_info.h 用 <code>__ram_from_flash$$Base/Limit/Load</code> 填充，即 VMA&#x2F;LMA 具体数值）——“照着表搬”，无需硬编码地址。</p>
+<h3 id="反汇编佐证：为什么这里用不到-PIC"><a href="#反汇编佐证：为什么这里用不到-PIC" class="headerlink" title="反汇编佐证：为什么这里用不到 PIC"></a>反汇编佐证：为什么这里用不到 PIC</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">0000008c &lt;Reset_Handler&gt;:</span><br><span class="line">  90:  f000 f89a     bl     1c8 &lt;SystemInit&gt;     ← PC 相对跳转（天然位置无关）</span><br><span class="line">  94:  f009 fc16     bl     98c4 &lt;entry&gt;</span><br><span class="line"></span><br><span class="line">0000009c &lt;SystemRuntimeInit&gt;:</span><br><span class="line">  aa:  f240 037c     movw   r3, #0x7c           ← ★ 直接加载&quot;绝对地址&quot;0x7c</span><br><span class="line">  ae:  f2c0 0300     movt   r3, #0              （g_init_info 的 VMA）</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li>跳转用 <strong>PC 相对</strong>（天然位置无关）；</li>
+<li>访问全局数据却用 <strong>绝对地址</strong>（movw&#x2F;movt 写死 VMA）。</li>
+</ul>
+<p><strong>为什么可以放心用绝对地址？</strong> 因为这是固定链接固件，代码就在 Flash 里原地跑（XIP），LMA&#x3D;&#x3D;VMA，<strong>运行位置永远不变</strong> → 绝对寻址完全可靠。这就是<strong>裸机&#x2F;RTOS 程序默认不用 PIC 的原因</strong>。</p>
+<h2 id="七、实战②：TC375-SOTA-到底用不用-PIC？"><a href="#七、实战②：TC375-SOTA-到底用不用-PIC？" class="headerlink" title="七、实战②：TC375 SOTA 到底用不用 PIC？"></a>七、实战②：TC375 SOTA 到底用不用 PIC？</h2><blockquote>
+<p>关键事实（Infineon 官方文档确认）：<strong>TC3xx 官方 SOTA 是硬件 bank 交换（SWAP），不需要 PIC。</strong></p>
+</blockquote>
+<h3 id="TC375-内存格局"><a href="#TC375-内存格局" class="headerlink" title="TC375 内存格局"></a>TC375 内存格局</h3><table>
+<thead>
+<tr>
+<th>资源</th>
+<th>地址</th>
+<th>大小</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>PFLASH0 (PF0)</td>
+<td><code>0x80000000</code></td>
+<td>3MB</td>
+</tr>
+<tr>
+<td>PFLASH1 (PF1)</td>
+<td><code>0x80300000</code></td>
+<td>3MB</td>
+</tr>
+<tr>
+<td>LMU</td>
+<td><code>0x90000000</code></td>
+<td>512KB</td>
+</tr>
+<tr>
+<td>CPU0 DSPR &#x2F; PSPR</td>
+<td><code>0x70000000</code> &#x2F; <code>0x70100000</code></td>
+<td>96KB &#x2F; 32KB</td>
+</tr>
+</tbody></table>
+<h3 id="硬件-SWAP-机制"><a href="#硬件-SWAP-机制" class="headerlink" title="硬件 SWAP 机制"></a>硬件 SWAP 机制</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">PFLASH 分为 A、B 两组 bank</span><br><span class="line"></span><br><span class="line">  Active bank（PF0）→ 映射到可执行地址 0x80000000</span><br><span class="line">  Inactive bank（PF1）→ 映射到&quot;可读写&quot;的其它地址</span><br><span class="line"></span><br><span class="line">  更新完成 → 交换 → 【只改变地址映射，不拷贝任何数据】</span><br><span class="line">  交换后 App 依然从 0x80000000 取指执行</span><br></pre></td></tr></table></figure>
+
+<p>官方文档三句话是关键：</p>
+<ul>
+<li><em>“only the address mapping will change. no data needs to be copied and the address ranges being executed from are always the same.”</em></li>
+<li><em>“parameters are pre-configured in a User Configuration Block (UCB) and only updated by on-chip system firmware during the subsequent System Reset.”</em></li>
+<li><em>“All NVM operations always use the standard address map regardless of swap settings.”</em></li>
+</ul>
+<p><strong>所以 App 只需一份镜像、一个链接地址（0x80000000），永远从同一个地址执行</strong>——硬件帮你”重定位”了，PIC 纯属多余。</p>
+<h3 id="硬件方案的代价"><a href="#硬件方案的代价" class="headerlink" title="硬件方案的代价"></a>硬件方案的代价</h3><table>
+<thead>
+<tr>
+<th>代价</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>性能下降</td>
+<td>必须禁用 CPU 到本地 PFLASH 的 fast path，保证 A&#x2F;B bank 执行性能一致</td>
+</tr>
+<tr>
+<td>部分 Flash 不可用</td>
+<td>在 1MB+3MB 变体上，3MB 组的上 2MB 不能放代码</td>
+</tr>
+<tr>
+<td>交换时机受限</td>
+<td>只能在系统复位时由片上固件按 UCB 配置切换</td>
+</tr>
+</tbody></table>
+<h3 id="什么情况下-TC375-SOTA-才需要-PIC？"><a href="#什么情况下-TC375-SOTA-才需要-PIC？" class="headerlink" title="什么情况下 TC375 SOTA 才需要 PIC？"></a>什么情况下 TC375 SOTA 才需要 PIC？</h3><table>
+<thead>
+<tr>
+<th>SOTA 方案</th>
+<th>App 运行地址</th>
+<th>需要 PIC？</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>官方硬件双 bank 交换</td>
+<td>永远是 0x80000000</td>
+<td>❌</td>
+</tr>
+<tr>
+<td>双构建（A&#x2F;B 各编一次）</td>
+<td>两个固定地址</td>
+<td>❌</td>
+</tr>
+<tr>
+<td>搬移到 RAM 执行</td>
+<td>固定 RAM 地址</td>
+<td>❌</td>
+</tr>
+<tr>
+<td>单镜像 + 软件跳转两个不同 Flash 地址</td>
+<td>两个地址</td>
+<td>✅ <strong>必须</strong></td>
+</tr>
+</tbody></table>
+<p><strong>易混点</strong>：Flash 擦写函数拷到 PSPR 运行 <strong>≠ PIC</strong>，那是”拷贝到固定 RAM 地址执行”，属于重定位&#x2F;拷贝执行，SOTA 下载阶段都要做。</p>
+<h3 id="对比：STM32-vs-TC375-的”换-bank”"><a href="#对比：STM32-vs-TC375-的”换-bank”" class="headerlink" title="对比：STM32 vs TC375 的”换 bank”"></a>对比：STM32 vs TC375 的”换 bank”</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">STM32（无硬件重映射）：</span><br><span class="line">  物理 bank 地址固定不变，App 换 bank 后运行地址变了</span><br><span class="line">  → 双构建、搬移、或 PIC     ← 软件自己想办法</span><br><span class="line"></span><br><span class="line">TC375（硬件重映射）：</span><br><span class="line">  bank 交换只改地址映射，App 永远从 0x80000000 执行</span><br><span class="line">  → 硬件搞定，不用 PIC</span><br></pre></td></tr></table></figure>
+
+<h2 id="八、如果真要上-PIC，要改哪些东西？"><a href="#八、如果真要上-PIC，要改哪些东西？" class="headerlink" title="八、如果真要上 PIC，要改哪些东西？"></a>八、如果真要上 PIC，要改哪些东西？</h2><blockquote>
+<p>以 TASKING 工具链为例（AURIX 车规主力编译器）。前提：<strong>只用在不走硬件 SWAP、单镜像多地址运行场景</strong>；AUTOSAR + 闭源 MCAL&#x2F;OS 库场景基本走不通，建议双构建。</p>
+</blockquote>
+<h3 id="1-编译-链接选项"><a href="#1-编译-链接选项" class="headerlink" title="1. 编译&#x2F;链接选项"></a>1. 编译&#x2F;链接选项</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">ctc --cpu=tc37x --pic=A12 test.c          <span class="comment"># 编译：EABI 完整 PIC/PID 模式</span></span><br><span class="line">ltc --pic=A12 -L &lt;install&gt;\ctc\lib\pic\tc1.6.2 -deabi_pic.lsl ...  <span class="comment"># 链接</span></span><br><span class="line"><span class="comment"># 简化模式（RAM/ROM 数据各 ≤64KB）：</span></span><br><span class="line">ctc --pic=A0/A1 test.c</span><br></pre></td></tr></table></figure>
+
+<p><strong>连带影响</strong>：<code>--immediate-in-code</code> 自动开启；<code>--profile</code>&#x2F;<code>--runtime</code> 不兼容被禁用；代码压缩禁用；只能用 <code>\lib\pic\</code> 下的 PIC 运行库（libc 只有 <code>picinit.o</code>）。</p>
+<h3 id="2-链接脚本-lsl"><a href="#2-链接脚本-lsl" class="headerlink" title="2. 链接脚本 .lsl"></a>2. 链接脚本 <code>.lsl</code></h3><ul>
+<li><code>#include &quot;eabi_pic.lsl&quot;</code>（或 <code>pic.lsl</code>）；</li>
+<li>GOT&#x2F;描述符表放进 RAM（或 LMU），输出基址符号（如 <code>__PIC_BASE</code>）；</li>
+<li>内存布局适配 SOTA 双 bank（App 要能装进任一 bank）。</li>
+</ul>
+<h3 id="3-启动代码（最关键，最容易错）"><a href="#3-启动代码（最关键，最容易错）" class="headerlink" title="3. 启动代码（最关键，最容易错）"></a>3. 启动代码（最关键，最容易错）</h3><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">void</span> __START(<span class="type">void</span>)</span><br><span class="line">&#123;</span><br><span class="line">    __mtcr(CPU_A12, &amp;__PIC_BASE);   <span class="comment">/* ① A12 = GOT 描述符表基址（PIC 必需） */</span></span><br><span class="line">    <span class="comment">/* ② 设置 SP / CSA */</span></span><br><span class="line">    <span class="comment">/* ③ copy table（.data: Flash→RAM）+ clear table（.bss 清零） */</span></span><br><span class="line">    <span class="comment">/* ④ 初始化 BIV/BTV */</span></span><br><span class="line">    <span class="comment">/* ⑤ core0_main() */</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>TASKING 提供 <code>picinit.o</code> 处理 A12 初始化；若自定义初始化（<code>--user-provided-initialization-code</code>），<strong>A12 没设对，第一条全局变量访问就 trap</strong>。</p>
+<h3 id="4-中断-陷阱向量表（BIV-BTV）"><a href="#4-中断-陷阱向量表（BIV-BTV）" class="headerlink" title="4. 中断&#x2F;陷阱向量表（BIV&#x2F;BTV）"></a>4. 中断&#x2F;陷阱向量表（BIV&#x2F;BTV）</h3><p>TriCore 的 BIV 寄存器类似 ARM 的 VTOR，PIC 模式下必须<strong>在 App 启动时动态设置</strong>（不能链接写死）：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">__mtcr(CPU_BIV, (<span class="type">uint32_t</span>)&amp;__inttab);</span><br></pre></td></tr></table></figure>
+
+<h3 id="5-Bootloader-跳转协议"><a href="#5-Bootloader-跳转协议" class="headerlink" title="5. Bootloader 跳转协议"></a>5. Bootloader 跳转协议</h3><table>
+<thead>
+<tr>
+<th>交接项</th>
+<th>非 PIC</th>
+<th>PIC（EABI）</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>SP &#x2F; CSA</td>
+<td>✅</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>A12（GOT 基址）</td>
+<td>❌</td>
+<td>✅ 必须设</td>
+</tr>
+<tr>
+<td>A0&#x2F;A1&#x2F;A8&#x2F;A9（简化模式基址）</td>
+<td>❌</td>
+<td>✅（如用简化模式）</td>
+</tr>
+<tr>
+<td>BIV&#x2F;BTV</td>
+<td>App 自己设</td>
+<td>App 自己设</td>
+</tr>
+</tbody></table>
+<p>现实中”跳转 App 后复位&#x2F;跑飞”的 bug 多出在这里：A12 没设对立刻 trap。</p>
+<h3 id="6-运行库与第三方库（AUTOSAR-场景痛点）"><a href="#6-运行库与第三方库（AUTOSAR-场景痛点）" class="headerlink" title="6. 运行库与第三方库（AUTOSAR 场景痛点）"></a>6. 运行库与第三方库（AUTOSAR 场景痛点）</h3><ul>
+<li>所有预编译库必须同为 PIC 版；</li>
+<li>第三方闭源库（Vector&#x2F;EB 的 MCAL、BSW、AUTOSAR OS）没出 PIC 版 → 用 <code>abs_addr</code>&#x2F;<code>if_jump_tab</code> 属性通过固定绝对地址回调”静态软件”，或让供应商出 PIC 版；</li>
+<li>iLLD 是源码，可全量重编，工作量可控。</li>
+</ul>
+<h3 id="7-应用代码约束"><a href="#7-应用代码约束" class="headerlink" title="7. 应用代码约束"></a>7. 应用代码约束</h3><table>
+<thead>
+<tr>
+<th>禁止事项</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>内联汇编写死绝对地址</td>
+<td>编译期不查，运行期必炸</td>
+</tr>
+<tr>
+<td>常量指针指向绝对地址</td>
+<td>需封装成跳板函数</td>
+</tr>
+<tr>
+<td>函数指针直接存绝对地址</td>
+<td>需通过 GOT&#x2F;符号解析</td>
+</tr>
+<tr>
+<td><code>__near</code>&#x2F;<code>__a0</code> 限定符混用</td>
+<td>EABI 模式下要重审</td>
+</tr>
+</tbody></table>
+<h3 id="8-改动清单速查表"><a href="#8-改动清单速查表" class="headerlink" title="8. 改动清单速查表"></a>8. 改动清单速查表</h3><table>
+<thead>
+<tr>
+<th>#</th>
+<th>改动项</th>
+<th>工作量</th>
+<th>备注</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1</td>
+<td>编译&#x2F;链接加 <code>--pic=A12</code></td>
+<td>小</td>
+<td>全工程统一，配 <code>eabi_pic.lsl</code></td>
+</tr>
+<tr>
+<td>2</td>
+<td>换 PIC 运行库</td>
+<td>小</td>
+<td>供应商库是拦路虎</td>
+</tr>
+<tr>
+<td>3</td>
+<td><code>.lsl</code> 加 GOT&#x2F;描述符表布局</td>
+<td>中</td>
+<td>RAM 里给 GOT 留空间</td>
+</tr>
+<tr>
+<td>4</td>
+<td>启动代码设 A12 + 重定位表</td>
+<td>中</td>
+<td><strong>最容易错</strong></td>
+</tr>
+<tr>
+<td>5</td>
+<td>BIV&#x2F;BTV 动态设置</td>
+<td>小</td>
+<td>App 启动时设</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Bootloader 跳转协议</td>
+<td>中</td>
+<td>交接 SP&#x2F;CSA&#x2F;A12&#x2F;BIV</td>
+</tr>
+<tr>
+<td>7</td>
+<td>代码约束审查</td>
+<td>中</td>
+<td>绝对地址清零</td>
+</tr>
+<tr>
+<td>8</td>
+<td>第三方库 PIC 化</td>
+<td><strong>大</strong></td>
+<td>MCAL&#x2F;OS 闭源库基本卡死</td>
+</tr>
+<tr>
+<td>9</td>
+<td>安全&#x2F;CRC&#x2F;认证复核</td>
+<td>大</td>
+<td>ISO 26262 影响评估</td>
+</tr>
+<tr>
+<td>10</td>
+<td>调试工具 SWAP 支持</td>
+<td>小</td>
+<td>TRACE32&#x2F;winIDEA 配置</td>
+</tr>
+</tbody></table>
+<h3 id="最终选型建议"><a href="#最终选型建议" class="headerlink" title="最终选型建议"></a>最终选型建议</h3><table>
+<thead>
+<tr>
+<th>你的情况</th>
+<th>建议</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>用官方 SOTA（UCB SWAP）</td>
+<td><strong>不要 PIC</strong>，配 UCB 就行</td>
+</tr>
+<tr>
+<td>自研 Bootloader + 全源码（裸机&#x2F;RT-Thread）</td>
+<td>PIC 可行，按清单 1~8 推进</td>
+</tr>
+<tr>
+<td>自研 Bootloader + AUTOSAR 闭源 MCAL&#x2F;OS</td>
+<td><strong>建议双构建</strong>，比 PIC 靠谱得多</td>
+</tr>
+</tbody></table>
+<h2 id="九、总结：一句话记忆"><a href="#九、总结：一句话记忆" class="headerlink" title="九、总结：一句话记忆"></a>九、总结：一句话记忆</h2><blockquote>
+<p><strong>LMA 决定”烧到哪”，VMA 决定”跑到哪”；.text 常常就地执行（XIP，两者相等），.data 必由 Flash 搬运到 RAM（两者不等），.bss 只清不搬。</strong><br><strong>链接脚本定坐标，启动代码做搬运，.map 文件来验证。</strong><br><strong>PIC 是”地址不确定”场景的救星：共享库、启动早期借宿、双 bank OTA；但 TC375 官方 SOTA 靠硬件 SWAP 保证执行地址不变，天然不需要 PIC——能用硬件解决的事，别让软件背锅。</strong></p>
+</blockquote>
+
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="http://example.com/2026/08/02/%E5%B5%8C%E5%85%A5%E5%BC%8F%E5%9B%BA%E4%BB%B6%E5%9C%B0%E5%9D%80%E4%B8%89%E4%BB%B6%E5%A5%97-LMA-VMA-XIP%E4%B8%8EPIC/" data-id="cmsb2wk960008bglmert6afgm" data-title="嵌入式固件地址三件套：加载地址、运行时地址、XIP 与 PIC" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      
+      
+      
+  <ul class="article-tag-list" itemprop="keywords"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/AURIX/" rel="tag">AURIX</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/LMA/" rel="tag">LMA</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Linker-Script/" rel="tag">Linker Script</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/PIC/" rel="tag">PIC</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/RT-Thread/" rel="tag">RT-Thread</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/SOTA/" rel="tag">SOTA</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/TC375/" rel="tag">TC375</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/TriCore/" rel="tag">TriCore</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/VMA/" rel="tag">VMA</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/XIP/" rel="tag">XIP</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/%E5%B5%8C%E5%85%A5%E5%BC%8F/" rel="tag">嵌入式</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/%E8%8B%B1%E9%A3%9E%E5%87%8C/" rel="tag">英飞凌</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/%E9%93%BE%E6%8E%A5%E8%84%9A%E6%9C%AC/" rel="tag">链接脚本</a></li></ul>
+
+    </footer>
+  </div>
+  
+</article>
+
+
+
+  
     <article id="post-嵌入式链接脚本详解：从零理解Linker-Script" class="h-entry article article-type-post" itemprop="blogPost" itemscope itemtype="https://schema.org/BlogPosting">
   <div class="article-meta">
     <a href="/2026/08/01/%E5%B5%8C%E5%85%A5%E5%BC%8F%E9%93%BE%E6%8E%A5%E8%84%9A%E6%9C%AC%E8%AF%A6%E8%A7%A3%EF%BC%9A%E4%BB%8E%E9%9B%B6%E7%90%86%E8%A7%A3Linker-Script/" class="article-date">
@@ -103,7 +676,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2026/08/01/%E5%B5%8C%E5%85%A5%E5%BC%8F%E9%93%BE%E6%8E%A5%E8%84%9A%E6%9C%AC%E8%AF%A6%E8%A7%A3%EF%BC%9A%E4%BB%8E%E9%9B%B6%E7%90%86%E8%A7%A3Linker-Script/" data-id="cmsa2gwya000b8ulm1fb08hxc" data-title="嵌入式链接脚本详解：以英飞凌TC375为例" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2026/08/01/%E5%B5%8C%E5%85%A5%E5%BC%8F%E9%93%BE%E6%8E%A5%E8%84%9A%E6%9C%AC%E8%AF%A6%E8%A7%A3%EF%BC%9A%E4%BB%8E%E9%9B%B6%E7%90%86%E8%A7%A3Linker-Script/" data-id="cmsb2wk98000bbglm8gxibpf3" data-title="嵌入式链接脚本详解：以英飞凌TC375为例" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
@@ -300,7 +873,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2026/08/01/Linux%E8%BD%AF%E4%BB%B6%E5%90%AF%E5%8A%A8%E8%BF%87%E7%A8%8B%E8%AF%A6%E8%A7%A3/" data-id="cmsa2gwy300038ulmgfgx1tnf" data-title="Linux软件启动过程详解" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2026/08/01/Linux%E8%BD%AF%E4%BB%B6%E5%90%AF%E5%8A%A8%E8%BF%87%E7%A8%8B%E8%AF%A6%E8%A7%A3/" data-id="cmsb2wk920003bglm7gk6da3n" data-title="Linux软件启动过程详解" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
@@ -442,7 +1015,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2026/08/01/%E5%A6%82%E4%BD%95%E5%BC%80%E5%8F%91%E9%83%A8%E7%BD%B2AUTOSAR-Agent/" data-id="cmsa2gwy700078ulm2m518uh7" data-title="如何开发部署AUTOSAR-Agent" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2026/08/01/%E5%A6%82%E4%BD%95%E5%BC%80%E5%8F%91%E9%83%A8%E7%BD%B2AUTOSAR-Agent/" data-id="cmsb2wk950007bglm4ib13gne" data-title="如何开发部署AUTOSAR-Agent" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
@@ -1167,7 +1740,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2026/08/01/%E7%94%B5%E6%9C%BA%E6%8E%A7%E5%88%B6%E7%9F%A5%E8%AF%86%E4%BD%93%E7%B3%BB%E5%85%A5%E9%97%A8%EF%BC%9A%E4%BB%8E%E7%94%B5%E6%9C%BA%E5%8E%9F%E7%90%86%E5%88%B0FOC%E5%AE%9E%E6%88%98/" data-id="cmsa2gwyc000e8ulm7th08b8z" data-title="电机控制知识体系入门：从电机原理到FOC实战" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2026/08/01/%E7%94%B5%E6%9C%BA%E6%8E%A7%E5%88%B6%E7%9F%A5%E8%AF%86%E4%BD%93%E7%B3%BB%E5%85%A5%E9%97%A8%EF%BC%9A%E4%BB%8E%E7%94%B5%E6%9C%BA%E5%8E%9F%E7%90%86%E5%88%B0FOC%E5%AE%9E%E6%88%98/" data-id="cmsb2wk9c000hbglm2on8856c" data-title="电机控制知识体系入门：从电机原理到FOC实战" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
@@ -1413,7 +1986,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2026/08/01/%E4%BD%BF%E7%94%A8-Ventoy-%E5%88%B6%E4%BD%9C-U-%E7%9B%98%E5%90%AF%E5%8A%A8%E7%9B%98%E5%AE%8C%E5%85%A8%E6%8C%87%E5%8D%97/" data-id="cmsa2gwy500058ulmfynj55ch" data-title="使用 Ventoy 制作 U 盘启动盘完全指南" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2026/08/01/%E4%BD%BF%E7%94%A8-Ventoy-%E5%88%B6%E4%BD%9C-U-%E7%9B%98%E5%90%AF%E5%8A%A8%E7%9B%98%E5%AE%8C%E5%85%A8%E6%8C%87%E5%8D%97/" data-id="cmsb2wk940005bglm2c2igppg" data-title="使用 Ventoy 制作 U 盘启动盘完全指南" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
@@ -1576,7 +2149,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2026/07/31/%E7%94%A8%E9%A3%9E%E4%B9%A6%E8%BF%9E%E6%8E%A5AUTOSAR-Agent-%E6%89%8B%E6%9C%BA%E8%BF%9C%E7%A8%8B%E6%93%8D%E6%8E%A7%E6%8C%87%E5%8D%97/" data-id="cmsa2gwyb000d8ulmdw2t21oq" data-title="用飞书连接AUTOSAR-Agent-手机远程操控指南" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2026/07/31/%E7%94%A8%E9%A3%9E%E4%B9%A6%E8%BF%9E%E6%8E%A5AUTOSAR-Agent-%E6%89%8B%E6%9C%BA%E8%BF%9C%E7%A8%8B%E6%93%8D%E6%8E%A7%E6%8C%87%E5%8D%97/" data-id="cmsb2wk9a000ebglma6xr6z8i" data-title="用飞书连接AUTOSAR-Agent-手机远程操控指南" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
@@ -2330,7 +2903,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2026/07/31/CANoe-CAPL%E8%84%9A%E6%9C%AC%E6%B5%8B%E8%AF%95%E5%85%A5%E9%97%A8%E4%B8%8E%E5%AE%9E%E8%B7%B5/" data-id="cmsa2gwxt00008ulmgtvf5c23" data-title="CANoe CAPL脚本测试入门与实践" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2026/07/31/CANoe-CAPL%E8%84%9A%E6%9C%AC%E6%B5%8B%E8%AF%95%E5%85%A5%E9%97%A8%E4%B8%8E%E5%AE%9E%E8%B7%B5/" data-id="cmsb2wk8r0000bglm8brg6388" data-title="CANoe CAPL脚本测试入门与实践" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
@@ -2681,7 +3254,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2026/07/31/Linux%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86%E8%AF%A6%E8%A7%A3/" data-id="cmsa2gwy000018ulm8rjg5nbt" data-title="Linux内存管理详解" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2026/07/31/Linux%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86%E8%AF%A6%E8%A7%A3/" data-id="cmsb2wk8y0001bglm4o19asja" data-title="Linux内存管理详解" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
@@ -2727,63 +3300,12 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2026/07/31/%E6%B5%8B%E8%AF%95%E6%96%87%E7%AB%A0-%E8%87%AA%E5%8A%A8%E9%83%A8%E7%BD%B2%E9%AA%8C%E8%AF%81/" data-id="cmsa2gwy9000a8ulma11s1rd7" data-title="测试文章-自动部署验证" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2026/07/31/%E6%B5%8B%E8%AF%95%E6%96%87%E7%AB%A0-%E8%87%AA%E5%8A%A8%E9%83%A8%E7%BD%B2%E9%AA%8C%E8%AF%81/" data-id="cmsb2wk99000dbglmh35f4dq5" data-title="测试文章-自动部署验证" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
   <ul class="article-tag-list" itemprop="keywords"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/%E6%B5%8B%E8%AF%95/" rel="tag">测试</a></li></ul>
 
-    </footer>
-  </div>
-  
-</article>
-
-
-
-  
-    <article id="post-hello-world" class="h-entry article article-type-post" itemprop="blogPost" itemscope itemtype="https://schema.org/BlogPosting">
-  <div class="article-meta">
-    <a href="/2026/07/31/hello-world/" class="article-date">
-  <time class="dt-published" datetime="2026-07-31T09:50:31.569Z" itemprop="datePublished">2026-07-31</time>
-</a>
-    
-  </div>
-  <div class="article-inner">
-    
-    
-      <header class="article-header">
-        
-  
-    <h1 itemprop="name">
-      <a class="p-name article-title" href="/2026/07/31/hello-world/">Hello World</a>
-    </h1>
-  
-
-      </header>
-    
-    <div class="e-content article-entry" itemprop="articleBody">
-      
-        <p>Welcome to <a target="_blank" rel="noopener" href="https://hexo.io/">Hexo</a>! This is your very first post. Check <a target="_blank" rel="noopener" href="https://hexo.io/docs/">documentation</a> for more info. If you get any problems when using Hexo, you can find the answer in <a target="_blank" rel="noopener" href="https://hexo.io/docs/troubleshooting.html">troubleshooting</a> or you can ask me on <a target="_blank" rel="noopener" href="https://github.com/hexojs/hexo/issues">GitHub</a>.</p>
-<h2 id="Quick-Start"><a href="#Quick-Start" class="headerlink" title="Quick Start"></a>Quick Start</h2><h3 id="Create-a-new-post"><a href="#Create-a-new-post" class="headerlink" title="Create a new post"></a>Create a new post</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ hexo new <span class="string">&quot;My New Post&quot;</span></span><br></pre></td></tr></table></figure>
-
-<p>More info: <a target="_blank" rel="noopener" href="https://hexo.io/docs/writing.html">Writing</a></p>
-<h3 id="Run-server"><a href="#Run-server" class="headerlink" title="Run server"></a>Run server</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ hexo server</span><br></pre></td></tr></table></figure>
-
-<p>More info: <a target="_blank" rel="noopener" href="https://hexo.io/docs/server.html">Server</a></p>
-<h3 id="Generate-static-files"><a href="#Generate-static-files" class="headerlink" title="Generate static files"></a>Generate static files</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ hexo generate</span><br></pre></td></tr></table></figure>
-
-<p>More info: <a target="_blank" rel="noopener" href="https://hexo.io/docs/generating.html">Generating</a></p>
-<h3 id="Deploy-to-remote-sites"><a href="#Deploy-to-remote-sites" class="headerlink" title="Deploy to remote sites"></a>Deploy to remote sites</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ hexo deploy</span><br></pre></td></tr></table></figure>
-
-<p>More info: <a target="_blank" rel="noopener" href="https://hexo.io/docs/one-command-deployment.html">Deployment</a></p>
-
-      
-    </div>
-    <footer class="article-footer">
-      <a data-url="http://example.com/2026/07/31/hello-world/" data-id="cmsa2gwy400048ulm453xc19e" data-title="Hello World" class="article-share-link"><span class="fa fa-share">Share</span></a>
-      
-      
-      
     </footer>
   </div>
   
@@ -2810,7 +3332,7 @@
   <div class="widget-wrap">
     <h3 class="widget-title">Tags</h3>
     <div class="widget">
-      <ul class="tag-list" itemprop="keywords"><li class="tag-list-item"><a class="tag-list-link" href="/tags/AI-Agent/" rel="tag">AI Agent</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/AURIX/" rel="tag">AURIX</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/AUTOSAR/" rel="tag">AUTOSAR</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/CANoe/" rel="tag">CANoe</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/CAPL/" rel="tag">CAPL</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/FOC/" rel="tag">FOC</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/GCC/" rel="tag">GCC</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Linker-Script/" rel="tag">Linker Script</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Linux/" rel="tag">Linux</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/TC375/" rel="tag">TC375</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/TriCore/" rel="tag">TriCore</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/U%E7%9B%98%E5%90%AF%E5%8A%A8%E7%9B%98/" rel="tag">U盘启动盘</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Ventoy/" rel="tag">Ventoy</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/opencode/" rel="tag">opencode</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86/" rel="tag">内存管理</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%86%85%E6%A0%B8/" rel="tag">内核</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%90%AF%E5%8A%A8%E8%BF%87%E7%A8%8B/" rel="tag">启动过程</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/" rel="tag">学习笔记</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%B5%8C%E5%85%A5%E5%BC%8F/" rel="tag">嵌入式</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%BC%80%E5%8F%91/" rel="tag">开发</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%BC%95%E5%AF%BC/" rel="tag">引导</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E6%95%88%E7%8E%87%E5%B7%A5%E5%85%B7/" rel="tag">效率工具</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E6%B1%87%E7%BC%96/" rel="tag">汇编</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E6%B1%BD%E8%BD%A6%E7%94%B5%E5%AD%90/" rel="tag">汽车电子</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E6%B5%8B%E8%AF%95/" rel="tag">测试</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E7%94%B5%E5%8A%9B%E7%94%B5%E5%AD%90/" rel="tag">电力电子</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E7%94%B5%E6%9C%BA%E6%8E%A7%E5%88%B6/" rel="tag">电机控制</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E7%B3%BB%E7%BB%9F%E5%AE%89%E8%A3%85/" rel="tag">系统安装</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E8%8B%B1%E9%A3%9E%E5%87%8C/" rel="tag">英飞凌</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E8%A3%85%E6%9C%BA%E5%B7%A5%E5%85%B7/" rel="tag">装机工具</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E9%83%A8%E7%BD%B2/" rel="tag">部署</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E9%93%BE%E6%8E%A5%E8%84%9A%E6%9C%AC/" rel="tag">链接脚本</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E9%A3%9E%E4%B9%A6/" rel="tag">飞书</a></li></ul>
+      <ul class="tag-list" itemprop="keywords"><li class="tag-list-item"><a class="tag-list-link" href="/tags/AI-Agent/" rel="tag">AI Agent</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/AURIX/" rel="tag">AURIX</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/AUTOSAR/" rel="tag">AUTOSAR</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/CANoe/" rel="tag">CANoe</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/CAPL/" rel="tag">CAPL</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/FOC/" rel="tag">FOC</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/GCC/" rel="tag">GCC</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/LMA/" rel="tag">LMA</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Linker-Script/" rel="tag">Linker Script</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Linux/" rel="tag">Linux</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/PIC/" rel="tag">PIC</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/RT-Thread/" rel="tag">RT-Thread</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/SOTA/" rel="tag">SOTA</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/TC375/" rel="tag">TC375</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/TriCore/" rel="tag">TriCore</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/U%E7%9B%98%E5%90%AF%E5%8A%A8%E7%9B%98/" rel="tag">U盘启动盘</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/VMA/" rel="tag">VMA</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Ventoy/" rel="tag">Ventoy</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/XIP/" rel="tag">XIP</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/opencode/" rel="tag">opencode</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86/" rel="tag">内存管理</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%86%85%E6%A0%B8/" rel="tag">内核</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%90%AF%E5%8A%A8%E8%BF%87%E7%A8%8B/" rel="tag">启动过程</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/" rel="tag">学习笔记</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%B5%8C%E5%85%A5%E5%BC%8F/" rel="tag">嵌入式</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%BC%80%E5%8F%91/" rel="tag">开发</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%BC%95%E5%AF%BC/" rel="tag">引导</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E6%95%88%E7%8E%87%E5%B7%A5%E5%85%B7/" rel="tag">效率工具</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E6%B1%87%E7%BC%96/" rel="tag">汇编</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E6%B1%BD%E8%BD%A6%E7%94%B5%E5%AD%90/" rel="tag">汽车电子</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E6%B5%8B%E8%AF%95/" rel="tag">测试</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E7%94%B5%E5%8A%9B%E7%94%B5%E5%AD%90/" rel="tag">电力电子</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E7%94%B5%E6%9C%BA%E6%8E%A7%E5%88%B6/" rel="tag">电机控制</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E7%B3%BB%E7%BB%9F%E5%AE%89%E8%A3%85/" rel="tag">系统安装</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E8%8B%B1%E9%A3%9E%E5%87%8C/" rel="tag">英飞凌</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E8%A3%85%E6%9C%BA%E5%B7%A5%E5%85%B7/" rel="tag">装机工具</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E9%83%A8%E7%BD%B2/" rel="tag">部署</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E9%93%BE%E6%8E%A5%E8%84%9A%E6%9C%AC/" rel="tag">链接脚本</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E9%A3%9E%E4%B9%A6/" rel="tag">飞书</a></li></ul>
     </div>
   </div>
 
@@ -2820,7 +3342,7 @@
   <div class="widget-wrap">
     <h3 class="widget-title">Tag Cloud</h3>
     <div class="widget tagcloud">
-      <a href="/tags/AI-Agent/" style="font-size: 15px;">AI Agent</a> <a href="/tags/AURIX/" style="font-size: 10px;">AURIX</a> <a href="/tags/AUTOSAR/" style="font-size: 15px;">AUTOSAR</a> <a href="/tags/CANoe/" style="font-size: 10px;">CANoe</a> <a href="/tags/CAPL/" style="font-size: 10px;">CAPL</a> <a href="/tags/FOC/" style="font-size: 10px;">FOC</a> <a href="/tags/GCC/" style="font-size: 10px;">GCC</a> <a href="/tags/Linker-Script/" style="font-size: 10px;">Linker Script</a> <a href="/tags/Linux/" style="font-size: 20px;">Linux</a> <a href="/tags/TC375/" style="font-size: 10px;">TC375</a> <a href="/tags/TriCore/" style="font-size: 10px;">TriCore</a> <a href="/tags/U%E7%9B%98%E5%90%AF%E5%8A%A8%E7%9B%98/" style="font-size: 10px;">U盘启动盘</a> <a href="/tags/Ventoy/" style="font-size: 10px;">Ventoy</a> <a href="/tags/opencode/" style="font-size: 15px;">opencode</a> <a href="/tags/%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86/" style="font-size: 10px;">内存管理</a> <a href="/tags/%E5%86%85%E6%A0%B8/" style="font-size: 15px;">内核</a> <a href="/tags/%E5%90%AF%E5%8A%A8%E8%BF%87%E7%A8%8B/" style="font-size: 10px;">启动过程</a> <a href="/tags/%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/" style="font-size: 10px;">学习笔记</a> <a href="/tags/%E5%B5%8C%E5%85%A5%E5%BC%8F/" style="font-size: 15px;">嵌入式</a> <a href="/tags/%E5%BC%80%E5%8F%91/" style="font-size: 10px;">开发</a> <a href="/tags/%E5%BC%95%E5%AF%BC/" style="font-size: 10px;">引导</a> <a href="/tags/%E6%95%88%E7%8E%87%E5%B7%A5%E5%85%B7/" style="font-size: 15px;">效率工具</a> <a href="/tags/%E6%B1%87%E7%BC%96/" style="font-size: 15px;">汇编</a> <a href="/tags/%E6%B1%BD%E8%BD%A6%E7%94%B5%E5%AD%90/" style="font-size: 10px;">汽车电子</a> <a href="/tags/%E6%B5%8B%E8%AF%95/" style="font-size: 15px;">测试</a> <a href="/tags/%E7%94%B5%E5%8A%9B%E7%94%B5%E5%AD%90/" style="font-size: 10px;">电力电子</a> <a href="/tags/%E7%94%B5%E6%9C%BA%E6%8E%A7%E5%88%B6/" style="font-size: 10px;">电机控制</a> <a href="/tags/%E7%B3%BB%E7%BB%9F%E5%AE%89%E8%A3%85/" style="font-size: 10px;">系统安装</a> <a href="/tags/%E8%8B%B1%E9%A3%9E%E5%87%8C/" style="font-size: 10px;">英飞凌</a> <a href="/tags/%E8%A3%85%E6%9C%BA%E5%B7%A5%E5%85%B7/" style="font-size: 10px;">装机工具</a> <a href="/tags/%E9%83%A8%E7%BD%B2/" style="font-size: 10px;">部署</a> <a href="/tags/%E9%93%BE%E6%8E%A5%E8%84%9A%E6%9C%AC/" style="font-size: 10px;">链接脚本</a> <a href="/tags/%E9%A3%9E%E4%B9%A6/" style="font-size: 10px;">飞书</a>
+      <a href="/tags/AI-Agent/" style="font-size: 15px;">AI Agent</a> <a href="/tags/AURIX/" style="font-size: 15px;">AURIX</a> <a href="/tags/AUTOSAR/" style="font-size: 15px;">AUTOSAR</a> <a href="/tags/CANoe/" style="font-size: 10px;">CANoe</a> <a href="/tags/CAPL/" style="font-size: 10px;">CAPL</a> <a href="/tags/FOC/" style="font-size: 10px;">FOC</a> <a href="/tags/GCC/" style="font-size: 10px;">GCC</a> <a href="/tags/LMA/" style="font-size: 10px;">LMA</a> <a href="/tags/Linker-Script/" style="font-size: 15px;">Linker Script</a> <a href="/tags/Linux/" style="font-size: 20px;">Linux</a> <a href="/tags/PIC/" style="font-size: 10px;">PIC</a> <a href="/tags/RT-Thread/" style="font-size: 10px;">RT-Thread</a> <a href="/tags/SOTA/" style="font-size: 10px;">SOTA</a> <a href="/tags/TC375/" style="font-size: 15px;">TC375</a> <a href="/tags/TriCore/" style="font-size: 15px;">TriCore</a> <a href="/tags/U%E7%9B%98%E5%90%AF%E5%8A%A8%E7%9B%98/" style="font-size: 10px;">U盘启动盘</a> <a href="/tags/VMA/" style="font-size: 10px;">VMA</a> <a href="/tags/Ventoy/" style="font-size: 10px;">Ventoy</a> <a href="/tags/XIP/" style="font-size: 10px;">XIP</a> <a href="/tags/opencode/" style="font-size: 15px;">opencode</a> <a href="/tags/%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86/" style="font-size: 10px;">内存管理</a> <a href="/tags/%E5%86%85%E6%A0%B8/" style="font-size: 15px;">内核</a> <a href="/tags/%E5%90%AF%E5%8A%A8%E8%BF%87%E7%A8%8B/" style="font-size: 10px;">启动过程</a> <a href="/tags/%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/" style="font-size: 10px;">学习笔记</a> <a href="/tags/%E5%B5%8C%E5%85%A5%E5%BC%8F/" style="font-size: 20px;">嵌入式</a> <a href="/tags/%E5%BC%80%E5%8F%91/" style="font-size: 10px;">开发</a> <a href="/tags/%E5%BC%95%E5%AF%BC/" style="font-size: 10px;">引导</a> <a href="/tags/%E6%95%88%E7%8E%87%E5%B7%A5%E5%85%B7/" style="font-size: 15px;">效率工具</a> <a href="/tags/%E6%B1%87%E7%BC%96/" style="font-size: 15px;">汇编</a> <a href="/tags/%E6%B1%BD%E8%BD%A6%E7%94%B5%E5%AD%90/" style="font-size: 10px;">汽车电子</a> <a href="/tags/%E6%B5%8B%E8%AF%95/" style="font-size: 15px;">测试</a> <a href="/tags/%E7%94%B5%E5%8A%9B%E7%94%B5%E5%AD%90/" style="font-size: 10px;">电力电子</a> <a href="/tags/%E7%94%B5%E6%9C%BA%E6%8E%A7%E5%88%B6/" style="font-size: 10px;">电机控制</a> <a href="/tags/%E7%B3%BB%E7%BB%9F%E5%AE%89%E8%A3%85/" style="font-size: 10px;">系统安装</a> <a href="/tags/%E8%8B%B1%E9%A3%9E%E5%87%8C/" style="font-size: 15px;">英飞凌</a> <a href="/tags/%E8%A3%85%E6%9C%BA%E5%B7%A5%E5%85%B7/" style="font-size: 10px;">装机工具</a> <a href="/tags/%E9%83%A8%E7%BD%B2/" style="font-size: 10px;">部署</a> <a href="/tags/%E9%93%BE%E6%8E%A5%E8%84%9A%E6%9C%AC/" style="font-size: 15px;">链接脚本</a> <a href="/tags/%E9%A3%9E%E4%B9%A6/" style="font-size: 10px;">飞书</a>
     </div>
   </div>
 
@@ -2842,6 +3364,10 @@
       <ul>
         
           <li>
+            <a href="/2026/08/02/%E5%B5%8C%E5%85%A5%E5%BC%8F%E5%9B%BA%E4%BB%B6%E5%9C%B0%E5%9D%80%E4%B8%89%E4%BB%B6%E5%A5%97-LMA-VMA-XIP%E4%B8%8EPIC/">嵌入式固件地址三件套：加载地址、运行时地址、XIP 与 PIC</a>
+          </li>
+        
+          <li>
             <a href="/2026/08/01/%E5%B5%8C%E5%85%A5%E5%BC%8F%E9%93%BE%E6%8E%A5%E8%84%9A%E6%9C%AC%E8%AF%A6%E8%A7%A3%EF%BC%9A%E4%BB%8E%E9%9B%B6%E7%90%86%E8%A7%A3Linker-Script/">嵌入式链接脚本详解：以英飞凌TC375为例</a>
           </li>
         
@@ -2855,10 +3381,6 @@
         
           <li>
             <a href="/2026/08/01/%E7%94%B5%E6%9C%BA%E6%8E%A7%E5%88%B6%E7%9F%A5%E8%AF%86%E4%BD%93%E7%B3%BB%E5%85%A5%E9%97%A8%EF%BC%9A%E4%BB%8E%E7%94%B5%E6%9C%BA%E5%8E%9F%E7%90%86%E5%88%B0FOC%E5%AE%9E%E6%88%98/">电机控制知识体系入门：从电机原理到FOC实战</a>
-          </li>
-        
-          <li>
-            <a href="/2026/08/01/%E4%BD%BF%E7%94%A8-Ventoy-%E5%88%B6%E4%BD%9C-U-%E7%9B%98%E5%90%AF%E5%8A%A8%E7%9B%98%E5%AE%8C%E5%85%A8%E6%8C%87%E5%8D%97/">使用 Ventoy 制作 U 盘启动盘完全指南</a>
           </li>
         
       </ul>
