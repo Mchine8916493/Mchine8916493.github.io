@@ -364,7 +364,94 @@
 <li>访问全局数据却用 <strong>绝对地址</strong>（movw&#x2F;movt 写死 VMA）。</li>
 </ul>
 <p><strong>为什么可以放心用绝对地址？</strong> 因为这是固定链接固件，代码就在 Flash 里原地跑（XIP），LMA&#x3D;&#x3D;VMA，<strong>运行位置永远不变</strong> → 绝对寻址完全可靠。这就是<strong>裸机&#x2F;RTOS 程序默认不用 PIC 的原因</strong>。</p>
-<h2 id="七、实战②：TC375-SOTA-到底用不用-PIC？"><a href="#七、实战②：TC375-SOTA-到底用不用-PIC？" class="headerlink" title="七、实战②：TC375 SOTA 到底用不用 PIC？"></a>七、实战②：TC375 SOTA 到底用不用 PIC？</h2><blockquote>
+<h2 id="七、搬运与交接：谁把代码搬到-RAM，搬完怎么跑起来"><a href="#七、搬运与交接：谁把代码搬到-RAM，搬完怎么跑起来" class="headerlink" title="七、搬运与交接：谁把代码搬到 RAM，搬完怎么跑起来"></a>七、搬运与交接：谁把代码搬到 RAM，搬完怎么跑起来</h2><blockquote>
+<p>前面讲了”搬什么、搬去哪”，这里回答两个更深入的问题：<strong>谁在哪个阶段搬</strong>、<strong>搬完后怎么把执行流交到 RAM 里</strong>。</p>
+</blockquote>
+<h3 id="7-1-谁在哪个阶段把程序搬到-RAM"><a href="#7-1-谁在哪个阶段把程序搬到-RAM" class="headerlink" title="7.1 谁在哪个阶段把程序搬到 RAM"></a>7.1 谁在哪个阶段把程序搬到 RAM</h3><p>搬运动作发生在”复位后、main() 之前”的启动阶段，由<strong>用户程序的启动代码</strong>执行。以 TC375 为例，一条完整的搬运链分三个阶段：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><span class="line">┌─ 阶段0 ─────────────────────────────────────────────┐</span><br><span class="line">│ 上电/复位                                            │</span><br><span class="line">│   CPU0 从 BootROM(BROM) 开始执行 —— ROM 里的固件，    │</span><br><span class="line">│   不可修改，不属于你的程序                            │</span><br><span class="line">│   · 读 BMI/BMHD（UCB 配置块）                        │</span><br><span class="line">│   · CRC 校验 Boot Header                            │</span><br><span class="line">│   · 通过 → 跳到用户程序起始地址 STAD                  │</span><br><span class="line">│   · 失败 → 进入 Bootstrap Loader（CAN/ASC 加载）     │</span><br><span class="line">│   ★ BootROM 只负责&quot;跳&quot;，不搬你的代码                 │</span><br><span class="line">└─────────────────────────────────────────────────────┘</span><br><span class="line">              │ 跳到 App 入口 __START (0x80000000, XIP)</span><br><span class="line">              ▼</span><br><span class="line">┌─ 阶段1 ─────────────────────────────────────────────┐</span><br><span class="line">│ App 的启动代码（cstart / __START / _c_init）        │</span><br><span class="line">│   ★ 它跑在 PFLASH 里（XIP），但干的是&quot;搬&quot;的活：     │</span><br><span class="line">│   ① 设 SP / CSA                                    │</span><br><span class="line">│   ② 处理链接器生成的 copy table：                   │</span><br><span class="line">│      .data 段             LMA(Flash) → VMA(RAM)     │</span><br><span class="line">│      需要 RAM 运行的代码段  LMA(Flash) → VMA(PSPR)  │</span><br><span class="line">│   ③ 处理 clear table：.bss 清零                     │</span><br><span class="line">│   ④ 设 BIV/BTV 向量表                              │</span><br><span class="line">│   ★ 这是&quot;把早期存在 PFLASH 的程序搬到 RAM&quot;的主力     │</span><br><span class="line">└─────────────────────────────────────────────────────┘</span><br><span class="line">              │ main() / core0_main()</span><br><span class="line">              ▼</span><br><span class="line">┌─ 阶段2 ─────────────────────────────────────────────┐</span><br><span class="line">│ 运行期间（例如 SOTA 下载时）                        │</span><br><span class="line">│   copyFunctionsToPSPR() —— 由运行中的 App 调用      │</span><br><span class="line">│   把 Flash 擦写函数从 PFLASH 拷到 PSPR，切换函数指针 │</span><br><span class="line">│   ★ 这是&quot;运行期主动搬运&quot;：目的：不在被擦的 bank 上取指│</span><br><span class="line">└─────────────────────────────────────────────────────┘</span><br></pre></td></tr></table></figure>
+
+<p><strong>结论：阶段 1 的 App 启动代码是主力搬运者</strong>；阶段 2 的 <code>copyFunctionsToPSPR()</code> 是特殊场景下的运行期搬运；BootROM 全程不参与搬运。</p>
+<h3 id="7-2-搬运表是谁生成的？——链接器"><a href="#7-2-搬运表是谁生成的？——链接器" class="headerlink" title="7.2 搬运表是谁生成的？——链接器"></a>7.2 搬运表是谁生成的？——链接器</h3><p>启动代码能搬，是因为<strong>链接器</strong>在链接时（根据 <code>.lsl</code> 脚本）生成了搬运表：</p>
+<figure class="highlight lsl"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">section_layout :vtc:linear</span><br><span class="line">&#123;</span><br><span class="line">    <span class="comment">/* 代码段：运行地址在 PSPR(RAM)，加载地址在 PFLASH */</span></span><br><span class="line">    group TC0_FUNCTIONS ( ordered, run_addr = mem:mpe:pspr0, copy )</span><br><span class="line">    &#123;</span><br><span class="line">        select <span class="string">&quot;.text.file_1.init_func&quot;</span>;   <span class="comment">/* 生成 ROM copy 段 [.text.xxx] */</span></span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>链接器生成的 map 里可以看到两个地址：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">mpe:pflash0 | [.text.file_1.init_func]   LMA = 0x800000ac   ← 代码原始存放处</span><br><span class="line">mpe:pspr0   |  .text.file_1.init_func    VMA = 0x70100000   ← 代码最终运行处</span><br></pre></td></tr></table></figure>
+
+<p>同时链接器生成一张 <strong>copy table</strong>，每条记录三个量：<strong>源地址(LMA)、目标地址(VMA)、长度</strong>。启动代码就是”照着这张表逐条 memcpy”。与前面 RA2A1 工程的 <code>__ram_from_flash$$Base/Limit/Load</code> 是同一套机制——只是 ARM 用链接器符号，TriCore 用 copy table，本质都是”LMA→VMA 清单”。</p>
+<h3 id="7-3-为什么搬运者能安心跑在-Flash-里？"><a href="#7-3-为什么搬运者能安心跑在-Flash-里？" class="headerlink" title="7.3 为什么搬运者能安心跑在 Flash 里？"></a>7.3 为什么搬运者能安心跑在 Flash 里？</h3><p>因为<strong>源在 Flash、目标在 RAM，二者不重叠</strong>——搬运过程中 Flash 里的代码不会被自己改，所以”从 Flash 拷到 RAM”这个动作在 Flash 里执行完全安全。</p>
+<p><strong>那什么情况会”自杀”？</strong> 当你要<strong>擦掉&#x2F;改写 Flash 源区域</strong>时（SOTA 下载、OTA 升级），如果还从 Flash 取指就会崩。所以两步走：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">第 1 步：还在 Flash 跑 → 把擦写函数拷到 PSPR（copyFunctionsToPSPR）</span><br><span class="line">第 2 步：把函数指针切到 PSPR 地址</span><br><span class="line">第 3 步：此时擦写 Flash 才安全（取指在 PSPR，擦的是 Flash）</span><br></pre></td></tr></table></figure>
+
+<h3 id="7-4-搬运结束后：怎么把执行流交到-RAM"><a href="#7-4-搬运结束后：怎么把执行流交到-RAM" class="headerlink" title="7.4 搬运结束后：怎么把执行流交到 RAM"></a>7.4 搬运结束后：怎么把执行流交到 RAM</h3><p>核心结论：<strong>通过”跳转到 RAM 里的 VMA 地址”完成交接</strong>。能直接跳的原因是——<strong>代码的链接地址就是 RAM 地址（VMA），内部所有引用在链接时都已按 VMA 解析好</strong>，只要拷贝时”精确落到 VMA”，跳过去就能跑。</p>
+<table>
+<thead>
+<tr>
+<th>代码内部的引用</th>
+<th>为什么换地方跑还能用</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>跳转指令</strong>（B&#x2F;CALL&#x2F;BL）</td>
+<td>PC 相对寻址，<strong>天然位置无关</strong>，偏移量不变</td>
+</tr>
+<tr>
+<td><strong>数据访问</strong>（全局变量、常量池）</td>
+<td>绝对寻址，指向<strong>数据的链接地址</strong>——数据在它该在的地方就正常</td>
+</tr>
+</tbody></table>
+<p>三种交接方式：</p>
+<p><strong>方式 A：函数指针（最常见，SOTA 擦写例程标准做法）</strong></p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">typedef</span> <span class="title function_">void</span> <span class="params">(*pFlashFunc_t)</span><span class="params">(<span class="type">void</span>)</span>;</span><br><span class="line"><span class="type">static</span> pFlashFunc_t eraseFunc;    <span class="comment">/* 函数指针，将指向 PSPR 里的副本 */</span></span><br><span class="line"></span><br><span class="line"><span class="type">void</span> <span class="title function_">copyFunctionsToPSPR</span><span class="params">(<span class="type">void</span>)</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="comment">/* ① 还在 Flash 里跑：把擦写函数拷到 PSPR */</span></span><br><span class="line">    <span class="built_in">memcpy</span>((<span class="type">void</span>*)<span class="number">0x70100000</span>, (<span class="type">const</span> <span class="type">void</span>*)<span class="number">0x800000ac</span>, size);</span><br><span class="line">    <span class="comment">/* ② 交接：把函数指针指向 RAM 里的副本地址（VMA） */</span></span><br><span class="line">    eraseFunc = (pFlashFunc_t)<span class="number">0x70100000</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="type">void</span> <span class="title function_">doErase</span><span class="params">(<span class="type">void</span>)</span></span><br><span class="line">&#123;</span><br><span class="line">    eraseFunc();   <span class="comment">/* ③ 调用 —— 实际跳进 PSPR 里的代码执行 */</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><code>eraseFunc()</code> 编译出来是<strong>间接调用</strong>：ARM 是 <code>BLX rX</code>、TriCore 是 <code>CALLI rX</code>，目标在寄存器里，<strong>不受范围限制、能跳任意地址</strong>——这就是交接的载体。</p>
+<p><strong>方式 B：直接长跳转 &#x2F; 硬跳（整个 App 在 RAM 里跑时）</strong></p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">void</span> (*entry)(<span class="type">void</span>) = (<span class="type">void</span>(*)(<span class="type">void</span>))<span class="number">0x90000000</span>;</span><br><span class="line">entry();              <span class="comment">/* 直接跳到 RAM 里的 App 入口 */</span></span><br></pre></td></tr></table></figure>
+
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">; ARM: 间接跳转</span><br><span class="line">LDR   r0, =0x90000000</span><br><span class="line">BX    r0              ; 注意：最后一位是 ARM/Thumb 状态标志，bit0 必须=1</span><br><span class="line"></span><br><span class="line">; TriCore: 间接跳转</span><br><span class="line">mov.a  a0, 0x90000000</span><br><span class="line">JI     a0             ; Jump Indirect，跳到 RAM 入口</span><br></pre></td></tr></table></figure>
+
+<p><strong>方式 C：硬件向量表跳入（ISR 在 RAM 的场景）</strong></p>
+<p>中断到来时不是”谁去调”，而是<strong>硬件到点自动跳</strong>：向量表某项存 ISR 的 VMA（RAM 地址），中断触发 → 硬件读向量 → 跳进 RAM 里的 ISR。交接的对象是<strong>表的基址寄存器</strong>：ARM 设 <code>VTOR</code>、TriCore 设 <code>BIV</code> 指向 RAM 里的表。</p>
+<h3 id="7-5-RAM-函数怎么”回头”？——返回机制与坑"><a href="#7-5-RAM-函数怎么”回头”？——返回机制与坑" class="headerlink" title="7.5 RAM 函数怎么”回头”？——返回机制与坑"></a>7.5 RAM 函数怎么”回头”？——返回机制与坑</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">Flash 里的调用者 (0x800000xx)</span><br><span class="line">    │  CALL 到 RAM (0x70100000)    ← 返回地址被压栈/保存</span><br><span class="line">    ▼</span><br><span class="line">RAM 里的函数执行 (0x70100000)</span><br><span class="line">    │  内部跳转、数据访问都 OK</span><br><span class="line">    │  RET / BX LR                 ← 弹出返回地址</span><br><span class="line">    ▼</span><br><span class="line">回到 Flash 里的调用者，继续跑</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li>ARM：<code>BLX rX</code> 自动把返回地址存 LR，函数末尾 <code>BX LR</code> 回来；</li>
+<li>TriCore：<code>CALLI</code> 把返回地址存进 CSA（上下文保存区），<code>RET</code> 从 CSA 弹出。</li>
+</ul>
+<p><strong>关键约束</strong>：返回地址指向”调用者所在的 Flash”——所以<strong>如果调用者所在的那块 Flash 正在被擦写，就回不去了</strong>。这正是 SOTA 里擦写例程要”自包含”的根本原因：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">✅ 正确：擦写函数拷到 PSPR 后自包含运行（内部不调用仍留在被擦 bank 的代码）</span><br><span class="line">❌ 错误：PSPR 里的擦写函数调用了 active bank 里的辅助函数，然后擦同一块 bank → 调一半取指失败</span><br></pre></td></tr></table></figure>
+
+<h3 id="7-6-注意事项速查"><a href="#7-6-注意事项速查" class="headerlink" title="7.6 注意事项速查"></a>7.6 注意事项速查</h3><table>
+<thead>
+<tr>
+<th>坑</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>必须拷到精确 VMA</strong></td>
+<td>拷贝目标地址错 1 字节，绝对寻址的全局数据访问全错</td>
+</tr>
+<tr>
+<td><strong>调用者所在 Flash 不能被擦</strong></td>
+<td>返回地址指向调用点，擦了就回不去 → 擦写例程要自包含</td>
+</tr>
+<tr>
+<td><strong>拷贝者自身安全</strong></td>
+<td>memcpy&#x2F;搬运代码要跑在”不会被擦的存储”里</td>
+</tr>
+<tr>
+<td><strong>I-Cache &#x2F; 缓存一致性</strong></td>
+<td><strong>DMA</strong> 拷贝代码进 RAM 时需 flush&#x2F;invalidate 指令缓存再跳；CPU 用 memcpy 搬则天然一致</td>
+</tr>
+<tr>
+<td><strong>字节对齐&#x2F;浮点状态</strong></td>
+<td>代码按函数边界、4 字节对齐拷贝；浮点上下文注意 CPn 使能</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p>一句话：**”拷到哪”是 copy table 的事，”跳过去”是函数指针&#x2F;跳转指令的事，”回来”是调用约定的事——三者对了，RAM 程序就跑起来了。**</p>
+</blockquote>
+<h2 id="八、实战②：TC375-SOTA-到底用不用-PIC？"><a href="#八、实战②：TC375-SOTA-到底用不用-PIC？" class="headerlink" title="八、实战②：TC375 SOTA 到底用不用 PIC？"></a>八、实战②：TC375 SOTA 到底用不用 PIC？</h2><blockquote>
 <p>关键事实（Infineon 官方文档确认）：<strong>TC3xx 官方 SOTA 是硬件 bank 交换（SWAP），不需要 PIC。</strong></p>
 </blockquote>
 <h3 id="TC375-内存格局"><a href="#TC375-内存格局" class="headerlink" title="TC375 内存格局"></a>TC375 内存格局</h3><table>
@@ -457,7 +544,7 @@
 <p><strong>易混点</strong>：Flash 擦写函数拷到 PSPR 运行 <strong>≠ PIC</strong>，那是”拷贝到固定 RAM 地址执行”，属于重定位&#x2F;拷贝执行，SOTA 下载阶段都要做。</p>
 <h3 id="对比：STM32-vs-TC375-的”换-bank”"><a href="#对比：STM32-vs-TC375-的”换-bank”" class="headerlink" title="对比：STM32 vs TC375 的”换 bank”"></a>对比：STM32 vs TC375 的”换 bank”</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">STM32（无硬件重映射）：</span><br><span class="line">  物理 bank 地址固定不变，App 换 bank 后运行地址变了</span><br><span class="line">  → 双构建、搬移、或 PIC     ← 软件自己想办法</span><br><span class="line"></span><br><span class="line">TC375（硬件重映射）：</span><br><span class="line">  bank 交换只改地址映射，App 永远从 0x80000000 执行</span><br><span class="line">  → 硬件搞定，不用 PIC</span><br></pre></td></tr></table></figure>
 
-<h2 id="八、如果真要上-PIC，要改哪些东西？"><a href="#八、如果真要上-PIC，要改哪些东西？" class="headerlink" title="八、如果真要上 PIC，要改哪些东西？"></a>八、如果真要上 PIC，要改哪些东西？</h2><blockquote>
+<h2 id="九、如果真要上-PIC，要改哪些东西？"><a href="#九、如果真要上-PIC，要改哪些东西？" class="headerlink" title="九、如果真要上 PIC，要改哪些东西？"></a>九、如果真要上 PIC，要改哪些东西？</h2><blockquote>
 <p>以 TASKING 工具链为例（AURIX 车规主力编译器）。前提：<strong>只用在不走硬件 SWAP、单镜像多地址运行场景</strong>；AUTOSAR + 闭源 MCAL&#x2F;OS 库场景基本走不通，建议双构建。</p>
 </blockquote>
 <h3 id="1-编译-链接选项"><a href="#1-编译-链接选项" class="headerlink" title="1. 编译&#x2F;链接选项"></a>1. 编译&#x2F;链接选项</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">ctc --cpu=tc37x --pic=A12 test.c          <span class="comment"># 编译：EABI 完整 PIC/PID 模式</span></span><br><span class="line">ltc --pic=A12 -L &lt;install&gt;\ctc\lib\pic\tc1.6.2 -deabi_pic.lsl ...  <span class="comment"># 链接</span></span><br><span class="line"><span class="comment"># 简化模式（RAM/ROM 数据各 ≤64KB）：</span></span><br><span class="line">ctc --pic=A0/A1 test.c</span><br></pre></td></tr></table></figure>
@@ -623,14 +710,14 @@
 <td><strong>建议双构建</strong>，比 PIC 靠谱得多</td>
 </tr>
 </tbody></table>
-<h2 id="九、总结：一句话记忆"><a href="#九、总结：一句话记忆" class="headerlink" title="九、总结：一句话记忆"></a>九、总结：一句话记忆</h2><blockquote>
+<h2 id="十、总结：一句话记忆"><a href="#十、总结：一句话记忆" class="headerlink" title="十、总结：一句话记忆"></a>十、总结：一句话记忆</h2><blockquote>
 <p><strong>LMA 决定”烧到哪”，VMA 决定”跑到哪”；.text 常常就地执行（XIP，两者相等），.data 必由 Flash 搬运到 RAM（两者不等），.bss 只清不搬。</strong><br><strong>链接脚本定坐标，启动代码做搬运，.map 文件来验证。</strong><br><strong>PIC 是”地址不确定”场景的救星：共享库、启动早期借宿、双 bank OTA；但 TC375 官方 SOTA 靠硬件 SWAP 保证执行地址不变，天然不需要 PIC——能用硬件解决的事，别让软件背锅。</strong></p>
 </blockquote>
 
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2026/08/02/%E5%B5%8C%E5%85%A5%E5%BC%8F%E5%9B%BA%E4%BB%B6%E5%9C%B0%E5%9D%80%E4%B8%89%E4%BB%B6%E5%A5%97-LMA-VMA-XIP%E4%B8%8EPIC/" data-id="cmsb2wk960008bglmert6afgm" data-title="嵌入式固件地址三件套：加载地址、运行时地址、XIP 与 PIC" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2026/08/02/%E5%B5%8C%E5%85%A5%E5%BC%8F%E5%9B%BA%E4%BB%B6%E5%9C%B0%E5%9D%80%E4%B8%89%E4%BB%B6%E5%A5%97-LMA-VMA-XIP%E4%B8%8EPIC/" data-id="cmsb3cjwh0008w2lm1a33h3fr" data-title="嵌入式固件地址三件套：加载地址、运行时地址、XIP 与 PIC" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
@@ -676,7 +763,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2026/08/01/%E5%B5%8C%E5%85%A5%E5%BC%8F%E9%93%BE%E6%8E%A5%E8%84%9A%E6%9C%AC%E8%AF%A6%E8%A7%A3%EF%BC%9A%E4%BB%8E%E9%9B%B6%E7%90%86%E8%A7%A3Linker-Script/" data-id="cmsb2wk98000bbglm8gxibpf3" data-title="嵌入式链接脚本详解：以英飞凌TC375为例" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2026/08/01/%E5%B5%8C%E5%85%A5%E5%BC%8F%E9%93%BE%E6%8E%A5%E8%84%9A%E6%9C%AC%E8%AF%A6%E8%A7%A3%EF%BC%9A%E4%BB%8E%E9%9B%B6%E7%90%86%E8%A7%A3Linker-Script/" data-id="cmsb3cjwk000bw2lmc7ql21zw" data-title="嵌入式链接脚本详解：以英飞凌TC375为例" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
@@ -873,7 +960,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2026/08/01/Linux%E8%BD%AF%E4%BB%B6%E5%90%AF%E5%8A%A8%E8%BF%87%E7%A8%8B%E8%AF%A6%E8%A7%A3/" data-id="cmsb2wk920003bglm7gk6da3n" data-title="Linux软件启动过程详解" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2026/08/01/Linux%E8%BD%AF%E4%BB%B6%E5%90%AF%E5%8A%A8%E8%BF%87%E7%A8%8B%E8%AF%A6%E8%A7%A3/" data-id="cmsb3cjwc0003w2lm8w3xbzfl" data-title="Linux软件启动过程详解" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
@@ -1015,7 +1102,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2026/08/01/%E5%A6%82%E4%BD%95%E5%BC%80%E5%8F%91%E9%83%A8%E7%BD%B2AUTOSAR-Agent/" data-id="cmsb2wk950007bglm4ib13gne" data-title="如何开发部署AUTOSAR-Agent" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2026/08/01/%E5%A6%82%E4%BD%95%E5%BC%80%E5%8F%91%E9%83%A8%E7%BD%B2AUTOSAR-Agent/" data-id="cmsb3cjwg0007w2lmh1fcf7nt" data-title="如何开发部署AUTOSAR-Agent" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
@@ -1740,7 +1827,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2026/08/01/%E7%94%B5%E6%9C%BA%E6%8E%A7%E5%88%B6%E7%9F%A5%E8%AF%86%E4%BD%93%E7%B3%BB%E5%85%A5%E9%97%A8%EF%BC%9A%E4%BB%8E%E7%94%B5%E6%9C%BA%E5%8E%9F%E7%90%86%E5%88%B0FOC%E5%AE%9E%E6%88%98/" data-id="cmsb2wk9c000hbglm2on8856c" data-title="电机控制知识体系入门：从电机原理到FOC实战" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2026/08/01/%E7%94%B5%E6%9C%BA%E6%8E%A7%E5%88%B6%E7%9F%A5%E8%AF%86%E4%BD%93%E7%B3%BB%E5%85%A5%E9%97%A8%EF%BC%9A%E4%BB%8E%E7%94%B5%E6%9C%BA%E5%8E%9F%E7%90%86%E5%88%B0FOC%E5%AE%9E%E6%88%98/" data-id="cmsb3cjwn000hw2lme8lq7bw6" data-title="电机控制知识体系入门：从电机原理到FOC实战" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
@@ -1986,7 +2073,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2026/08/01/%E4%BD%BF%E7%94%A8-Ventoy-%E5%88%B6%E4%BD%9C-U-%E7%9B%98%E5%90%AF%E5%8A%A8%E7%9B%98%E5%AE%8C%E5%85%A8%E6%8C%87%E5%8D%97/" data-id="cmsb2wk940005bglm2c2igppg" data-title="使用 Ventoy 制作 U 盘启动盘完全指南" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2026/08/01/%E4%BD%BF%E7%94%A8-Ventoy-%E5%88%B6%E4%BD%9C-U-%E7%9B%98%E5%90%AF%E5%8A%A8%E7%9B%98%E5%AE%8C%E5%85%A8%E6%8C%87%E5%8D%97/" data-id="cmsb3cjwf0005w2lmdvm3fpms" data-title="使用 Ventoy 制作 U 盘启动盘完全指南" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
@@ -2149,7 +2236,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2026/07/31/%E7%94%A8%E9%A3%9E%E4%B9%A6%E8%BF%9E%E6%8E%A5AUTOSAR-Agent-%E6%89%8B%E6%9C%BA%E8%BF%9C%E7%A8%8B%E6%93%8D%E6%8E%A7%E6%8C%87%E5%8D%97/" data-id="cmsb2wk9a000ebglma6xr6z8i" data-title="用飞书连接AUTOSAR-Agent-手机远程操控指南" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2026/07/31/%E7%94%A8%E9%A3%9E%E4%B9%A6%E8%BF%9E%E6%8E%A5AUTOSAR-Agent-%E6%89%8B%E6%9C%BA%E8%BF%9C%E7%A8%8B%E6%93%8D%E6%8E%A7%E6%8C%87%E5%8D%97/" data-id="cmsb3cjwm000ew2lm6dq522yu" data-title="用飞书连接AUTOSAR-Agent-手机远程操控指南" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
@@ -2903,7 +2990,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2026/07/31/CANoe-CAPL%E8%84%9A%E6%9C%AC%E6%B5%8B%E8%AF%95%E5%85%A5%E9%97%A8%E4%B8%8E%E5%AE%9E%E8%B7%B5/" data-id="cmsb2wk8r0000bglm8brg6388" data-title="CANoe CAPL脚本测试入门与实践" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2026/07/31/CANoe-CAPL%E8%84%9A%E6%9C%AC%E6%B5%8B%E8%AF%95%E5%85%A5%E9%97%A8%E4%B8%8E%E5%AE%9E%E8%B7%B5/" data-id="cmsb3cjw10000w2lmchiofntg" data-title="CANoe CAPL脚本测试入门与实践" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
@@ -3254,7 +3341,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2026/07/31/Linux%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86%E8%AF%A6%E8%A7%A3/" data-id="cmsb2wk8y0001bglm4o19asja" data-title="Linux内存管理详解" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2026/07/31/Linux%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86%E8%AF%A6%E8%A7%A3/" data-id="cmsb3cjw80001w2lmfp1k313z" data-title="Linux内存管理详解" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
@@ -3300,7 +3387,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2026/07/31/%E6%B5%8B%E8%AF%95%E6%96%87%E7%AB%A0-%E8%87%AA%E5%8A%A8%E9%83%A8%E7%BD%B2%E9%AA%8C%E8%AF%81/" data-id="cmsb2wk99000dbglmh35f4dq5" data-title="测试文章-自动部署验证" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2026/07/31/%E6%B5%8B%E8%AF%95%E6%96%87%E7%AB%A0-%E8%87%AA%E5%8A%A8%E9%83%A8%E7%BD%B2%E9%AA%8C%E8%AF%81/" data-id="cmsb3cjwl000dw2lm962x3dqv" data-title="测试文章-自动部署验证" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
