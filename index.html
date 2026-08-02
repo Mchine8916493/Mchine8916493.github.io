@@ -71,6 +71,364 @@
       <div class="outer">
         <section id="main">
   
+    <article id="post-C语言基础知识点详解" class="h-entry article article-type-post" itemprop="blogPost" itemscope itemtype="https://schema.org/BlogPosting">
+  <div class="article-meta">
+    <a href="/2026/08/02/C%E8%AF%AD%E8%A8%80%E5%9F%BA%E7%A1%80%E7%9F%A5%E8%AF%86%E7%82%B9%E8%AF%A6%E8%A7%A3/" class="article-date">
+  <time class="dt-published" datetime="2026-08-02T08:31:59.000Z" itemprop="datePublished">2026-08-02</time>
+</a>
+    
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 itemprop="name">
+      <a class="p-name article-title" href="/2026/08/02/C%E8%AF%AD%E8%A8%80%E5%9F%BA%E7%A1%80%E7%9F%A5%E8%AF%86%E7%82%B9%E8%AF%A6%E8%A7%A3/">C语言基础知识点详解</a>
+    </h1>
+  
+
+      </header>
+    
+    <div class="e-content article-entry" itemprop="articleBody">
+      
+        <p>C 语言是嵌入式、操作系统、驱动开发与高性能计算的基石。本文面向初学者，系统梳理 C 语言<strong>基础</strong>知识点，从”程序长什么样”到”怎么组织代码”，为后续的进阶学习（指针深入、内存管理、编译链接）打下地基。建议配合《C语言进阶知识点详解》一起阅读。</p>
+<h1 id="一、第一个-C-程序"><a href="#一、第一个-C-程序" class="headerlink" title="一、第一个 C 程序"></a>一、第一个 C 程序</h1><h2 id="1-1-Hello-World-逐行拆解"><a href="#1-1-Hello-World-逐行拆解" class="headerlink" title="1.1 Hello World 逐行拆解"></a>1.1 Hello World 逐行拆解</h2><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;stdio.h&gt;</span>        <span class="comment">// 预处理指令：引入标准输入输出库的头文件</span></span></span><br><span class="line"></span><br><span class="line"><span class="type">int</span> <span class="title function_">main</span><span class="params">(<span class="type">void</span>)</span> &#123;          <span class="comment">// 程序入口函数，int 是返回类型</span></span><br><span class="line">    <span class="built_in">printf</span>(<span class="string">&quot;Hello, World!\n&quot;</span>);   <span class="comment">// 调用库函数输出，&quot;%n&quot; 是换行</span></span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;             <span class="comment">// 返回 0 表示程序正常结束</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li><code>main</code> 是<strong>程序入口</strong>，一个程序只能有一个</li>
+<li><code>printf</code> 里的 <code>\n</code> 是换行转义字符</li>
+<li><code>return 0;</code> 把退出码交给操作系统（0 &#x3D; 成功，非 0 &#x3D; 出错）</li>
+</ul>
+<h2 id="1-2-编译运行"><a href="#1-2-编译运行" class="headerlink" title="1.2 编译运行"></a>1.2 编译运行</h2><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">gcc hello.c -o hello     <span class="comment"># 编译生成可执行文件 hello</span></span><br><span class="line">./hello                  <span class="comment"># 运行</span></span><br><span class="line">gcc hello.c -o hello &amp;&amp; ./hello   <span class="comment"># 一步到位</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="1-3-程序的基本结构"><a href="#1-3-程序的基本结构" class="headerlink" title="1.3 程序的基本结构"></a>1.3 程序的基本结构</h2><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">预处理指令（#include / #define）</span><br><span class="line">┌──────────────────────────────┐</span><br><span class="line">│ 全局变量声明                  │</span><br><span class="line">│ 函数声明（原型）              │</span><br><span class="line">│ 函数定义                      │</span><br><span class="line">│   ┌────────────┐              │</span><br><span class="line">│   │ 局部变量    │              │</span><br><span class="line">│   │ 语句序列    │              │</span><br><span class="line">│   │ return     │              │</span><br><span class="line">│   └────────────┘              │</span><br><span class="line">└──────────────────────────────┘</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h1 id="二、基本数据类型"><a href="#二、基本数据类型" class="headerlink" title="二、基本数据类型"></a>二、基本数据类型</h1><h2 id="2-1-整数类型"><a href="#2-1-整数类型" class="headerlink" title="2.1 整数类型"></a>2.1 整数类型</h2><table>
+<thead>
+<tr>
+<th>类型</th>
+<th>典型大小</th>
+<th>取值范围（典型 32 位平台）</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>char</code></td>
+<td>1 字节</td>
+<td>-128 ~ 127</td>
+</tr>
+<tr>
+<td><code>unsigned char</code></td>
+<td>1 字节</td>
+<td>0 ~ 255</td>
+</tr>
+<tr>
+<td><code>short</code></td>
+<td>2 字节</td>
+<td>-32768 ~ 32767</td>
+</tr>
+<tr>
+<td><code>int</code></td>
+<td>4 字节</td>
+<td>-2147483648 ~ 2147483647</td>
+</tr>
+<tr>
+<td><code>unsigned int</code></td>
+<td>4 字节</td>
+<td>0 ~ 4294967295</td>
+</tr>
+<tr>
+<td><code>long</code></td>
+<td>4 或 8 字节</td>
+<td>平台相关</td>
+</tr>
+<tr>
+<td><code>long long</code></td>
+<td>8 字节</td>
+<td>-2^63 ~ 2^63-1</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p><strong>记忆</strong>：<code>sizeof(int)</code> 在大多数平台是 4 字节，但 C 标准只保证 <code>int ≥ 16 位</code>。想要确定宽度用 <code>&lt;stdint.h&gt;</code> 的 <code>int32_t</code>、<code>uint8_t</code> 等。</p>
+</blockquote>
+<h2 id="2-2-浮点类型"><a href="#2-2-浮点类型" class="headerlink" title="2.2 浮点类型"></a>2.2 浮点类型</h2><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">float</span>       f = <span class="number">3.14f</span>;   <span class="comment">// 单精度，4 字节，约 6~7 位有效数字</span></span><br><span class="line"><span class="type">double</span>      d = <span class="number">3.14159</span>; <span class="comment">// 双精度，8 字节，约 15~16 位有效数字</span></span><br><span class="line"><span class="type">long</span> <span class="type">double</span> l = <span class="number">3.14L</span>;   <span class="comment">// 扩展精度，平台相关</span></span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p>字面量加 <code>f</code>&#x2F;<code>L</code> 后缀指定类型；默认小数是 <code>double</code>。浮点不能直接比较相等（精度问题）。</p>
+</blockquote>
+<h2 id="2-3-布尔与字符"><a href="#2-3-布尔与字符" class="headerlink" title="2.3 布尔与字符"></a>2.3 布尔与字符</h2><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;stdbool.h&gt;</span></span></span><br><span class="line"><span class="type">bool</span> flag = <span class="literal">true</span>;      <span class="comment">// C99 起支持 bool / true / false</span></span><br><span class="line"><span class="type">char</span> ch = <span class="string">&#x27;A&#x27;</span>;         <span class="comment">// 字符用单引号</span></span><br><span class="line"><span class="type">char</span> c = <span class="number">65</span>;           <span class="comment">// 字符本质是整数（ASCII），&#x27;A&#x27; == 65</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="2-4-sizeof-运算符"><a href="#2-4-sizeof-运算符" class="headerlink" title="2.4 sizeof 运算符"></a>2.4 sizeof 运算符</h2><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">sizeof</span>(<span class="type">int</span>)        <span class="comment">// 类型大小，单位是字节</span></span><br><span class="line"><span class="keyword">sizeof</span>(x)          <span class="comment">// 变量大小</span></span><br></pre></td></tr></table></figure>
+
+<hr>
+<h1 id="三、变量与常量"><a href="#三、变量与常量" class="headerlink" title="三、变量与常量"></a>三、变量与常量</h1><h2 id="3-1-变量声明与初始化"><a href="#3-1-变量声明与初始化" class="headerlink" title="3.1 变量声明与初始化"></a>3.1 变量声明与初始化</h2><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">int</span> a;              <span class="comment">// 声明：此时 a 的值不确定（垃圾值！）</span></span><br><span class="line"><span class="type">int</span> b = <span class="number">10</span>;         <span class="comment">// 声明并初始化</span></span><br><span class="line"><span class="type">int</span> c = <span class="number">0</span>;          <span class="comment">// 强烈建议：使用前一定初始化</span></span><br><span class="line"><span class="type">int</span> x = <span class="number">1</span>, y = <span class="number">2</span>;   <span class="comment">// 一行声明多个</span></span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p>未初始化的局部变量是<strong>不确定值</strong>，直接使用属于未定义行为，是初学者的头号陷阱。</p>
+</blockquote>
+<h2 id="3-2-常量"><a href="#3-2-常量" class="headerlink" title="3.2 常量"></a>3.2 常量</h2><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">define</span> MAX 100          <span class="comment">// 预处理宏常量（无类型，纯文本替换）</span></span></span><br><span class="line"><span class="type">const</span> <span class="type">int</span> LIMIT = <span class="number">50</span>;    <span class="comment">// const 常量（有类型，编译期检查）</span></span><br><span class="line"><span class="type">const</span> <span class="type">double</span> PI = <span class="number">3.14159</span>;</span><br></pre></td></tr></table></figure>
+
+<h2 id="3-3-命名规则"><a href="#3-3-命名规则" class="headerlink" title="3.3 命名规则"></a>3.3 命名规则</h2><ul>
+<li>只能由字母、数字、下划线组成，且<strong>不能以数字开头</strong></li>
+<li>不能与关键字（if、int、return 等）重名</li>
+<li>大小写敏感：<code>Sum</code>、<code>sum</code>、<code>SUM</code> 是三个不同变量</li>
+<li>常见风格：<code>snake_case</code>（变量&#x2F;函数）、<code>SCREAMING_CASE</code>（宏）</li>
+</ul>
+<hr>
+<h1 id="四、运算符"><a href="#四、运算符" class="headerlink" title="四、运算符"></a>四、运算符</h1><h2 id="4-1-算术运算符"><a href="#4-1-算术运算符" class="headerlink" title="4.1 算术运算符"></a>4.1 算术运算符</h2><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">+  -  *  /  %</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li><code>/</code>：整数相除<strong>截断小数</strong>（<code>7 / 2 == 3</code>），浮点相除才保留小数（<code>7.0 / 2 == 3.5</code>）</li>
+<li><code>%</code>：取余，仅用于整数（<code>7 % 2 == 1</code>）</li>
+<li>除零是运行时错误</li>
+</ul>
+<h2 id="4-2-赋值与复合赋值"><a href="#4-2-赋值与复合赋值" class="headerlink" title="4.2 赋值与复合赋值"></a>4.2 赋值与复合赋值</h2><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">x = x + <span class="number">5</span>;   <span class="comment">// 等价于</span></span><br><span class="line">x += <span class="number">5</span>;      <span class="comment">// 复合赋值：+= -= *= /= %= &lt;&lt;= &gt;&gt;= &amp;= |= ^=</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="4-3-自增自减"><a href="#4-3-自增自减" class="headerlink" title="4.3 自增自减"></a>4.3 自增自减</h2><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">i++;   <span class="comment">// 后缀：先使用 i 的值，再自增</span></span><br><span class="line">++i;   <span class="comment">// 前缀：先自增，再使用新值</span></span><br><span class="line"></span><br><span class="line"><span class="type">int</span> i = <span class="number">5</span>;</span><br><span class="line"><span class="built_in">printf</span>(<span class="string">&quot;%d&quot;</span>, i++);   <span class="comment">// 输出 5，之后 i 变 6</span></span><br><span class="line"><span class="built_in">printf</span>(<span class="string">&quot;%d&quot;</span>, ++i);   <span class="comment">// 输出 6，之前 i 已变 6</span></span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p>一条语句里不要多次修改同一个变量（<code>i = i++ + i</code> 是未定义行为）。</p>
+</blockquote>
+<h2 id="4-4-关系与逻辑运算符"><a href="#4-4-关系与逻辑运算符" class="headerlink" title="4.4 关系与逻辑运算符"></a>4.4 关系与逻辑运算符</h2><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">==  !=  &gt;  &lt;  &gt;=  &lt;=     <span class="comment">// 关系：结果是 0（假）或 1（真）</span></span><br><span class="line">&amp;&amp;  ||  !                <span class="comment">// 逻辑：与、或、非</span></span><br></pre></td></tr></table></figure>
+
+<ul>
+<li><strong>短路求值</strong>：<code>a &amp;&amp; b</code> 若 a 为假则不计算 b；<code>a || b</code> 若 a 为真则不计算 b</li>
+<li><code>!0 == 1</code>，<code>!5 == 0</code>（C 中任何非 0 值都是”真”）</li>
+<li>常见错误：<code>if (a = 5)</code> 是赋值不是比较！应为 <code>if (a == 5)</code></li>
+</ul>
+<h2 id="4-5-位运算符"><a href="#4-5-位运算符" class="headerlink" title="4.5 位运算符"></a>4.5 位运算符</h2><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">&amp;  |  ^  ~  &lt;&lt;  &gt;&gt;    <span class="comment">// 按位与、或、异或、取反、左移、右移</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="4-6-条件运算符（三目）"><a href="#4-6-条件运算符（三目）" class="headerlink" title="4.6 条件运算符（三目）"></a>4.6 条件运算符（三目）</h2><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">int</span> max = (a &gt; b) ? a : b;   <span class="comment">// a&gt;b 成立取 a，否则取 b</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="4-7-运算符优先级速记"><a href="#4-7-运算符优先级速记" class="headerlink" title="4.7 运算符优先级速记"></a>4.7 运算符优先级速记</h2><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">先乘除后加减 → 移位 → 关系比较 → 位与 → 位异或 → 位或 → 逻辑与 → 逻辑或 → 赋值</span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p>记不住优先级就<strong>用括号</strong>，括号永远是最清晰的。</p>
+</blockquote>
+<hr>
+<h1 id="五、流程控制"><a href="#五、流程控制" class="headerlink" title="五、流程控制"></a>五、流程控制</h1><h2 id="5-1-if-else-if-else"><a href="#5-1-if-else-if-else" class="headerlink" title="5.1 if &#x2F; else if &#x2F; else"></a>5.1 if &#x2F; else if &#x2F; else</h2><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">if</span> (score &gt;= <span class="number">90</span>) &#123;</span><br><span class="line">    <span class="built_in">printf</span>(<span class="string">&quot;优秀\n&quot;</span>);</span><br><span class="line">&#125; <span class="keyword">else</span> <span class="keyword">if</span> (score &gt;= <span class="number">60</span>) &#123;</span><br><span class="line">    <span class="built_in">printf</span>(<span class="string">&quot;及格\n&quot;</span>);</span><br><span class="line">&#125; <span class="keyword">else</span> &#123;</span><br><span class="line">    <span class="built_in">printf</span>(<span class="string">&quot;不及格\n&quot;</span>);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li><code>if</code> 只控制紧随其后的<strong>一条语句</strong>；要控制多句必须加大括号 <code>&#123;&#125;</code></li>
+<li>判断”是否等于 0”可写 <code>if (!x)</code> 或 <code>if (x == 0)</code></li>
+</ul>
+<h2 id="5-2-switch"><a href="#5-2-switch" class="headerlink" title="5.2 switch"></a>5.2 switch</h2><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">switch</span> (grade) &#123;</span><br><span class="line">    <span class="keyword">case</span> <span class="string">&#x27;A&#x27;</span>: <span class="built_in">printf</span>(<span class="string">&quot;优秀&quot;</span>); <span class="keyword">break</span>;</span><br><span class="line">    <span class="keyword">case</span> <span class="string">&#x27;B&#x27;</span>:</span><br><span class="line">    <span class="keyword">case</span> <span class="string">&#x27;C&#x27;</span>: <span class="built_in">printf</span>(<span class="string">&quot;良好&quot;</span>); <span class="keyword">break</span>;   <span class="comment">// 多个 case 共用一个分支</span></span><br><span class="line">    <span class="keyword">default</span>:  <span class="built_in">printf</span>(<span class="string">&quot;未知&quot;</span>);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p>别忘 <code>break</code>！否则会<strong>穿透</strong>继续执行下一个 case（fallthrough）。</p>
+</blockquote>
+<h2 id="5-3-循环：while-do-while-for"><a href="#5-3-循环：while-do-while-for" class="headerlink" title="5.3 循环：while &#x2F; do-while &#x2F; for"></a>5.3 循环：while &#x2F; do-while &#x2F; for</h2><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// while：先判断后执行</span></span><br><span class="line"><span class="type">int</span> i = <span class="number">0</span>;</span><br><span class="line"><span class="keyword">while</span> (i &lt; <span class="number">10</span>) &#123;</span><br><span class="line">    <span class="built_in">printf</span>(<span class="string">&quot;%d &quot;</span>, i);</span><br><span class="line">    i++;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// do-while：先执行后判断（至少执行一次）</span></span><br><span class="line"><span class="type">int</span> n;</span><br><span class="line"><span class="keyword">do</span> &#123;</span><br><span class="line">    <span class="built_in">printf</span>(<span class="string">&quot;请输入正数：&quot;</span>);</span><br><span class="line">    <span class="built_in">scanf</span>(<span class="string">&quot;%d&quot;</span>, &amp;n);</span><br><span class="line">&#125; <span class="keyword">while</span> (n &lt;= <span class="number">0</span>);</span><br><span class="line"></span><br><span class="line"><span class="comment">// for：最常用，适合固定次数</span></span><br><span class="line"><span class="keyword">for</span> (<span class="type">int</span> j = <span class="number">0</span>; j &lt; <span class="number">10</span>; j++) &#123;</span><br><span class="line">    <span class="built_in">printf</span>(<span class="string">&quot;%d &quot;</span>, j);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="5-4-break-continue"><a href="#5-4-break-continue" class="headerlink" title="5.4 break &#x2F; continue"></a>5.4 break &#x2F; continue</h2><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">for</span> (<span class="type">int</span> i = <span class="number">0</span>; i &lt; <span class="number">10</span>; i++) &#123;</span><br><span class="line">    <span class="keyword">if</span> (i == <span class="number">3</span>) <span class="keyword">continue</span>;   <span class="comment">// 跳过本次循环剩余部分</span></span><br><span class="line">    <span class="keyword">if</span> (i == <span class="number">7</span>) <span class="keyword">break</span>;      <span class="comment">// 立即终止整个循环</span></span><br><span class="line">    <span class="built_in">printf</span>(<span class="string">&quot;%d &quot;</span>, i);       <span class="comment">// 输出 0 1 2 4 5 6</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h1 id="六、数组"><a href="#六、数组" class="headerlink" title="六、数组"></a>六、数组</h1><h2 id="6-1-一维数组"><a href="#6-1-一维数组" class="headerlink" title="6.1 一维数组"></a>6.1 一维数组</h2><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">int</span> arr[<span class="number">5</span>];              <span class="comment">// 声明：5 个 int，元素未初始化</span></span><br><span class="line"><span class="type">int</span> nums[<span class="number">5</span>] = &#123;<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>, <span class="number">4</span>, <span class="number">5</span>&#125;;   <span class="comment">// 完整初始化</span></span><br><span class="line"><span class="type">int</span> part[<span class="number">5</span>] = &#123;<span class="number">1</span>, <span class="number">2</span>&#125;;    <span class="comment">// 部分初始化：其余自动填 0</span></span><br><span class="line"><span class="type">int</span> auto_size[] = &#123;<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>&#125;;     <span class="comment">// 由初始化列表推导大小（=3）</span></span><br><span class="line"></span><br><span class="line"><span class="built_in">printf</span>(<span class="string">&quot;%d&quot;</span>, nums[<span class="number">0</span>]);   <span class="comment">// 下标从 0 开始</span></span><br><span class="line">nums[<span class="number">2</span>] = <span class="number">100</span>;           <span class="comment">// 修改元素</span></span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p>下标越界不会报编译错，但运行时会访问到未知内存（未定义行为）。</p>
+</blockquote>
+<h2 id="6-2-数组的遍历"><a href="#6-2-数组的遍历" class="headerlink" title="6.2 数组的遍历"></a>6.2 数组的遍历</h2><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">int</span> sum = <span class="number">0</span>;</span><br><span class="line"><span class="keyword">for</span> (<span class="type">int</span> i = <span class="number">0</span>; i &lt; <span class="number">5</span>; i++) &#123;</span><br><span class="line">    sum += nums[i];</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="6-3-二维数组"><a href="#6-3-二维数组" class="headerlink" title="6.3 二维数组"></a>6.3 二维数组</h2><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">int</span> matrix[<span class="number">3</span>][<span class="number">4</span>];       <span class="comment">// 3 行 4 列，内存连续存放</span></span><br><span class="line"><span class="type">int</span> table[<span class="number">2</span>][<span class="number">2</span>] = &#123;&#123;<span class="number">1</span>, <span class="number">2</span>&#125;, &#123;<span class="number">3</span>, <span class="number">4</span>&#125;&#125;;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 双重循环遍历</span></span><br><span class="line"><span class="keyword">for</span> (<span class="type">int</span> i = <span class="number">0</span>; i &lt; <span class="number">3</span>; i++) &#123;</span><br><span class="line">    <span class="keyword">for</span> (<span class="type">int</span> j = <span class="number">0</span>; j &lt; <span class="number">4</span>; j++) &#123;</span><br><span class="line">        matrix[i][j] = <span class="number">0</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="6-4-字符数组与字符串"><a href="#6-4-字符数组与字符串" class="headerlink" title="6.4 字符数组与字符串"></a>6.4 字符数组与字符串</h2><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">char</span> name[<span class="number">6</span>] = <span class="string">&quot;hello&quot;</span>;       <span class="comment">// 数组长度要 +1 给 &#x27;\0&#x27;</span></span><br><span class="line"><span class="type">char</span> msg[] = <span class="string">&quot;hello&quot;</span>;         <span class="comment">// 自动分配 6 字节（含结尾 &#x27;\0&#x27;）</span></span><br><span class="line"><span class="type">char</span> words[<span class="number">100</span>];</span><br><span class="line">gets(words);                  <span class="comment">// ⚠️ 危险！无边界检查，勿用</span></span><br><span class="line">fgets(words, <span class="keyword">sizeof</span>(words), <span class="built_in">stdin</span>);  <span class="comment">// ✅ 安全：限定最多读入大小-1</span></span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p>C 字符串以 <code>&#39;\0&#39;</code>（值为 0）结尾，字符串函数靠它判断结束。</p>
+</blockquote>
+<hr>
+<h1 id="七、函数"><a href="#七、函数" class="headerlink" title="七、函数"></a>七、函数</h1><h2 id="7-1-函数的定义与调用"><a href="#7-1-函数的定义与调用" class="headerlink" title="7.1 函数的定义与调用"></a>7.1 函数的定义与调用</h2><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 函数定义：返回类型 + 函数名 + 参数列表 + 函数体</span></span><br><span class="line"><span class="type">int</span> <span class="title function_">add</span><span class="params">(<span class="type">int</span> a, <span class="type">int</span> b)</span> &#123;</span><br><span class="line">    <span class="keyword">return</span> a + b;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="type">int</span> <span class="title function_">main</span><span class="params">(<span class="type">void</span>)</span> &#123;</span><br><span class="line">    <span class="type">int</span> result = add(<span class="number">3</span>, <span class="number">5</span>);   <span class="comment">// 调用</span></span><br><span class="line">    <span class="built_in">printf</span>(<span class="string">&quot;%d\n&quot;</span>, result);   <span class="comment">// 输出 8</span></span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="7-2-函数原型（声明）"><a href="#7-2-函数原型（声明）" class="headerlink" title="7.2 函数原型（声明）"></a>7.2 函数原型（声明）</h2><p>如果函数定义在使用之后，必须先声明（原型）：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">int</span> <span class="title function_">add</span><span class="params">(<span class="type">int</span> a, <span class="type">int</span> b)</span>;   <span class="comment">// 函数原型声明</span></span><br><span class="line"></span><br><span class="line"><span class="type">int</span> <span class="title function_">main</span><span class="params">(<span class="type">void</span>)</span> &#123;</span><br><span class="line">    <span class="type">int</span> r = add(<span class="number">3</span>, <span class="number">5</span>);   <span class="comment">// 编译器需要先知道 add 存在</span></span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="type">int</span> <span class="title function_">add</span><span class="params">(<span class="type">int</span> a, <span class="type">int</span> b)</span> &#123;  <span class="comment">// 定义</span></span><br><span class="line">    <span class="keyword">return</span> a + b;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="7-3-参数传递：按值传递"><a href="#7-3-参数传递：按值传递" class="headerlink" title="7.3 参数传递：按值传递"></a>7.3 参数传递：按值传递</h2><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">void</span> <span class="title function_">change</span><span class="params">(<span class="type">int</span> x)</span> &#123;</span><br><span class="line">    x = <span class="number">100</span>;          <span class="comment">// 只是副本</span></span><br><span class="line">&#125;</span><br><span class="line"><span class="type">int</span> a = <span class="number">5</span>;</span><br><span class="line">change(a);            <span class="comment">// 调用后 a 仍然是 5</span></span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p>C 函数参数<strong>默认按值传递</strong>（拷贝）。要修改调用者的变量，必须传指针（进阶篇详述）。</p>
+</blockquote>
+<h2 id="7-4-返回值与提前返回"><a href="#7-4-返回值与提前返回" class="headerlink" title="7.4 返回值与提前返回"></a>7.4 返回值与提前返回</h2><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">int</span> <span class="title function_">divide</span><span class="params">(<span class="type">int</span> a, <span class="type">int</span> b)</span> &#123;</span><br><span class="line">    <span class="keyword">if</span> (b == <span class="number">0</span>) <span class="keyword">return</span> <span class="number">-1</span>;    <span class="comment">// 提前返回，处理错误</span></span><br><span class="line">    <span class="keyword">return</span> a / b;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="7-5-void-类型"><a href="#7-5-void-类型" class="headerlink" title="7.5 void 类型"></a>7.5 void 类型</h2><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">void</span> <span class="title function_">hello</span><span class="params">(<span class="type">void</span>)</span>;     <span class="comment">// 无参数、无返回值的函数</span></span><br></pre></td></tr></table></figure>
+
+<hr>
+<h1 id="八、指针入门"><a href="#八、指针入门" class="headerlink" title="八、指针入门"></a>八、指针入门</h1><h2 id="8-1-指针是什么"><a href="#8-1-指针是什么" class="headerlink" title="8.1 指针是什么"></a>8.1 指针是什么</h2><p>指针是<strong>存放地址的变量</strong>。用 <code>&amp;</code> 取地址，用 <code>*</code> 解引用：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">int</span> x = <span class="number">42</span>;</span><br><span class="line"><span class="type">int</span> *p = &amp;x;     <span class="comment">// p 存放 x 的地址</span></span><br><span class="line"></span><br><span class="line"><span class="built_in">printf</span>(<span class="string">&quot;%d&quot;</span>, x);      <span class="comment">// 42（直接访问）</span></span><br><span class="line"><span class="built_in">printf</span>(<span class="string">&quot;%d&quot;</span>, *p);     <span class="comment">// 42（通过指针解引用访问）</span></span><br><span class="line">*p = <span class="number">100</span>;             <span class="comment">// 通过指针修改 x</span></span><br><span class="line"><span class="built_in">printf</span>(<span class="string">&quot;%d&quot;</span>, x);      <span class="comment">// 100</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="8-2-图解"><a href="#8-2-图解" class="headerlink" title="8.2 图解"></a>8.2 图解</h2><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">变量 x（地址 0x1000）┌─────┐</span><br><span class="line">                     │ 42  │</span><br><span class="line">                     └─────┘</span><br><span class="line">指针 p（地址 0x2000）┌──────────┐</span><br><span class="line">                     │ 0x1000   │ ← p 的值是 x 的地址</span><br><span class="line">                     └──────────┘</span><br></pre></td></tr></table></figure>
+
+<h2 id="8-3-指针的声明"><a href="#8-3-指针的声明" class="headerlink" title="8.3 指针的声明"></a>8.3 指针的声明</h2><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">int</span> *p;     <span class="comment">// p 是一个指向 int 的指针</span></span><br><span class="line"><span class="type">char</span> *cp;   <span class="comment">// p 是一个指向 char 的指针</span></span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p><code>*</code> 跟随变量名：<code>int *p1, *p2;</code> 声明两个指针；<code>int *p1, p2;</code> 中 p2 是普通 int！</p>
+</blockquote>
+<h2 id="8-4-NULL-与空指针"><a href="#8-4-NULL-与空指针" class="headerlink" title="8.4 NULL 与空指针"></a>8.4 NULL 与空指针</h2><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">int</span> *p = <span class="literal">NULL</span>;      <span class="comment">// NULL 表示&quot;不指向任何有效地址&quot;</span></span><br><span class="line"><span class="keyword">if</span> (p != <span class="literal">NULL</span>) &#123;    <span class="comment">// 使用前检查</span></span><br><span class="line">    *p = <span class="number">5</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h1 id="九、作用域与生命周期"><a href="#九、作用域与生命周期" class="headerlink" title="九、作用域与生命周期"></a>九、作用域与生命周期</h1><h2 id="9-1-局部变量-vs-全局变量"><a href="#9-1-局部变量-vs-全局变量" class="headerlink" title="9.1 局部变量 vs 全局变量"></a>9.1 局部变量 vs 全局变量</h2><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">int</span> global = <span class="number">10</span>;          <span class="comment">// 全局变量：函数外，任何函数可见</span></span><br><span class="line"></span><br><span class="line"><span class="type">void</span> <span class="title function_">f</span><span class="params">(<span class="type">void</span>)</span> &#123;</span><br><span class="line">    <span class="type">int</span> local = <span class="number">5</span>;        <span class="comment">// 局部变量：函数内可见</span></span><br><span class="line">    <span class="type">static</span> <span class="type">int</span> count = <span class="number">0</span>; <span class="comment">// 静态局部：跨函数调用保留，只初始化一次</span></span><br><span class="line">    count++;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<table>
+<thead>
+<tr>
+<th></th>
+<th>局部变量</th>
+<th>全局变量</th>
+<th>静态局部</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>作用域</td>
+<td>所在函数&#x2F;块</td>
+<td>整个文件</td>
+<td>所在函数</td>
+</tr>
+<tr>
+<td>生命周期</td>
+<td>函数调用期间</td>
+<td>程序全程</td>
+<td>程序全程</td>
+</tr>
+<tr>
+<td>初始化</td>
+<td>垃圾值</td>
+<td>自动清零</td>
+<td>只初始化一次</td>
+</tr>
+</tbody></table>
+<h2 id="9-2-块作用域"><a href="#9-2-块作用域" class="headerlink" title="9.2 块作用域"></a>9.2 块作用域</h2><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">&#123;</span><br><span class="line">    <span class="type">int</span> t = <span class="number">1</span>;    <span class="comment">// t 只在这个花括号内有效</span></span><br><span class="line">&#125;</span><br><span class="line"><span class="comment">// 这里访问 t 会编译错误</span></span><br></pre></td></tr></table></figure>
+
+<hr>
+<h1 id="十、预处理指令"><a href="#十、预处理指令" class="headerlink" title="十、预处理指令"></a>十、预处理指令</h1><h2 id="10-1-include-引入头文件"><a href="#10-1-include-引入头文件" class="headerlink" title="10.1 #include 引入头文件"></a>10.1 #include 引入头文件</h2><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;stdio.h&gt;</span>    <span class="comment">// 尖括号：从系统标准库路径查找</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&quot;myheader.h&quot;</span> <span class="comment">// 双引号：先从当前目录查找</span></span></span><br></pre></td></tr></table></figure>
+
+<h2 id="10-2-define-宏定义"><a href="#10-2-define-宏定义" class="headerlink" title="10.2 #define 宏定义"></a>10.2 #define 宏定义</h2><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">define</span> PI 3.14159</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> MAX(a, b) ((a) &gt; (b) ? (a) : (b))   <span class="comment">// 带参数的宏</span></span></span><br></pre></td></tr></table></figure>
+
+<h2 id="10-3-条件编译"><a href="#10-3-条件编译" class="headerlink" title="10.3 条件编译"></a>10.3 条件编译</h2><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">define</span> DEBUG 1</span></span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="keyword">ifdef</span> DEBUG</span></span><br><span class="line">    <span class="built_in">printf</span>(<span class="string">&quot;调试信息\n&quot;</span>);</span><br><span class="line"><span class="meta">#<span class="keyword">endif</span></span></span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="keyword">ifndef</span> HEADER_H</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> HEADER_H   <span class="comment">// 防止头文件被重复包含</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">endif</span></span></span><br></pre></td></tr></table></figure>
+
+<h2 id="10-4-常用标准头文件"><a href="#10-4-常用标准头文件" class="headerlink" title="10.4 常用标准头文件"></a>10.4 常用标准头文件</h2><table>
+<thead>
+<tr>
+<th>头文件</th>
+<th>提供内容</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>stdio.h</code></td>
+<td>printf&#x2F;scanf、文件操作</td>
+</tr>
+<tr>
+<td><code>stdlib.h</code></td>
+<td>malloc&#x2F;free、exit、atoi</td>
+</tr>
+<tr>
+<td><code>string.h</code></td>
+<td>strcpy&#x2F;strlen&#x2F;memcpy</td>
+</tr>
+<tr>
+<td><code>math.h</code></td>
+<td>sqrt&#x2F;pow&#x2F;sin（编译加 <code>-lm</code>）</td>
+</tr>
+<tr>
+<td><code>stdint.h</code></td>
+<td>int32_t&#x2F;uint8_t 等定宽类型</td>
+</tr>
+</tbody></table>
+<hr>
+<h1 id="十一、输入输出"><a href="#十一、输入输出" class="headerlink" title="十一、输入输出"></a>十一、输入输出</h1><h2 id="11-1-格式化输出-printf"><a href="#11-1-格式化输出-printf" class="headerlink" title="11.1 格式化输出 printf"></a>11.1 格式化输出 printf</h2><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">printf</span>(<span class="string">&quot;%d\n&quot;</span>, <span class="number">10</span>);        <span class="comment">// 十进制整数</span></span><br><span class="line"><span class="built_in">printf</span>(<span class="string">&quot;%f\n&quot;</span>, <span class="number">3.14</span>);      <span class="comment">// 浮点（默认 6 位小数）</span></span><br><span class="line"><span class="built_in">printf</span>(<span class="string">&quot;%.2f\n&quot;</span>, <span class="number">3.14159</span>); <span class="comment">// 保留 2 位小数</span></span><br><span class="line"><span class="built_in">printf</span>(<span class="string">&quot;%c\n&quot;</span>, <span class="string">&#x27;A&#x27;</span>);       <span class="comment">// 字符</span></span><br><span class="line"><span class="built_in">printf</span>(<span class="string">&quot;%s\n&quot;</span>, <span class="string">&quot;hello&quot;</span>);   <span class="comment">// 字符串</span></span><br><span class="line"><span class="built_in">printf</span>(<span class="string">&quot;%x\n&quot;</span>, <span class="number">255</span>);       <span class="comment">// 十六进制</span></span><br><span class="line"><span class="built_in">printf</span>(<span class="string">&quot;%o\n&quot;</span>, <span class="number">8</span>);         <span class="comment">// 八进制</span></span><br><span class="line"><span class="built_in">printf</span>(<span class="string">&quot;%ld\n&quot;</span>, <span class="number">123456L</span>);  <span class="comment">// 长整数</span></span><br><span class="line"><span class="built_in">printf</span>(<span class="string">&quot;%5d\n&quot;</span>, <span class="number">42</span>);       <span class="comment">// 宽度 5 右对齐</span></span><br><span class="line"><span class="built_in">printf</span>(<span class="string">&quot;%-5d\n&quot;</span>, <span class="number">42</span>);      <span class="comment">// 宽度 5 左对齐</span></span><br><span class="line"><span class="built_in">printf</span>(<span class="string">&quot;%p\n&quot;</span>, &amp;x);        <span class="comment">// 指针地址</span></span><br><span class="line"><span class="built_in">printf</span>(<span class="string">&quot;%%&quot;</span>);              <span class="comment">// 输出百分号本身</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="11-2-格式化输入-scanf"><a href="#11-2-格式化输入-scanf" class="headerlink" title="11.2 格式化输入 scanf"></a>11.2 格式化输入 scanf</h2><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">int</span> n;</span><br><span class="line"><span class="type">double</span> d;</span><br><span class="line"><span class="built_in">scanf</span>(<span class="string">&quot;%d&quot;</span>, &amp;n);       <span class="comment">// ⚠️ 必须加 &amp;（取地址）！</span></span><br><span class="line"><span class="built_in">scanf</span>(<span class="string">&quot;%lf&quot;</span>, &amp;d);      <span class="comment">// 读 double 用 %lf</span></span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p>初学者最常见错误：<code>scanf(&quot;%d&quot;, n)</code> 忘了 <code>&amp;</code>，会导致程序崩溃或行为未定义。</p>
+</blockquote>
+<h2 id="11-3-getchar-putchar"><a href="#11-3-getchar-putchar" class="headerlink" title="11.3 getchar &#x2F; putchar"></a>11.3 getchar &#x2F; putchar</h2><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">char</span> ch = getchar();     <span class="comment">// 读一个字符</span></span><br><span class="line"><span class="built_in">putchar</span>(ch);             <span class="comment">// 输出一个字符</span></span><br></pre></td></tr></table></figure>
+
+<hr>
+<h1 id="十二、综合实例"><a href="#十二、综合实例" class="headerlink" title="十二、综合实例"></a>十二、综合实例</h1><h2 id="12-1-猜数字游戏"><a href="#12-1-猜数字游戏" class="headerlink" title="12.1 猜数字游戏"></a>12.1 猜数字游戏</h2><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;stdio.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;stdlib.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;time.h&gt;</span></span></span><br><span class="line"></span><br><span class="line"><span class="type">int</span> <span class="title function_">main</span><span class="params">(<span class="type">void</span>)</span> &#123;</span><br><span class="line">    srand(time(<span class="literal">NULL</span>));</span><br><span class="line">    <span class="type">int</span> secret = rand() % <span class="number">100</span> + <span class="number">1</span>;   <span class="comment">// 1~100 随机数</span></span><br><span class="line">    <span class="type">int</span> guess = <span class="number">0</span>, tries = <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">    <span class="built_in">printf</span>(<span class="string">&quot;猜数字游戏（1~100）\n&quot;</span>);</span><br><span class="line">    <span class="keyword">do</span> &#123;</span><br><span class="line">        <span class="built_in">printf</span>(<span class="string">&quot;请输入你的猜测：&quot;</span>);</span><br><span class="line">        <span class="built_in">scanf</span>(<span class="string">&quot;%d&quot;</span>, &amp;guess);</span><br><span class="line">        tries++;</span><br><span class="line">        <span class="keyword">if</span> (guess &gt; secret) &#123;</span><br><span class="line">            <span class="built_in">printf</span>(<span class="string">&quot;太大了！\n&quot;</span>);</span><br><span class="line">        &#125; <span class="keyword">else</span> <span class="keyword">if</span> (guess &lt; secret) &#123;</span><br><span class="line">            <span class="built_in">printf</span>(<span class="string">&quot;太小了！\n&quot;</span>);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125; <span class="keyword">while</span> (guess != secret);</span><br><span class="line"></span><br><span class="line">    <span class="built_in">printf</span>(<span class="string">&quot;恭喜！你用了 %d 次猜中。\n&quot;</span>, tries);</span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="12-2-冒泡排序"><a href="#12-2-冒泡排序" class="headerlink" title="12.2 冒泡排序"></a>12.2 冒泡排序</h2><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">void</span> <span class="title function_">bubble_sort</span><span class="params">(<span class="type">int</span> arr[], <span class="type">int</span> n)</span> &#123;</span><br><span class="line">    <span class="keyword">for</span> (<span class="type">int</span> i = <span class="number">0</span>; i &lt; n - <span class="number">1</span>; i++) &#123;</span><br><span class="line">        <span class="keyword">for</span> (<span class="type">int</span> j = <span class="number">0</span>; j &lt; n - <span class="number">1</span> - i; j++) &#123;</span><br><span class="line">            <span class="keyword">if</span> (arr[j] &gt; arr[j + <span class="number">1</span>]) &#123;</span><br><span class="line">                <span class="type">int</span> tmp = arr[j];</span><br><span class="line">                arr[j] = arr[j + <span class="number">1</span>];</span><br><span class="line">                arr[j + <span class="number">1</span>] = tmp;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="12-3-求最大公约数（辗转相除法）"><a href="#12-3-求最大公约数（辗转相除法）" class="headerlink" title="12.3 求最大公约数（辗转相除法）"></a>12.3 求最大公约数（辗转相除法）</h2><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">int</span> <span class="title function_">gcd</span><span class="params">(<span class="type">int</span> a, <span class="type">int</span> b)</span> &#123;</span><br><span class="line">    <span class="keyword">while</span> (b != <span class="number">0</span>) &#123;</span><br><span class="line">        <span class="type">int</span> tmp = a % b;</span><br><span class="line">        a = b;</span><br><span class="line">        b = tmp;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> a;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h1 id="十三、常见错误与调试"><a href="#十三、常见错误与调试" class="headerlink" title="十三、常见错误与调试"></a>十三、常见错误与调试</h1><h2 id="13-1-初学者高频错误"><a href="#13-1-初学者高频错误" class="headerlink" title="13.1 初学者高频错误"></a>13.1 初学者高频错误</h2><table>
+<thead>
+<tr>
+<th>错误</th>
+<th>正确写法</th>
+<th>原因</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>if (a = 5)</code></td>
+<td><code>if (a == 5)</code></td>
+<td>&#x3D; 是赋值，&#x3D;&#x3D; 才是比较</td>
+</tr>
+<tr>
+<td><code>scanf(&quot;%d&quot;, n)</code></td>
+<td><code>scanf(&quot;%d&quot;, &amp;n)</code></td>
+<td>scanf 需要地址</td>
+</tr>
+<tr>
+<td><code>int a[5]; a[5]=1;</code></td>
+<td>下标 0~4</td>
+<td>越界是未定义行为</td>
+</tr>
+<tr>
+<td>忘记初始化</td>
+<td><code>int sum = 0;</code></td>
+<td>垃圾值参与运算</td>
+</tr>
+<tr>
+<td><code>7 / 2 == 3.5</code></td>
+<td><code>7 / 2 == 3</code></td>
+<td>整数除法截断</td>
+</tr>
+<tr>
+<td>字符串数组不给 <code>\0</code> 留位</td>
+<td><code>char s[6]=&quot;hello&quot;</code></td>
+<td>少 1 个字节越界</td>
+</tr>
+</tbody></table>
+<h2 id="13-2-调试技巧"><a href="#13-2-调试技巧" class="headerlink" title="13.2 调试技巧"></a>13.2 调试技巧</h2><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">printf</span>(<span class="string">&quot;调试：a=%d b=%d\n&quot;</span>, a, b);   <span class="comment">// 最简单的打印调试</span></span><br></pre></td></tr></table></figure>
+
+<ul>
+<li>编译加 <code>-Wall -Wextra</code> 让编译器提示潜在错误</li>
+<li>使用 GDB 断点单步调试</li>
+<li>缩小问题范围：二分注释代码</li>
+</ul>
+<hr>
+<h1 id="十四、编码风格建议"><a href="#十四、编码风格建议" class="headerlink" title="十四、编码风格建议"></a>十四、编码风格建议</h1><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;stdio.h&gt;</span></span></span><br><span class="line"></span><br><span class="line"><span class="comment">// 1. 命名清晰：变量用名词，函数用动词</span></span><br><span class="line"><span class="type">int</span> student_count = <span class="number">0</span>;</span><br><span class="line"><span class="type">void</span> <span class="title function_">print_report</span><span class="params">(<span class="type">void</span>)</span> &#123; <span class="comment">/* ... */</span> &#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 2. 适当缩进与空格，保持可读性</span></span><br><span class="line"><span class="keyword">for</span> (<span class="type">int</span> i = <span class="number">0</span>; i &lt; <span class="number">10</span>; i++) &#123;</span><br><span class="line">    <span class="built_in">printf</span>(<span class="string">&quot;%d\n&quot;</span>, i);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 3. 复杂逻辑加注释</span></span><br><span class="line"><span class="keyword">if</span> (a &gt; <span class="number">0</span> &amp;&amp; b &gt; <span class="number">0</span>) &#123;   <span class="comment">// 要求两个数都为正</span></span><br><span class="line">    <span class="comment">// ...</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 4. 一行只做一件事，语句间逻辑连贯</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>核心原则</strong>：代码是写给<strong>人</strong>看的，顺便给机器运行。可读性 &gt; 炫技。</p>
+<hr>
+<h1 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h1><p>C 语言基础知识点构成一张完整的入门地图：</p>
+<blockquote>
+<p><strong>程序结构 → 数据类型 → 变量常量 → 运算符 → 流程控制 → 数组 → 函数 → 指针入门 → 作用域 → 预处理 → 输入输出</strong></p>
+</blockquote>
+<p>掌握这些内容后，你就可以写出完整的小程序（猜数字、排序、简易计算器）。下一站就是进阶篇：指针深入、内存管理、结构体、位操作、编译链接与未定义行为。</p>
+<blockquote>
+<p><strong>一句话记住</strong>：C 语言基础 &#x3D; 用”变量存数据、运算符算数据、流程控流程、函数组逻辑”，把这三件事练到条件反射，就算入门了。</p>
+</blockquote>
+
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="http://example.com/2026/08/02/C%E8%AF%AD%E8%A8%80%E5%9F%BA%E7%A1%80%E7%9F%A5%E8%AF%86%E7%82%B9%E8%AF%A6%E8%A7%A3/" data-id="cmsbjlr9700012rlm65jhaxqy" data-title="C语言基础知识点详解" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      
+      
+      
+  <ul class="article-tag-list" itemprop="keywords"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/C%E8%AF%AD%E8%A8%80/" rel="tag">C语言</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/%E5%85%A5%E9%97%A8/" rel="tag">入门</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/%E5%9F%BA%E7%A1%80/" rel="tag">基础</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/" rel="tag">学习笔记</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/%E8%AF%AD%E6%B3%95/" rel="tag">语法</a></li></ul>
+
+    </footer>
+  </div>
+  
+</article>
+
+
+
+  
     <article id="post-C语言进阶知识点详解" class="h-entry article article-type-post" itemprop="blogPost" itemscope itemtype="https://schema.org/BlogPosting">
   <div class="article-meta">
     <a href="/2026/08/02/C%E8%AF%AD%E8%A8%80%E8%BF%9B%E9%98%B6%E7%9F%A5%E8%AF%86%E7%82%B9%E8%AF%A6%E8%A7%A3/" class="article-date">
@@ -630,7 +988,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2026/08/02/C%E8%AF%AD%E8%A8%80%E8%BF%9B%E9%98%B6%E7%9F%A5%E8%AF%86%E7%82%B9%E8%AF%A6%E8%A7%A3/" data-id="cmsbjfvg00001sglm7ffg0zdu" data-title="C语言进阶知识点详解" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2026/08/02/C%E8%AF%AD%E8%A8%80%E8%BF%9B%E9%98%B6%E7%9F%A5%E8%AF%86%E7%82%B9%E8%AF%A6%E8%A7%A3/" data-id="cmsbjlr9d00052rlmgsllapom" data-title="C语言进阶知识点详解" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
@@ -1113,7 +1471,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2026/08/02/%E6%B1%87%E7%BC%96%E8%AF%AD%E8%A8%80%E7%9F%A5%E8%AF%86%E7%82%B9%E8%AF%A6%E8%A7%A3/" data-id="cmsbjfvgb000dsglmeaes7unv" data-title="汇编语言知识点详解" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2026/08/02/%E6%B1%87%E7%BC%96%E8%AF%AD%E8%A8%80%E7%9F%A5%E8%AF%86%E7%82%B9%E8%AF%A6%E8%A7%A3/" data-id="cmsbjlr9j000d2rlm5ssmhomf" data-title="汇编语言知识点详解" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
@@ -1773,7 +2131,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2026/08/02/%E5%B5%8C%E5%85%A5%E5%BC%8F%E5%9B%BA%E4%BB%B6%E5%9C%B0%E5%9D%80%E4%B8%89%E4%BB%B6%E5%A5%97-LMA-VMA-XIP%E4%B8%8EPIC/" data-id="cmsbjfvg9000asglmczvobiii" data-title="嵌入式固件地址三件套：加载地址、运行时地址、XIP 与 PIC" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2026/08/02/%E5%B5%8C%E5%85%A5%E5%BC%8F%E5%9B%BA%E4%BB%B6%E5%9C%B0%E5%9D%80%E4%B8%89%E4%BB%B6%E5%A5%97-LMA-VMA-XIP%E4%B8%8EPIC/" data-id="cmsbjlr9l000e2rlmd2hi9fbv" data-title="嵌入式固件地址三件套：加载地址、运行时地址、XIP 与 PIC" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
@@ -1819,7 +2177,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2026/08/01/%E5%B5%8C%E5%85%A5%E5%BC%8F%E9%93%BE%E6%8E%A5%E8%84%9A%E6%9C%AC%E8%AF%A6%E8%A7%A3%EF%BC%9A%E4%BB%8E%E9%9B%B6%E7%90%86%E8%A7%A3Linker-Script/" data-id="cmsbjfvga000bsglm82rpdnvj" data-title="嵌入式链接脚本详解：以英飞凌TC375为例" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2026/08/01/%E5%B5%8C%E5%85%A5%E5%BC%8F%E9%93%BE%E6%8E%A5%E8%84%9A%E6%9C%AC%E8%AF%A6%E8%A7%A3%EF%BC%9A%E4%BB%8E%E9%9B%B6%E7%90%86%E8%A7%A3Linker-Script/" data-id="cmsbjlr9m000g2rlmevzud6up" data-title="嵌入式链接脚本详解：以英飞凌TC375为例" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
@@ -2016,7 +2374,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2026/08/01/Linux%E8%BD%AF%E4%BB%B6%E5%90%AF%E5%8A%A8%E8%BF%87%E7%A8%8B%E8%AF%A6%E8%A7%A3/" data-id="cmsbjfvg60005sglmgpvtgqhz" data-title="Linux软件启动过程详解" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2026/08/01/Linux%E8%BD%AF%E4%BB%B6%E5%90%AF%E5%8A%A8%E8%BF%87%E7%A8%8B%E8%AF%A6%E8%A7%A3/" data-id="cmsbjlr9b00042rlmdtatdz5x" data-title="Linux软件启动过程详解" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
@@ -2158,7 +2516,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2026/08/01/%E5%A6%82%E4%BD%95%E5%BC%80%E5%8F%91%E9%83%A8%E7%BD%B2AUTOSAR-Agent/" data-id="cmsbjfvg70007sglmh2o80a5z" data-title="如何开发部署AUTOSAR-Agent" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2026/08/01/%E5%A6%82%E4%BD%95%E5%BC%80%E5%8F%91%E9%83%A8%E7%BD%B2AUTOSAR-Agent/" data-id="cmsbjlr9g000a2rlmao4x6f1e" data-title="如何开发部署AUTOSAR-Agent" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
@@ -2883,7 +3241,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2026/08/01/%E7%94%B5%E6%9C%BA%E6%8E%A7%E5%88%B6%E7%9F%A5%E8%AF%86%E4%BD%93%E7%B3%BB%E5%85%A5%E9%97%A8%EF%BC%9A%E4%BB%8E%E7%94%B5%E6%9C%BA%E5%8E%9F%E7%90%86%E5%88%B0FOC%E5%AE%9E%E6%88%98/" data-id="cmsbjfvge000ksglmg2x88okb" data-title="电机控制知识体系入门：从电机原理到FOC实战" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2026/08/01/%E7%94%B5%E6%9C%BA%E6%8E%A7%E5%88%B6%E7%9F%A5%E8%AF%86%E4%BD%93%E7%B3%BB%E5%85%A5%E9%97%A8%EF%BC%9A%E4%BB%8E%E7%94%B5%E6%9C%BA%E5%8E%9F%E7%90%86%E5%88%B0FOC%E5%AE%9E%E6%88%98/" data-id="cmsbjlrad00422rlm4iss3ynk" data-title="电机控制知识体系入门：从电机原理到FOC实战" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
@@ -3129,7 +3487,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2026/08/01/%E4%BD%BF%E7%94%A8-Ventoy-%E5%88%B6%E4%BD%9C-U-%E7%9B%98%E5%90%AF%E5%8A%A8%E7%9B%98%E5%AE%8C%E5%85%A8%E6%8C%87%E5%8D%97/" data-id="cmsbjfvg80008sglm6vzz1i60" data-title="使用 Ventoy 制作 U 盘启动盘完全指南" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2026/08/01/%E4%BD%BF%E7%94%A8-Ventoy-%E5%88%B6%E4%BD%9C-U-%E7%9B%98%E5%90%AF%E5%8A%A8%E7%9B%98%E5%AE%8C%E5%85%A8%E6%8C%87%E5%8D%97/" data-id="cmsbjlr9f00082rlmaywy3y2z" data-title="使用 Ventoy 制作 U 盘启动盘完全指南" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
@@ -3292,765 +3650,11 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2026/07/31/%E7%94%A8%E9%A3%9E%E4%B9%A6%E8%BF%9E%E6%8E%A5AUTOSAR-Agent-%E6%89%8B%E6%9C%BA%E8%BF%9C%E7%A8%8B%E6%93%8D%E6%8E%A7%E6%8C%87%E5%8D%97/" data-id="cmsbjfvge000isglmfds4fxpj" data-title="用飞书连接AUTOSAR-Agent-手机远程操控指南" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2026/07/31/%E7%94%A8%E9%A3%9E%E4%B9%A6%E8%BF%9E%E6%8E%A5AUTOSAR-Agent-%E6%89%8B%E6%9C%BA%E8%BF%9C%E7%A8%8B%E6%93%8D%E6%8E%A7%E6%8C%87%E5%8D%97/" data-id="cmsbjlr9n000i2rlmhb1yg9tm" data-title="用飞书连接AUTOSAR-Agent-手机远程操控指南" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
   <ul class="article-tag-list" itemprop="keywords"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/AI-Agent/" rel="tag">AI Agent</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/AUTOSAR/" rel="tag">AUTOSAR</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/opencode/" rel="tag">opencode</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/%E6%95%88%E7%8E%87%E5%B7%A5%E5%85%B7/" rel="tag">效率工具</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/%E9%A3%9E%E4%B9%A6/" rel="tag">飞书</a></li></ul>
-
-    </footer>
-  </div>
-  
-</article>
-
-
-
-  
-    <article id="post-CANoe-CAPL脚本测试入门与实践" class="h-entry article article-type-post" itemprop="blogPost" itemscope itemtype="https://schema.org/BlogPosting">
-  <div class="article-meta">
-    <a href="/2026/07/31/CANoe-CAPL%E8%84%9A%E6%9C%AC%E6%B5%8B%E8%AF%95%E5%85%A5%E9%97%A8%E4%B8%8E%E5%AE%9E%E8%B7%B5/" class="article-date">
-  <time class="dt-published" datetime="2026-07-31T10:04:53.000Z" itemprop="datePublished">2026-07-31</time>
-</a>
-    
-  </div>
-  <div class="article-inner">
-    
-    
-      <header class="article-header">
-        
-  
-    <h1 itemprop="name">
-      <a class="p-name article-title" href="/2026/07/31/CANoe-CAPL%E8%84%9A%E6%9C%AC%E6%B5%8B%E8%AF%95%E5%85%A5%E9%97%A8%E4%B8%8E%E5%AE%9E%E8%B7%B5/">CANoe CAPL脚本测试入门与实践</a>
-    </h1>
-  
-
-      </header>
-    
-    <div class="e-content article-entry" itemprop="articleBody">
-      
-        <h1 id="CANoe-CAPL-脚本测试入门与实践"><a href="#CANoe-CAPL-脚本测试入门与实践" class="headerlink" title="CANoe CAPL 脚本测试入门与实践"></a>CANoe CAPL 脚本测试入门与实践</h1><p>在汽车电子开发中，CANoe 是 Vector 公司出品的总线仿真与测试工具，堪称 ECU 开发、集成测试与诊断的”瑞士军刀”。而 <strong>CAPL</strong>（Communication Access Programming Language）是 CANoe 内置的类 C 脚本语言，用于编写总线仿真、自动测试与报文处理逻辑。本文从零开始，带你掌握 CAPL 脚本测试的核心技能。</p>
-<h2 id="一、CAPL-是什么？"><a href="#一、CAPL-是什么？" class="headerlink" title="一、CAPL 是什么？"></a>一、CAPL 是什么？</h2><p>CAPL 是一种<strong>事件驱动</strong>的语言：平时脚本处于等待状态，一旦绑定的”事件”发生（收到报文、定时器到期、按键按下），对应的处理函数就被自动调用。</p>
-<h3 id="1-1-CAPL-与-C-的异同"><a href="#1-1-CAPL-与-C-的异同" class="headerlink" title="1.1 CAPL 与 C 的异同"></a>1.1 CAPL 与 C 的异同</h3><table>
-<thead>
-<tr>
-<th>特点</th>
-<th>CAPL</th>
-<th>C</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>语言风格</td>
-<td>类 C</td>
-<td>标准 C</td>
-</tr>
-<tr>
-<td>事件驱动</td>
-<td>是（核心）</td>
-<td>否</td>
-</tr>
-<tr>
-<td>内存管理</td>
-<td>自动管理</td>
-<td>手动</td>
-</tr>
-<tr>
-<td>指针</td>
-<td>部分支持（受限）</td>
-<td>完整支持</td>
-</tr>
-<tr>
-<td>编译运行</td>
-<td>CANoe 内置编译器</td>
-<td>独立编译</td>
-</tr>
-<tr>
-<td>适用场景</td>
-<td>总线仿真&#x2F;测试</td>
-<td>通用编程</td>
-</tr>
-</tbody></table>
-<h3 id="1-2-主要事件类型"><a href="#1-2-主要事件类型" class="headerlink" title="1.2 主要事件类型"></a>1.2 主要事件类型</h3><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 报文接收事件：收到 ID 为 0x123 的报文时执行</span></span><br><span class="line">on message <span class="number">0x123</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="comment">// ...</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 定时事件</span></span><br><span class="line">on timer MyTimer</span><br><span class="line">&#123;</span><br><span class="line">    <span class="comment">// 定时器到期</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 按键事件</span></span><br><span class="line">on key <span class="string">&#x27;s&#x27;</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="comment">// 按下键盘 s 键</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 系统启动事件</span></span><br><span class="line">on start</span><br><span class="line">&#123;</span><br><span class="line">    <span class="comment">// 仿真启动</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 错误帧事件</span></span><br><span class="line">on errorFrame</span><br><span class="line">&#123;</span><br><span class="line">    <span class="comment">// 总线错误帧</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 诊断请求事件</span></span><br><span class="line">on diagRequest *</span><br><span class="line">&#123;</span><br><span class="line">    <span class="comment">// ...</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<h2 id="二、CAPL-基本语法"><a href="#二、CAPL-基本语法" class="headerlink" title="二、CAPL 基本语法"></a>二、CAPL 基本语法</h2><h3 id="2-1-数据类型"><a href="#2-1-数据类型" class="headerlink" title="2.1 数据类型"></a>2.1 数据类型</h3><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 基础类型</span></span><br><span class="line"><span class="type">int</span>    i;        <span class="comment">// 32 位整数</span></span><br><span class="line">word   w;        <span class="comment">// 16 位无符号</span></span><br><span class="line">dword  dw;       <span class="comment">// 32 位无符号</span></span><br><span class="line"><span class="type">float</span>  f;        <span class="comment">// 浮点</span></span><br><span class="line"><span class="type">char</span>   c[<span class="number">32</span>];    <span class="comment">// 字符串</span></span><br><span class="line"></span><br><span class="line"><span class="comment">// 枚举与常量</span></span><br><span class="line"><span class="class"><span class="keyword">enum</span> &#123;</span> OFF = <span class="number">0</span>, ON = <span class="number">1</span> &#125;;</span><br><span class="line"><span class="type">const</span> <span class="type">int</span> MAX_RETRY = <span class="number">3</span>;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 报文与信号类型</span></span><br><span class="line">message <span class="number">0x123</span> msg123;      <span class="comment">// CAN 报文</span></span><br><span class="line">msTimer  myTimer;          <span class="comment">// 毫秒定时器</span></span><br></pre></td></tr></table></figure>
-
-<h3 id="2-2-信号访问"><a href="#2-2-信号访问" class="headerlink" title="2.2 信号访问"></a>2.2 信号访问</h3><p>访问报文信号时，需要先将信号拖入”系统变量”或用 <code>message</code> 变量：</p>
-<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">on message <span class="number">0x123</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="comment">// 方式一：通过 dbc 信号名直接访问（需关联数据库）</span></span><br><span class="line">    <span class="keyword">if</span> (this.Speed &gt; <span class="number">50</span>)   <span class="comment">// this 指向当前报文</span></span><br><span class="line">    &#123;</span><br><span class="line">        write(<span class="string">&quot;车速超过 50 km/h&quot;</span>);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 方式二：使用消息选择器</span></span><br><span class="line">    msg123 = this;</span><br><span class="line">    <span class="type">int</span> rpm = msg123.EngineSpeed;   <span class="comment">// 读取 dbc 中的信号</span></span><br><span class="line">    msg123.TargetSpeed = <span class="number">80</span>;        <span class="comment">// 写入信号（发送前）</span></span><br><span class="line">    output(msg123);                 <span class="comment">// 发送到总线</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<h3 id="2-3-定时器"><a href="#2-3-定时器" class="headerlink" title="2.3 定时器"></a>2.3 定时器</h3><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line">msTimer  cycleTimer;</span><br><span class="line"><span class="type">char</span>     cnt = <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">on start</span><br><span class="line">&#123;</span><br><span class="line">    <span class="comment">// 每 100ms 触发一次</span></span><br><span class="line">    setTimer(cycleTimer, <span class="number">100</span>);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">on timer cycleTimer</span><br><span class="line">&#123;</span><br><span class="line">    <span class="comment">// 周期性发送报文</span></span><br><span class="line">    message <span class="number">0x123</span> txMsg;</span><br><span class="line">    txMsg.Byte(<span class="number">0</span>) = cnt;</span><br><span class="line">    output(txMsg);</span><br><span class="line">    cnt++;</span><br><span class="line">    setTimer(cycleTimer, <span class="number">100</span>);   <span class="comment">// 重新启动定时器</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<h3 id="2-4-常用内置函数"><a href="#2-4-常用内置函数" class="headerlink" title="2.4 常用内置函数"></a>2.4 常用内置函数</h3><table>
-<thead>
-<tr>
-<th>函数</th>
-<th>功能</th>
-</tr>
-</thead>
-<tbody><tr>
-<td><code>output(msg)</code></td>
-<td>发送报文到总线</td>
-</tr>
-<tr>
-<td><code>setTimer(timer, ms)</code></td>
-<td>启动定时器</td>
-</tr>
-<tr>
-<td><code>cancelTimer(timer)</code></td>
-<td>取消定时器</td>
-</tr>
-<tr>
-<td><code>write()</code></td>
-<td>输出到 Write 窗口</td>
-</tr>
-<tr>
-<td><code>testWaitForMessage()</code></td>
-<td>测试等待接收报文</td>
-</tr>
-<tr>
-<td><code>testGetSignal()</code> &#x2F; <code>testSetSignal()</code></td>
-<td>读写信号值</td>
-</tr>
-<tr>
-<td><code>getMsgChannel()</code></td>
-<td>获取通道号</td>
-</tr>
-<tr>
-<td><code>setSignal()</code> &#x2F; <code>getSignal()</code></td>
-<td>全局信号访问</td>
-</tr>
-<tr>
-<td><code>getBusLoad()</code></td>
-<td>读取总线负载</td>
-</tr>
-</tbody></table>
-<h2 id="三、CANoe-测试功能开发（Test-Module）"><a href="#三、CANoe-测试功能开发（Test-Module）" class="headerlink" title="三、CANoe 测试功能开发（Test Module）"></a>三、CANoe 测试功能开发（Test Module）</h2><p>CAPL 除了仿真外，最重要的用途是构建<strong>自动化测试</strong>。CANoe 的 Test Module（测试节点）支持 <code>test_*</code> 系列函数，可以编写标准的测试用例。</p>
-<h3 id="3-1-基本测试框架"><a href="#3-1-基本测试框架" class="headerlink" title="3.1 基本测试框架"></a>3.1 基本测试框架</h3><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 测试用例：验证车速信号的限幅逻辑</span></span><br><span class="line">testcase <span class="title function_">TC_Check_Speed_Clamp</span><span class="params">()</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="type">int</span> speedIn, speedOut;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 1. 测试开始</span></span><br><span class="line">    testCaseStart(<span class="string">&quot;TC_Check_Speed_Clamp&quot;</span>, <span class="string">&quot;车速信号限幅验证&quot;</span>);</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 2. 设置激励：注入 120 km/h</span></span><br><span class="line">    testSetSignal(EngineSpeed, <span class="number">120</span>);</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 3. 等待 ECU 响应（1s 超时）</span></span><br><span class="line">    <span class="keyword">if</span> (testWaitForSignalMatch(DisplayedSpeed, <span class="number">100</span>, <span class="number">1000</span>))</span><br><span class="line">    &#123;</span><br><span class="line">        speedOut = testGetSignal(DisplayedSpeed);</span><br><span class="line">        <span class="comment">// 4. 断言：显示值不应超过 100</span></span><br><span class="line">        <span class="keyword">if</span> (speedOut &gt; <span class="number">100</span>)</span><br><span class="line">        &#123;</span><br><span class="line">            testStepFail(<span class="string">&quot;限幅失效&quot;</span>, <span class="string">&quot;期望&lt;=100，实际=%d&quot;</span>, speedOut);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">else</span></span><br><span class="line">        &#123;</span><br><span class="line">            testStepPass(<span class="string">&quot;限幅正常&quot;</span>, <span class="string">&quot;输出=%d&quot;</span>, speedOut);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">else</span></span><br><span class="line">    &#123;</span><br><span class="line">        testStepFail(<span class="string">&quot;超时&quot;</span>, <span class="string">&quot;1s 内未收到响应&quot;</span>);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    testCaseEnd();</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 测试主入口</span></span><br><span class="line"><span class="type">void</span> <span class="title function_">MainTest</span><span class="params">()</span></span><br><span class="line">&#123;</span><br><span class="line">    TestGroupBegin(<span class="string">&quot;速度功能测试&quot;</span>, <span class="string">&quot;Speed Function&quot;</span>);</span><br><span class="line">    TC_Check_Speed_Clamp();</span><br><span class="line">    TestGroupEnd();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<h3 id="3-2-常用测试函数"><a href="#3-2-常用测试函数" class="headerlink" title="3.2 常用测试函数"></a>3.2 常用测试函数</h3><table>
-<thead>
-<tr>
-<th>函数</th>
-<th>功能</th>
-</tr>
-</thead>
-<tbody><tr>
-<td><code>testCaseStart() / testCaseEnd()</code></td>
-<td>用例开始&#x2F;结束</td>
-</tr>
-<tr>
-<td><code>testStepPass() / testStepFail()</code></td>
-<td>记录通过&#x2F;失败步骤</td>
-</tr>
-<tr>
-<td><code>testWaitForMessage(id, timeout)</code></td>
-<td>等待指定报文</td>
-</tr>
-<tr>
-<td><code>testWaitForSignalMatch(sig, val, timeout)</code></td>
-<td>等待信号达到目标值</td>
-</tr>
-<tr>
-<td><code>testWaitForTimeout(ms)</code></td>
-<td>固定延时等待</td>
-</tr>
-<tr>
-<td><code>testReportWrite()</code></td>
-<td>写测试报告</td>
-</tr>
-<tr>
-<td><code>TestGroupBegin() / TestGroupEnd()</code></td>
-<td>用例分组</td>
-</tr>
-<tr>
-<td><code>testAssert()</code></td>
-<td>通用断言</td>
-</tr>
-</tbody></table>
-<h3 id="3-3-测试报告"><a href="#3-3-测试报告" class="headerlink" title="3.3 测试报告"></a>3.3 测试报告</h3><p>用例执行后 CANoe 自动生成测试报告（HTML&#x2F;XML），包含：</p>
-<ul>
-<li>每条用例的执行结果（Pass&#x2F;Fail&#x2F;Error）</li>
-<li>每个测试步骤的详细记录（值、时间戳）</li>
-<li>失败时的错误信息与总线日志关联</li>
-</ul>
-<h2 id="四、实战：发动机转速超速报警测试"><a href="#四、实战：发动机转速超速报警测试" class="headerlink" title="四、实战：发动机转速超速报警测试"></a>四、实战：发动机转速超速报警测试</h2><p>以”发动机超速报警”功能为例，完整演示 CAPL 测试用例开发。</p>
-<h3 id="4-1-测试需求"><a href="#4-1-测试需求" class="headerlink" title="4.1 测试需求"></a>4.1 测试需求</h3><table>
-<thead>
-<tr>
-<th>项目</th>
-<th>内容</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>测试对象</td>
-<td>仪表盘 ECU（显示车速）</td>
-</tr>
-<tr>
-<td>输入信号</td>
-<td><code>EngineSpeed</code>（发动机转速）</td>
-</tr>
-<tr>
-<td>输出信号</td>
-<td><code>SpeedAlarm</code>（报警标志，1&#x3D;报警）</td>
-</tr>
-<tr>
-<td>报警阈值</td>
-<td>6000 rpm</td>
-</tr>
-<tr>
-<td>判定条件</td>
-<td>转速 &gt; 6000 时 200ms 内报警置 1</td>
-</tr>
-</tbody></table>
-<h3 id="4-2-测试用例实现"><a href="#4-2-测试用例实现" class="headerlink" title="4.2 测试用例实现"></a>4.2 测试用例实现</h3><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/* 超速报警测试 */</span></span><br><span class="line">testcase <span class="title function_">TC_Overspeed_Alarm</span><span class="params">()</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="type">const</span> <span class="type">int</span> THRESHOLD = <span class="number">6000</span>;</span><br><span class="line">    <span class="type">int</span> result;</span><br><span class="line"></span><br><span class="line">    testCaseStart(<span class="string">&quot;TC_Overspeed_Alarm&quot;</span>, <span class="string">&quot;发动机超速报警&quot;</span>);</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 步骤 1：正常转速，不应报警</span></span><br><span class="line">    testSetSignal(EngineSpeed, <span class="number">3000</span>);</span><br><span class="line">    testWaitForTimeout(<span class="number">200</span>);</span><br><span class="line">    result = testGetSignal(SpeedAlarm);</span><br><span class="line">    testStep(result == <span class="number">0</span> ? pass : fail, <span class="string">&quot;正常转速不报警&quot;</span>, <span class="string">&quot;SpeedAlarm=%d&quot;</span>, result);</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 步骤 2：超过阈值，应报警</span></span><br><span class="line">    testSetSignal(EngineSpeed, <span class="number">6500</span>);</span><br><span class="line">    <span class="keyword">if</span> (testWaitForSignalMatch(SpeedAlarm, <span class="number">1</span>, <span class="number">200</span>))</span><br><span class="line">    &#123;</span><br><span class="line">        testStepPass(<span class="string">&quot;超速报警&quot;</span>, <span class="string">&quot;6500rpm 时 200ms 内触发报警&quot;</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">else</span></span><br><span class="line">    &#123;</span><br><span class="line">        testStepFail(<span class="string">&quot;超速报警&quot;</span>, <span class="string">&quot;6500rpm 未在 200ms 内报警&quot;</span>);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 步骤 3：恢复转速，报警应解除</span></span><br><span class="line">    testSetSignal(EngineSpeed, <span class="number">3000</span>);</span><br><span class="line">    <span class="keyword">if</span> (testWaitForSignalMatch(SpeedAlarm, <span class="number">0</span>, <span class="number">500</span>))</span><br><span class="line">    &#123;</span><br><span class="line">        testStepPass(<span class="string">&quot;报警解除&quot;</span>, <span class="string">&quot;转速恢复后报警清除&quot;</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">else</span></span><br><span class="line">    &#123;</span><br><span class="line">        testStepFail(<span class="string">&quot;报警解除&quot;</span>, <span class="string">&quot;报警未清除&quot;</span>);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    testCaseEnd();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<h3 id="4-3-配置测试环境"><a href="#4-3-配置测试环境" class="headerlink" title="4.3 配置测试环境"></a>4.3 配置测试环境</h3><ol>
-<li>在 Simulation Setup 中新建 <strong>Test Module</strong> 节点；</li>
-<li>双击测试节点，打开 CAPL Browser 编写脚本；</li>
-<li>添加测试用例到 <code>MainTest()</code>；</li>
-<li>关联 DBC 文件，使信号名可用；</li>
-<li>点击运行，自动执行并生成报告。</li>
-</ol>
-<h2 id="五、OSEK-TP-DLL-库函数调用（CAN-TP-传输层）"><a href="#五、OSEK-TP-DLL-库函数调用（CAN-TP-传输层）" class="headerlink" title="五、OSEK TP DLL 库函数调用（CAN TP 传输层）"></a>五、OSEK TP DLL 库函数调用（CAN TP 传输层）</h2><p>CAN 单帧数据只有 8 字节（经典 CAN）或 64 字节（CAN FD），当需要传输超过单帧容量的大块数据（如 UDS 诊断请求&#x2F;响应、Bootloader 刷写数据）时，必须借助<strong>传输层协议</strong>将数据分段发送、重组接收。Vector 官方提供的 <strong>OSEK TP DLL</strong>（<code>osek_tp.dll</code>）在 CANoe 中实现了基于 ISO 15765-2 的 CAN TP 传输层，并封装为一组 CAPL 可直接调用的库函数，是 CANoe 诊断测试与 ECU 刷写仿真的利器。</p>
-<h3 id="5-1-为什么需要-TP-层"><a href="#5-1-为什么需要-TP-层" class="headerlink" title="5.1 为什么需要 TP 层"></a>5.1 为什么需要 TP 层</h3><p>ISO 15765-2 定义了四种帧类型：</p>
-<table>
-<thead>
-<tr>
-<th>帧类型</th>
-<th>缩写</th>
-<th>作用</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>单帧</td>
-<td>SF</td>
-<td>单帧即可装下的数据（≤7 字节）</td>
-</tr>
-<tr>
-<td>首帧</td>
-<td>FF</td>
-<td>多帧传输的第一帧，声明总数据长度</td>
-</tr>
-<tr>
-<td>连续帧</td>
-<td>CF</td>
-<td>后续分段数据</td>
-</tr>
-<tr>
-<td>流控帧</td>
-<td>FC</td>
-<td>接收方告知发送方：块大小（BlockSize）与最小间隔时间（STmin）</td>
-</tr>
-</tbody></table>
-<blockquote>
-<p>以 4096 字节的 UDS 响应为例：若不使用 TP 层，需手动拆成数百帧并自行管理时序、超时与重组，极易出错；使用 <code>osek_tp.dll</code> 后只需一行 <code>CanTpSendData()</code>，拆包、流控、重组全部自动完成。</p>
-</blockquote>
-<h3 id="5-2-加载-osek-tp-dll"><a href="#5-2-加载-osek-tp-dll" class="headerlink" title="5.2 加载 osek_tp.dll"></a>5.2 加载 osek_tp.dll</h3><ol>
-<li>在 Simulation Setup 中<strong>右键目标节点</strong>（仿真节点或 Test Module 测试节点）；</li>
-<li>选择 <strong>Configuration → Components</strong>；</li>
-<li>点击 <strong>Add</strong>，选择 <code>osek_tp.dll</code>（Vector 安装目录下自带）；</li>
-<li><strong>重新打开 CAPL Browser</strong>，即可在函数列表中找到导出的 <code>CanTp_*</code> 系列函数。</li>
-</ol>
-<blockquote>
-<p>注意：DLL 是节点级组件，<strong>每个需要 TP 能力的节点都要单独添加</strong>；加载后必须重开 CAPL Browser 才能识别新函数。</p>
-</blockquote>
-<h3 id="5-3-常用-API-一览"><a href="#5-3-常用-API-一览" class="headerlink" title="5.3 常用 API 一览"></a>5.3 常用 API 一览</h3><table>
-<thead>
-<tr>
-<th>分类</th>
-<th>函数</th>
-<th>说明</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>连接管理</td>
-<td><code>CanTpCreateConnection(mode)</code></td>
-<td>创建 TP 连接并返回句柄（0 &#x3D; 普通模式）</td>
-</tr>
-<tr>
-<td></td>
-<td><code>CanTpDeleteConnection(handle)</code></td>
-<td>删除连接</td>
-</tr>
-<tr>
-<td>地址配置</td>
-<td><code>CanTpSetTxIdentifier(handle, id)</code></td>
-<td>设置发送 CAN ID（如 0x710）</td>
-</tr>
-<tr>
-<td></td>
-<td><code>CanTpSetRxIdentifier(handle, id)</code></td>
-<td>设置接收 CAN ID（如 0x718）</td>
-</tr>
-<tr>
-<td>流控参数</td>
-<td><code>CanTpSetBlockSize(handle, n)</code></td>
-<td>流控块大小（0 &#x3D; 不限制）</td>
-</tr>
-<tr>
-<td></td>
-<td><code>CanTpSetSTmin(handle, ms)</code></td>
-<td>连续帧最小间隔（0~127ms）</td>
-</tr>
-<tr>
-<td></td>
-<td><code>CanTpSetFlowControlDelay(handle, ms)</code></td>
-<td>接收方发出流控帧前的延迟</td>
-</tr>
-<tr>
-<td>超时参数</td>
-<td><code>CanTpSetTimeoutAr/As/Bs/Cr(handle, ms)</code></td>
-<td>AR&#x2F;AS&#x2F;BS&#x2F;CR 各阶段超时</td>
-</tr>
-<tr>
-<td>填充配置</td>
-<td><code>CanTpSetPadding(handle, byte)</code></td>
-<td>空闲字节填充值（如 0xAA）</td>
-</tr>
-<tr>
-<td>数据收发</td>
-<td><code>CanTpSendData(handle, data[], len)</code></td>
-<td>发送大块数据（自动分段）</td>
-</tr>
-<tr>
-<td>回调函数</td>
-<td><code>CanTp_ReceptionInd(handle, data[])</code></td>
-<td>收到完整消息时回调（自动重组）</td>
-</tr>
-<tr>
-<td></td>
-<td><code>CanTp_ErrorInd(handle, errCode)</code></td>
-<td>TP 层错误回调</td>
-</tr>
-</tbody></table>
-<h3 id="5-4-建立-TP-连接"><a href="#5-4-建立-TP-连接" class="headerlink" title="5.4 建立 TP 连接"></a>5.4 建立 TP 连接</h3><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><span class="line">variables</span><br><span class="line">&#123;</span><br><span class="line">    <span class="type">long</span>    g_CanTpHandle = <span class="number">0</span>;</span><br><span class="line">    message <span class="number">0x710</span> txPhyMsg;      <span class="comment">// 物理寻址：诊断请求</span></span><br><span class="line">    message <span class="number">0x718</span> rxResMsg;      <span class="comment">// ECU 诊断响应</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">/* 初始化 TP 连接（on start 或发送前调用一次） */</span></span><br><span class="line"><span class="type">void</span> <span class="title function_">CanTP_Init</span><span class="params">(<span class="type">void</span>)</span></span><br><span class="line">&#123;</span><br><span class="line">    g_CanTpHandle = CanTpCreateConnection(<span class="number">0</span>);   <span class="comment">// 0 = 普通模式</span></span><br><span class="line"></span><br><span class="line">    CanTpSetTxIdentifier(g_CanTpHandle, <span class="number">0x710</span>);</span><br><span class="line">    CanTpSetRxIdentifier(g_CanTpHandle, <span class="number">0x718</span>);</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 流控参数：块大小 0（不限制），STmin = 20ms</span></span><br><span class="line">    CanTpSetBlockSize(g_CanTpHandle, <span class="number">0</span>);</span><br><span class="line">    CanTpSetSTmin(g_CanTpHandle, <span class="number">20</span>);</span><br><span class="line">    CanTpSetFlowControlDelay(g_CanTpHandle, <span class="number">15</span>);</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 超时参数（单位 ms）</span></span><br><span class="line">    CanTpSetTimeoutAr(g_CanTpHandle, <span class="number">250</span>);</span><br><span class="line">    CanTpSetTimeoutAs(g_CanTpHandle, <span class="number">250</span>);</span><br><span class="line">    CanTpSetTimeoutBs(g_CanTpHandle, <span class="number">100</span>);</span><br><span class="line">    CanTpSetTimeoutCr(g_CanTpHandle, <span class="number">250</span>);</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 空闲字节填充</span></span><br><span class="line">    CanTpSetPadding(g_CanTpHandle, <span class="number">0xAA</span>);</span><br><span class="line"></span><br><span class="line">    write(<span class="string">&quot;OSEK TP 连接已建立，Handle=%d&quot;</span>, g_CanTpHandle);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<h3 id="5-5-发送大数据（自动分段）"><a href="#5-5-发送大数据（自动分段）" class="headerlink" title="5.5 发送大数据（自动分段）"></a>5.5 发送大数据（自动分段）</h3><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/* 发送 UDS 22 服务：读取 DID 0xF190 */</span></span><br><span class="line"><span class="type">void</span> <span class="title function_">SendUdsReadDataByID</span><span class="params">(<span class="type">void</span>)</span></span><br><span class="line">&#123;</span><br><span class="line">    byte reqData[<span class="number">8</span>];</span><br><span class="line">    <span class="type">long</span>  len = <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">    reqData[len++] = <span class="number">0x22</span>;       <span class="comment">// UDS SID：ReadDataByIdentifier</span></span><br><span class="line">    reqData[len++] = <span class="number">0xF1</span>;       <span class="comment">// DID 高字节</span></span><br><span class="line">    reqData[len++] = <span class="number">0x90</span>;       <span class="comment">// DID 低字节</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">// TP 层自动完成：单帧/多帧判断、FF+CF 分段、等待流控帧</span></span><br><span class="line">    CanTpSendData(g_CanTpHandle, reqData, len);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>发送 3 字节请求时 TP 层会自动使用单帧（SF）；当数据超过单帧容量时自动切换为首帧（FF）+ 连续帧（CF），并依据接收方的流控帧（FC）管理发送节奏——<strong>拆包与组包逻辑全部由 DLL 完成</strong>。</p>
-<h3 id="5-6-接收回调（自动重组）"><a href="#5-6-接收回调（自动重组）" class="headerlink" title="5.6 接收回调（自动重组）"></a>5.6 接收回调（自动重组）</h3><p>ECU 返回多帧响应时，DLL 会自动重组数据并调用回调函数：</p>
-<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/* 回调：收到完整 TP 消息（已自动重组，data[] 不含长度字节） */</span></span><br><span class="line"><span class="type">void</span> <span class="title function_">CanTp_ReceptionInd</span><span class="params">(<span class="type">long</span> connHandle, byte data[])</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="type">int</span>  len = elcount(data);</span><br><span class="line">    byte i;</span><br><span class="line"></span><br><span class="line">    write(<span class="string">&quot;收到 TP 数据，连接=%d，长度=%d&quot;</span>, connHandle, len);</span><br><span class="line">    <span class="keyword">for</span> (i = <span class="number">0</span>; i &lt; len; i++)</span><br><span class="line">    &#123;</span><br><span class="line">        write(<span class="string">&quot;  data[%d] = 0x%02x&quot;</span>, i, data[i]);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<h3 id="5-7-其他回调函数"><a href="#5-7-其他回调函数" class="headerlink" title="5.7 其他回调函数"></a>5.7 其他回调函数</h3><table>
-<thead>
-<tr>
-<th>回调函数</th>
-<th>触发时机</th>
-<th>典型用途</th>
-</tr>
-</thead>
-<tbody><tr>
-<td><code>CanTp_FirstFrameInd(handle, len)</code></td>
-<td>收到对端首帧</td>
-<td>获知对方即将发送的大块数据长度</td>
-</tr>
-<tr>
-<td><code>CanTp_PreSend(handle)</code></td>
-<td>每次发送数据前</td>
-<td>更新数据 &#x2F; 记录发送时刻</td>
-</tr>
-<tr>
-<td><code>CanTp_SendCon(handle)</code></td>
-<td>发送完成确认</td>
-<td>确认发送成功，驱动下一步流程</td>
-</tr>
-<tr>
-<td><code>CanTp_ErrorInd(handle, errCode)</code></td>
-<td>TP 层错误（超时等）</td>
-<td>错误上报与重发策略</td>
-</tr>
-<tr>
-<td><code>CanTp_ChannelModeChangeInd(handle)</code></td>
-<td>通道模式切换</td>
-<td>诊断会话切换联动</td>
-</tr>
-</tbody></table>
-<h3 id="5-8-使用要点"><a href="#5-8-使用要点" class="headerlink" title="5.8 使用要点"></a>5.8 使用要点</h3><ul>
-<li>初始化顺序：<strong>先 <code>CanTpCreateConnection</code>，再 Set 各项参数</strong>，最后才能 <code>CanTpSendData</code>；</li>
-<li>句柄要保存为全局变量，回调函数通过 <code>connHandle</code> 区分多路连接；</li>
-<li>发送前确认节点 CAN ID 与寻址类型匹配（物理寻址 0x710&#x2F;0x718，功能寻址 0x7DF）；</li>
-<li>结合诊断测试时，可封装 <code>SendUdsRequest(sid, data, len)</code> + <code>CanTp_ReceptionInd</code> 形成完整的 UDS 收发闭环；</li>
-<li>64 位工程注意选用匹配位数的 DLL（Exec32&#x2F;Exec64 目录）。</li>
-</ul>
-<h2 id="六、LIN-TP-DLL-库函数调用（LIN-TP-传输层）"><a href="#六、LIN-TP-DLL-库函数调用（LIN-TP-传输层）" class="headerlink" title="六、LIN TP DLL 库函数调用（LIN TP 传输层）"></a>六、LIN TP DLL 库函数调用（LIN TP 传输层）</h2><p>与 CAN 类似，LIN 总线也有一套自己的传输层协议 <strong>LIN TP</strong>（定义于 LIN 2.x 规范，参考 ISO 15765-2 设计），用于在 8 字节的 LIN 帧上传输超过单帧容量的诊断数据。Vector 提供的 <strong>LINtp.dll</strong> 在 CANoe 中封装了 LIN TP 协议，即使不使用 CDD&#x2F;PDX 诊断数据库，也能通过 CAPL 直接实现 LIN 诊断通信。</p>
-<h3 id="6-1-LIN-TP-与-CAN-TP-的差异"><a href="#6-1-LIN-TP-与-CAN-TP-的差异" class="headerlink" title="6.1 LIN TP 与 CAN TP 的差异"></a>6.1 LIN TP 与 CAN TP 的差异</h3><table>
-<thead>
-<tr>
-<th>对比项</th>
-<th>CAN TP（osek_tp.dll）</th>
-<th>LIN TP（LINtp.dll）</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>物理层</td>
-<td>CAN &#x2F; CAN FD</td>
-<td>LIN（单线，12V）</td>
-</tr>
-<tr>
-<td>拓扑</td>
-<td>多主&#x2F;多从，总线仲裁</td>
-<td>主从结构，无仲裁</td>
-</tr>
-<tr>
-<td>诊断寻址</td>
-<td>CAN ID（0x710&#x2F;0x718 等）</td>
-<td><strong>NAD</strong>（节点诊断地址）</td>
-</tr>
-<tr>
-<td>诊断帧</td>
-<td>任意诊断 ID</td>
-<td>固定 0x3C（MasterReq）&#x2F; 0x3D（DiagResp）</td>
-</tr>
-<tr>
-<td>发送时机</td>
-<td>任意时刻主动发送</td>
-<td>由<strong>主机调度表</strong>控制帧时隙</td>
-</tr>
-<tr>
-<td>数据帧格式</td>
-<td>CAN ID + PCI + 数据</td>
-<td>NAD + PCI + 数据</td>
-</tr>
-<tr>
-<td>单帧数据量</td>
-<td>SF ≤ 7 字节</td>
-<td>SF ≤ 6 字节</td>
-</tr>
-</tbody></table>
-<p>LIN 的诊断数据帧格式为 <code>NAD + PCI + Data</code>：</p>
-<ul>
-<li><strong>NAD</strong>：目标从节点的诊断地址（如 0x55）；</li>
-<li><strong>PCI</strong>：协议控制信息，标明帧类型（SF&#x3D;0 &#x2F; FF&#x3D;1 &#x2F; CF&#x3D;2 &#x2F; FC&#x3D;3）与帧序号；</li>
-<li><strong>Data</strong>：有效数据，单帧（SF）最多 6 字节，连续帧（CF）最多 7 字节。</li>
-</ul>
-<h3 id="6-2-加载-LINtp-dll-与工程准备"><a href="#6-2-加载-LINtp-dll-与工程准备" class="headerlink" title="6.2 加载 LINtp.dll 与工程准备"></a>6.2 加载 LINtp.dll 与工程准备</h3><ol>
-<li>LIN 工程需先加载 <strong>LDF 文件</strong>，其中必须包含 0x3C 诊断请求帧、0x3D 诊断响应帧，以及<strong>主机调度表</strong>（调度表中至少要有一条包含诊断帧的表项，如 AppSend &#x2F; MasterReq &#x2F; DiagResp）；</li>
-<li>在 <strong>LIN 主节点</strong>上右键 → Configuration → Components，添加 <code>LINtp.dll</code>（LIN 诊断发送只能由主节点发起）；</li>
-<li>重新打开 CAPL Browser 即可看到 <code>LINtp_*</code> 系列函数。</li>
-</ol>
-<blockquote>
-<p>提示：LIN 从节点可以使用真实 ECU，也可以用 CAPL 仿真从节点接收诊断请求并回复。</p>
-</blockquote>
-<h3 id="6-3-常用-API-一览"><a href="#6-3-常用-API-一览" class="headerlink" title="6.3 常用 API 一览"></a>6.3 常用 API 一览</h3><table>
-<thead>
-<tr>
-<th>分类</th>
-<th>函数</th>
-<th>说明</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>数据发送</td>
-<td><code>LINtp_DataReq(data[], count, nad)</code></td>
-<td>发送诊断数据：数据缓冲、字节数、目标 NAD</td>
-</tr>
-<tr>
-<td>数据接收</td>
-<td><code>LINtp_DataInd(count, nad)</code></td>
-<td>回调：收到完整数据（已自动重组）</td>
-</tr>
-<tr>
-<td></td>
-<td><code>LINtp_GetRxData(buffer[], count)</code></td>
-<td>在回调中取出接收数据</td>
-</tr>
-<tr>
-<td>发送确认</td>
-<td><code>LINtp_DataCon(count)</code></td>
-<td>回调：发送完成，可获取已发送字节数</td>
-</tr>
-<tr>
-<td>错误处理</td>
-<td><code>LINtp_ErrorInd(error)</code></td>
-<td>回调：TP 层错误上报</td>
-</tr>
-<tr>
-<td>调度配合</td>
-<td><code>linChangeSchedTable(table)</code></td>
-<td>标准 LIN CAPL 函数，切换调度表</td>
-</tr>
-</tbody></table>
-<blockquote>
-<p><code>linChangeSchedTable()</code> 并非 LINtp.dll 导出，而是 LIN 节点自带的标准函数，但它是 LIN 诊断收发<strong>必不可少</strong>的配合函数——只有调度表运行到 0x3C&#x2F;0x3D 帧的时隙时，诊断帧才会真正出现在总线上。</p>
-</blockquote>
-<h3 id="6-4-发送单帧诊断请求"><a href="#6-4-发送单帧诊断请求" class="headerlink" title="6.4 发送单帧诊断请求"></a>6.4 发送单帧诊断请求</h3><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line">variables</span><br><span class="line">&#123;</span><br><span class="line">    byte req_data[<span class="number">4095</span>];</span><br><span class="line">    byte rxBuffer[<span class="number">4096</span>];</span><br><span class="line">    byte NAD = <span class="number">0x55</span>;             <span class="comment">// 目标从节点诊断地址</span></span><br><span class="line"></span><br><span class="line">    <span class="class"><span class="keyword">enum</span> <span class="title">eSchedTables</span></span></span><br><span class="line"><span class="class">    &#123;</span></span><br><span class="line">        AppSend    = <span class="number">0</span>,          <span class="comment">// 应用调度表</span></span><br><span class="line">        MasterReq  = <span class="number">1</span>,          <span class="comment">// 0x3C 诊断请求调度表</span></span><br><span class="line">        DiagResp   = <span class="number">2</span>           <span class="comment">// 0x3D 诊断响应调度表</span></span><br><span class="line">    &#125;;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">on key <span class="string">&#x27;a&#x27;</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="comment">// 1. 切换到 0x3C 诊断请求调度表</span></span><br><span class="line">    linChangeSchedTable(MasterReq);</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 2. 填充诊断数据（无需自行添加长度，TP 层自动处理）</span></span><br><span class="line">    req_data[<span class="number">0</span>] = <span class="number">0x10</span>;          <span class="comment">// UDS SID：DiagnosticSessionControl</span></span><br><span class="line">    req_data[<span class="number">1</span>] = <span class="number">0x01</span>;          <span class="comment">// SubFunction：DefaultSession</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">// 3. 发送 2 字节请求 → 自动封装为单帧（SF）</span></span><br><span class="line">    LINtp_DataReq(req_data, <span class="number">2</span>, NAD);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<h3 id="6-5-发送多帧诊断请求"><a href="#6-5-发送多帧诊断请求" class="headerlink" title="6.5 发送多帧诊断请求"></a>6.5 发送多帧诊断请求</h3><p>发送逻辑与单帧完全相同，<strong>只要数据超过单帧容量（&gt;6 字节），DLL 自动按 FF + CF 分段</strong>：</p>
-<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">on key <span class="string">&#x27;b&#x27;</span></span><br><span class="line">&#123;</span><br><span class="line">    byte i;</span><br><span class="line">    linChangeSchedTable(MasterReq);</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 构造 110 字节的写入请求（UDS 2E 服务：WriteDataByIdentifier）</span></span><br><span class="line">    req_data[<span class="number">0</span>] = <span class="number">0x2E</span>;</span><br><span class="line">    req_data[<span class="number">1</span>] = <span class="number">0xF1</span>;</span><br><span class="line">    req_data[<span class="number">2</span>] = <span class="number">0x90</span>;</span><br><span class="line">    <span class="keyword">for</span> (i = <span class="number">3</span>; i &lt; <span class="number">110</span>; i++)</span><br><span class="line">    &#123;</span><br><span class="line">        req_data[i] = i;         <span class="comment">// 填充业务数据</span></span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    LINtp_DataReq(req_data, <span class="number">110</span>, NAD);   <span class="comment">// 自动多帧发送</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<h3 id="6-6-接收响应回调（自动重组）"><a href="#6-6-接收响应回调（自动重组）" class="headerlink" title="6.6 接收响应回调（自动重组）"></a>6.6 接收响应回调（自动重组）</h3><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/* 回调：收到从节点响应（DLL 已完成重组） */</span></span><br><span class="line"><span class="type">void</span> <span class="title function_">LINtp_DataInd</span><span class="params">(<span class="type">long</span> count, DWORD nad)</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="type">long</span> i;</span><br><span class="line">    LINtp_GetRxData(rxBuffer, count);    <span class="comment">// 取出完整数据</span></span><br><span class="line"></span><br><span class="line">    write(<span class="string">&quot;从节点 0x%X 收到 %d 字节响应&quot;</span>, nad, count);</span><br><span class="line">    <span class="keyword">for</span> (i = <span class="number">0</span>; i &lt; count; i++)</span><br><span class="line">    &#123;</span><br><span class="line">        write(<span class="string">&quot;  rxBuffer[%d] = 0x%X&quot;</span>, i, rxBuffer[i]);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 响应接收完毕，切回应用调度表</span></span><br><span class="line">    linChangeSchedTable(AppSend);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">/* 回调：发送完成确认 */</span></span><br><span class="line"><span class="type">void</span> <span class="title function_">LINtp_DataCon</span><span class="params">(<span class="type">long</span> count)</span></span><br><span class="line">&#123;</span><br><span class="line">    write(<span class="string">&quot;成功发送 %d 字节，切换到 0x3D 调度表等待响应&quot;</span>, count);</span><br><span class="line">    linChangeSchedTable(DiagResp);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">/* 回调：TP 层错误 */</span></span><br><span class="line"><span class="type">void</span> <span class="title function_">LINtp_ErrorInd</span><span class="params">(<span class="type">int</span> error)</span></span><br><span class="line">&#123;</span><br><span class="line">    write(<span class="string">&quot;LIN TP 错误，错误码 = %d&quot;</span>, error);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<h3 id="6-7-完整收发时序"><a href="#6-7-完整收发时序" class="headerlink" title="6.7 完整收发时序"></a>6.7 完整收发时序</h3><p>以”主节点发 22 服务读 DID、从节点回数据”为例：</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">[主节点]                         [总线]                       [从节点]</span><br><span class="line">  LINtp_DataReq(0x22...)  →  0x3C 帧(SF)      →   收到请求</span><br><span class="line">  linChangeSchedTable      ↕                    处理数据</span><br><span class="line">  LINtp_DataCon(count)                          （0x3D 帧时隙）</span><br><span class="line">  LINtp_DataInd(count)   ←  0x3D 帧(FF+CF…)  ←   响应多帧</span><br><span class="line">  LINtp_GetRxData(buf,count) → 得到完整响应</span><br></pre></td></tr></table></figure>
-
-<h3 id="6-8-使用要点"><a href="#6-8-使用要点" class="headerlink" title="6.8 使用要点"></a>6.8 使用要点</h3><ul>
-<li>LIN 诊断由<strong>主节点</strong>发起，LINtp.dll 加在主节点上；从节点端可用真实 ECU 或 CAPL 仿真；</li>
-<li><strong>NAD 必须与 LDF 中定义的从节点 NAD 一致</strong>，否则从节点不响应；</li>
-<li>发送前先 <code>linChangeSchedTable(MasterReq)</code>，发送完成在 <code>LINtp_DataCon</code> 中切到 <code>DiagResp</code>，接收完毕切回应用表——调度表切换是 LIN 诊断的关键节奏；</li>
-<li>接收数据务必在 <code>LINtp_DataInd</code> 回调中调用 <code>LINtp_GetRxData()</code> 取出，回调外取不到；</li>
-<li>多帧数据由 DLL 自动分段，无需关心 FF&#x2F;CF 的 PCI 细节。</li>
-</ul>
-<h2 id="七、DoIP-DLL-库函数调用（以太网诊断传输层）"><a href="#七、DoIP-DLL-库函数调用（以太网诊断传输层）" class="headerlink" title="七、DoIP DLL 库函数调用（以太网诊断传输层）"></a>七、DoIP DLL 库函数调用（以太网诊断传输层）</h2><p><strong>答案是：有。</strong> 以太网对应的传输层建模库是 <strong>DoIP.dll</strong>（新版 CANoe 中为 <strong>DoIP.vmodule</strong>）。与 CAN&#x2F;LIN 的 TP 层不同，以太网诊断不需要在数据链路层拆帧——<strong>TCP 协议本身已承担分段与重组</strong>，以太网的”传输层”封装的是更高一层的 <strong>DoIP（Diagnostics over IP，ISO 13400-2）</strong> 协议。</p>
-<h3 id="7-1-三种-TP-DLL-对比"><a href="#7-1-三种-TP-DLL-对比" class="headerlink" title="7.1 三种 TP DLL 对比"></a>7.1 三种 TP DLL 对比</h3><table>
-<thead>
-<tr>
-<th>DLL</th>
-<th>总线</th>
-<th>协议</th>
-<th>寻址方式</th>
-<th>分段方式</th>
-</tr>
-</thead>
-<tbody><tr>
-<td><code>osek_tp.dll</code></td>
-<td>CAN</td>
-<td>ISO 15765-2</td>
-<td>CAN ID（0x710&#x2F;0x718）</td>
-<td>TP 层拆包（SF&#x2F;FF&#x2F;CF&#x2F;FC）</td>
-</tr>
-<tr>
-<td><code>LINtp.dll</code></td>
-<td>LIN</td>
-<td>LIN 2.x TP</td>
-<td>NAD（节点诊断地址）</td>
-<td>TP 层拆包（0x3C&#x2F;0x3D）</td>
-</tr>
-<tr>
-<td><code>DoIP.dll</code></td>
-<td>Ethernet</td>
-<td>ISO 13400-2</td>
-<td><strong>逻辑地址</strong>（Tester&#x2F;ECU）</td>
-<td><strong>TCP 协议自动分段</strong></td>
-</tr>
-</tbody></table>
-<h3 id="7-2-DoIP-协议要点"><a href="#7-2-DoIP-协议要点" class="headerlink" title="7.2 DoIP 协议要点"></a>7.2 DoIP 协议要点</h3><ul>
-<li><strong>双通道</strong>：UDP 端口 13400 用于车辆发现（Vehicle Identification）；TCP 端口 13400 用于路由激活与诊断消息传输；</li>
-<li><strong>DoIP 报文头</strong>：<code>版本号(1B) + 逆版本号(1B) + 负载类型(2B) + 负载长度(4B) + 负载</code>；</li>
-<li><strong>逻辑地址寻址</strong>：诊断消息靠逻辑地址（非 IP）寻址，如 Tester &#x3D; 0x0E00&#x2F;0x1000，ECU &#x3D; 0x0001~0x0DFF；</li>
-<li><strong>通信流程</strong>：车辆发现 → 建立 TCP 连接 → 发送<strong>路由激活请求</strong>（响应码 0x10 &#x3D; 激活成功）→ 传输诊断消息（UDS 负载）→ 关闭连接；</li>
-<li><strong>协议变体</strong>：CANoe 还支持 DoSoAd 与 OEM 专用的 HSFZ 协议，可在 Diagnostics&#x2F;ISO TP 配置中选择。</li>
-</ul>
-<h3 id="7-3-加载-DoIP-dll-DoIP-vmodule"><a href="#7-3-加载-DoIP-dll-DoIP-vmodule" class="headerlink" title="7.3 加载 DoIP.dll &#x2F; DoIP.vmodule"></a>7.3 加载 DoIP.dll &#x2F; DoIP.vmodule</h3><ol>
-<li>右键网络节点（或测试节点）→ <strong>Configuration → Components</strong>；</li>
-<li>点击 <strong>Add</strong>，在 CANoe 安装目录的 <code>Exec32/Exec64</code> 文件夹中选择 <code>DoIP.dll</code>（或新版 <code>DoIP.vmodule</code>）；</li>
-<li>重新打开 CAPL Browser，即可看到 <code>DoIP_*</code> 系列函数。</li>
-</ol>
-<blockquote>
-<p>注意：标准 CANoe 即自带 DoIP.dll（Vector KB0011588）。若需要在 Trace 中解析以太网层&#x2F;DoIP 层报文，则需要额外的 <strong>CANoe.Ethernet</strong> 选项。</p>
-</blockquote>
-<h3 id="7-4-常用-API-一览"><a href="#7-4-常用-API-一览" class="headerlink" title="7.4 常用 API 一览"></a>7.4 常用 API 一览</h3><table>
-<thead>
-<tr>
-<th>分类</th>
-<th>函数</th>
-<th>说明</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>模式初始化</td>
-<td><code>DoIP_InitAsTester()</code></td>
-<td>DLL 默认按 ECU 仿真模式运行；测试节点需在 <code>on preStart</code> 中调用切换为 Tester 模式</td>
-</tr>
-<tr>
-<td>逻辑地址</td>
-<td><code>DoIP_SetTesterLogicalAddress(addr)</code></td>
-<td>设置 Tester 逻辑地址（发送时使用）</td>
-</tr>
-<tr>
-<td></td>
-<td><code>DoIP_SetVehicleLogicalAddress(addr)</code></td>
-<td>设置 ECU&#x2F;车辆逻辑地址</td>
-</tr>
-<tr>
-<td>连接管理</td>
-<td><code>DoIP_ConnectToVehicle()</code></td>
-<td>连接配置的车辆（必要时先执行车辆发现）</td>
-</tr>
-<tr>
-<td></td>
-<td><code>DoIP_CloseConnection()</code></td>
-<td>关闭 TCP 连接</td>
-</tr>
-<tr>
-<td>数据收发</td>
-<td><code>DoIP_DataReq(buf[], count, ecuAddr, testerAddr)</code></td>
-<td>发送 DoIP 诊断消息</td>
-</tr>
-<tr>
-<td></td>
-<td><code>DoIP_DataInd(buf[], count, ecuAddr, testerAddr)</code></td>
-<td>接收回调（收到诊断数据）</td>
-</tr>
-<tr>
-<td>超时配置</td>
-<td><code>DoIP_GetSetDiagnosticMessageTimeout(ms)</code></td>
-<td>诊断消息超时</td>
-</tr>
-<tr>
-<td></td>
-<td><code>DoIP_GetSetVehicleDiscoveryTimeout(ms)</code></td>
-<td>车辆发现超时</td>
-</tr>
-<tr>
-<td></td>
-<td><code>DoIP_GetSetAliveCheckTimeout(ms)</code></td>
-<td>在线保持超时</td>
-</tr>
-<tr>
-<td>回调</td>
-<td><code>_DoIP_VehicleIdentificationCompleteInd()</code></td>
-<td>车辆识别阶段完成</td>
-</tr>
-<tr>
-<td></td>
-<td><code>_DoIP_PeriodicDataInd()</code></td>
-<td>收到周期数据（负载类型 0x8004）</td>
-</tr>
-<tr>
-<td></td>
-<td><code>_DoIP_TransportLayerStatusInd()</code></td>
-<td>传输层状态上报（0x9001）</td>
-</tr>
-</tbody></table>
-<h3 id="7-5-Tester-端最小示例：发送-UDS-22-服务"><a href="#7-5-Tester-端最小示例：发送-UDS-22-服务" class="headerlink" title="7.5 Tester 端最小示例：发送 UDS 22 服务"></a>7.5 Tester 端最小示例：发送 UDS 22 服务</h3><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br></pre></td><td class="code"><pre><span class="line">includes</span><br><span class="line">&#123;</span><br><span class="line">    <span class="comment">/* 若使用 CCI（CAPL 回调接口）需包含参考实现 */</span></span><br><span class="line">    <span class="comment">/* #include &quot;Diagnostics\\CCI_DoIP.cin&quot; */</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">variables</span><br><span class="line">&#123;</span><br><span class="line">    dword gEcuAddr  = <span class="number">0x0001</span>;    <span class="comment">// ECU 逻辑地址</span></span><br><span class="line">    dword gTestAddr = <span class="number">0x1000</span>;    <span class="comment">// Tester 逻辑地址</span></span><br><span class="line">    byte  reqData[<span class="number">8</span>];</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">on preStart</span><br><span class="line">&#123;</span><br><span class="line">    <span class="comment">// 切换为 Tester 模式（默认是 ECU 仿真模式）</span></span><br><span class="line">    DoIP_InitAsTester();</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">on start</span><br><span class="line">&#123;</span><br><span class="line">    <span class="comment">// 设置逻辑地址并连接车辆</span></span><br><span class="line">    DoIP_SetTesterLogicalAddress(gTestAddr);</span><br><span class="line">    DoIP_ConnectToVehicle();</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">on key <span class="string">&#x27;r&#x27;</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="comment">// 发送 UDS 22 服务：读取 DID 0xF190</span></span><br><span class="line">    reqData[<span class="number">0</span>] = <span class="number">0x22</span>;</span><br><span class="line">    reqData[<span class="number">1</span>] = <span class="number">0xF1</span>;</span><br><span class="line">    reqData[<span class="number">2</span>] = <span class="number">0x90</span>;</span><br><span class="line"></span><br><span class="line">    DoIP_DataReq(reqData, <span class="number">3</span>, gEcuAddr, gTestAddr);</span><br><span class="line">    write(<span class="string">&quot;已发送 DoIP 诊断请求&quot;</span>);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<h3 id="7-6-接收响应回调"><a href="#7-6-接收响应回调" class="headerlink" title="7.6 接收响应回调"></a>7.6 接收响应回调</h3><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/* 回调：收到 ECU 的 DoIP 诊断响应（UDS 负载，TCP 已自动重组） */</span></span><br><span class="line"><span class="type">void</span> <span class="title function_">DoIP_DataInd</span><span class="params">(byte buffer[], dword count,</span></span><br><span class="line"><span class="params">                  dword ecuAddress, dword testerAddress)</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="type">long</span> i;</span><br><span class="line">    write(<span class="string">&quot;收到 ECU 0x%X 响应 %d 字节&quot;</span>, ecuAddress, count);</span><br><span class="line">    <span class="keyword">for</span> (i = <span class="number">0</span>; i &lt; count; i++)</span><br><span class="line">    &#123;</span><br><span class="line">        write(<span class="string">&quot;  data[%d] = 0x%02x&quot;</span>, i, buffer[i]);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<h3 id="7-7-结合-CCI-做故障注入与网关"><a href="#7-7-结合-CCI-做故障注入与网关" class="headerlink" title="7.7 结合 CCI 做故障注入与网关"></a>7.7 结合 CCI 做故障注入与网关</h3><p>内置诊断通道严格遵循诊断规范，无法注入协议级错误。需要<strong>违反 DoIP 协议</strong>的测试（如错误负载类型、网关仿真）时，必须使用 <strong>CCI（CAPL Callback Interface）</strong>：</p>
-<ol>
-<li>节点 Components 添加 DoIP.vmodule；</li>
-<li>CAPL 中 <code>#include &quot;Diagnostics\CCI_DoIP.cin&quot;</code>；</li>
-<li>用 <code>DoIP_TCPSend()</code> 发送自定义负载类型的数据，配合 <code>_DoIP_PeriodicDataInd()</code> &#x2F; <code>_DoIP_TransportLayerStatusInd()</code> 回调处理 0x8004&#x2F;0x9001 扩展负载类型；</li>
-<li>可在诊断配置对话框中**取消勾选 “Simulation by”**，改用 CCI 实现 ECU 仿真。</li>
-</ol>
-<h3 id="7-8-使用要点"><a href="#7-8-使用要点" class="headerlink" title="7.8 使用要点"></a>7.8 使用要点</h3><ul>
-<li>DoIP 数据分段由 <strong>TCP 完成</strong>，无需像 CAN&#x2F;LIN TP 那样手动关注 FF&#x2F;CF&#x2F;FC；</li>
-<li><strong>逻辑地址</strong>是 DoIP 寻址核心（而非 IP），发送前务必 <code>DoIP_SetTesterLogicalAddress</code> &#x2F; <code>DoIP_SetVehicleLogicalAddress</code>；</li>
-<li>测试节点务必在 <code>on preStart</code> 调用 <code>DoIP_InitAsTester()</code>，否则 DLL 按 ECU 仿真运行；</li>
-<li>车辆发现依赖 UDP 广播&#x2F;组播（A_DoIP_Ctrl 约 2s 超时），连接不上先查防火墙与 TCP 13400 端口；</li>
-<li>官方完整函数清单见 CANoe Help 索引中的 <strong>DoIP_</strong> 前缀条目；示例工程在 <strong>Help | Sample Configurations | Diagnostics | Sample Configurations Ethernet</strong>。</li>
-</ul>
-<h2 id="八、CAPL-调试技巧"><a href="#八、CAPL-调试技巧" class="headerlink" title="八、CAPL 调试技巧"></a>八、CAPL 调试技巧</h2><h3 id="8-1-断点与单步"><a href="#8-1-断点与单步" class="headerlink" title="8.1 断点与单步"></a>8.1 断点与单步</h3><p>CAPL Browser 支持设置断点、单步执行和变量监视，适合定位逻辑错误。</p>
-<h3 id="8-2-打印调试信息"><a href="#8-2-打印调试信息" class="headerlink" title="8.2 打印调试信息"></a>8.2 打印调试信息</h3><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">on message <span class="number">0x456</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="comment">// 格式化输出报文数据</span></span><br><span class="line">    write(<span class="string">&quot;ID=0x%x DLC=%d Data=0x%02x 0x%02x 0x%02x 0x%02x&quot;</span>,</span><br><span class="line">          this.id, this.dlc,</span><br><span class="line">          this.byte(<span class="number">0</span>), this.byte(<span class="number">1</span>),</span><br><span class="line">          this.byte(<span class="number">2</span>), this.byte(<span class="number">3</span>));</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<h3 id="8-3-使用系统变量调试"><a href="#8-3-使用系统变量调试" class="headerlink" title="8.3 使用系统变量调试"></a>8.3 使用系统变量调试</h3><p>通过 CANoe 的 <strong>System Variables</strong> 面板可以实时读写系统变量，配合 CAPL 里的 <code>@sysvar</code> 语法，方便在运行中调整参数：</p>
-<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">on message <span class="number">0x123</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="comment">// 读取系统变量（可在面板上实时修改）</span></span><br><span class="line">    <span class="type">int</span> limit = @sysvar::Test::SpeedLimit;</span><br><span class="line">    <span class="keyword">if</span> (this.Speed &gt; limit)</span><br><span class="line">    &#123;</span><br><span class="line">        write(<span class="string">&quot;超过限速 %d&quot;</span>, limit);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<h2 id="九、常见问题与避坑指南"><a href="#九、常见问题与避坑指南" class="headerlink" title="九、常见问题与避坑指南"></a>九、常见问题与避坑指南</h2><table>
-<thead>
-<tr>
-<th>问题</th>
-<th>原因</th>
-<th>解决方案</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>信号名未定义</td>
-<td>未关联 DBC</td>
-<td>Simulation Setup → 右键节点 → 分配数据库</td>
-</tr>
-<tr>
-<td>报文发不出去</td>
-<td>节点未激活&#x2F;通道错误</td>
-<td>检查节点激活状态与 <code>getMsgChannel()</code></td>
-</tr>
-<tr>
-<td>定时器不触发</td>
-<td>忘记 <code>setTimer</code> 重启</td>
-<td>周期任务需在回调里重新 setTimer</td>
-</tr>
-<tr>
-<td><code>this</code> 无法识别</td>
-<td>事件块外使用 <code>this</code></td>
-<td><code>this</code> 只在事件处理函数内有效</td>
-</tr>
-<tr>
-<td>字符串比较失败</td>
-<td>使用 <code>==</code> 比较字符数组</td>
-<td>用 <code>strcmp()</code> 比较</td>
-</tr>
-<tr>
-<td>测试用例没执行</td>
-<td>未挂到 <code>MainTest()</code></td>
-<td>将用例名写入 MainTest 调用链</td>
-</tr>
-<tr>
-<td>浮点比较误差</td>
-<td>直接比较 float 值</td>
-<td>定义容差范围或取整比较</td>
-</tr>
-<tr>
-<td><code>CanTp_*</code> 函数未定义</td>
-<td>节点未加载 <code>osek_tp.dll</code></td>
-<td>节点 Components 中添加 DLL 并重开 CAPL Browser</td>
-</tr>
-<tr>
-<td><code>CanTpSendData</code> 无响应</td>
-<td>未先 <code>CanTpCreateConnection</code> 或参数未设置</td>
-<td>按 5.4 节顺序初始化连接后再发送</td>
-</tr>
-<tr>
-<td>多帧响应收不全</td>
-<td>收发 CAN ID 或寻址类型配置错误</td>
-<td>核对 <code>CanTpSetTx/RxIdentifier</code> 与物理&#x2F;功能寻址</td>
-</tr>
-<tr>
-<td><code>LINtp_*</code> 函数未定义</td>
-<td>节点未加载 <code>LINtp.dll</code></td>
-<td>在 LIN 主节点 Components 中添加 DLL</td>
-</tr>
-<tr>
-<td>从节点不响应</td>
-<td>NAD 与 LDF 配置不一致</td>
-<td>核对 LDF 中从节点 NAD 与 <code>LINtp_DataReq</code> 第三参数</td>
-</tr>
-<tr>
-<td>诊断帧没上总线</td>
-<td>调度表未包含 0x3C&#x2F;0x3D 或未切换</td>
-<td>LDF 添加诊断调度表，发送前 <code>linChangeSchedTable(MasterReq)</code></td>
-</tr>
-<tr>
-<td>取不到接收数据</td>
-<td>未在 <code>LINtp_DataInd</code> 内取数</td>
-<td>回调内调用 <code>LINtp_GetRxData()</code> 读取</td>
-</tr>
-<tr>
-<td><code>DoIP_*</code> 函数不可用</td>
-<td>节点未添加 DoIP.dll&#x2F;DoIP.vmodule</td>
-<td>节点 Components 中添加建模库</td>
-</tr>
-<tr>
-<td>测试节点发不出诊断消息</td>
-<td>未切换 Tester 模式</td>
-<td><code>on preStart</code> 中调用 <code>DoIP_InitAsTester()</code></td>
-</tr>
-<tr>
-<td>连不上 ECU &#x2F; 无响应</td>
-<td>防火墙、TCP 13400 端口、逻辑地址错误</td>
-<td>核对 IP 连通性、端口与 <code>DoIP_Set*LogicalAddress</code></td>
-</tr>
-</tbody></table>
-<h2 id="十、CAPL-进阶方向"><a href="#十、CAPL-进阶方向" class="headerlink" title="十、CAPL 进阶方向"></a>十、CAPL 进阶方向</h2><ul>
-<li><strong>诊断测试</strong>：结合 ODX&#x2F;CDD 文件，用 <code>diagRequest</code>&#x2F;<code>diagResponse</code> 事件做 UDS 诊断自动化；</li>
-<li><strong>多总线协同</strong>：CAN + LIN + FlexRay + Ethernet 混合仿真测试；</li>
-<li><strong>ECU 测试自动化</strong>：配合 vTESTstudio 图形化生成测试用例后导出 CAPL；</li>
-<li><strong>回归测试</strong>：与 Jenkins&#x2F;CI 集成，无人值守跑全量用例；</li>
-<li><strong>HIL 测试</strong>：CAPL 与 dSPACE&#x2F;NI 硬件在环平台结合做实时闭环测试。</li>
-</ul>
-<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>CAPL 是汽车总线测试领域绕不开的核心技能，它的价值在于：</p>
-<ol>
-<li><strong>仿真</strong>：用脚本模拟节点行为，替代缺失的 ECU；</li>
-<li><strong>测试</strong>：自动化执行用例、自动判定、自动出报告；</li>
-<li><strong>诊断</strong>：与诊断协议栈结合实现 UDS 刷写与功能测试。</li>
-</ol>
-<p>学习路径建议：先掌握 <code>on message</code>、定时器和报文收发，再学习 <code>test_*</code> 函数构建用例，最后结合 DBC、诊断与 CI 形成完整的自动化测试体系。<strong>从一段能”发报文”的脚本，到一套能”自动验证功能”的测试工程，这就是 CAPL 的核心进阶之路。</strong></p>
-
-      
-    </div>
-    <footer class="article-footer">
-      <a data-url="http://example.com/2026/07/31/CANoe-CAPL%E8%84%9A%E6%9C%AC%E6%B5%8B%E8%AF%95%E5%85%A5%E9%97%A8%E4%B8%8E%E5%AE%9E%E8%B7%B5/" data-id="cmsbjfvfu0000sglm496895n1" data-title="CANoe CAPL脚本测试入门与实践" class="article-share-link"><span class="fa fa-share">Share</span></a>
-      
-      
-      
-  <ul class="article-tag-list" itemprop="keywords"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/CANoe/" rel="tag">CANoe</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/CAPL/" rel="tag">CAPL</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/%E6%B1%BD%E8%BD%A6%E7%94%B5%E5%AD%90/" rel="tag">汽车电子</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/%E6%B5%8B%E8%AF%95/" rel="tag">测试</a></li></ul>
 
     </footer>
   </div>
@@ -4078,7 +3682,7 @@
   <div class="widget-wrap">
     <h3 class="widget-title">Tags</h3>
     <div class="widget">
-      <ul class="tag-list" itemprop="keywords"><li class="tag-list-item"><a class="tag-list-link" href="/tags/AI-Agent/" rel="tag">AI Agent</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/ARM/" rel="tag">ARM</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/AURIX/" rel="tag">AURIX</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/AUTOSAR/" rel="tag">AUTOSAR</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/CANoe/" rel="tag">CANoe</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/CAPL/" rel="tag">CAPL</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/C%E8%AF%AD%E8%A8%80/" rel="tag">C语言</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/FOC/" rel="tag">FOC</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/GCC/" rel="tag">GCC</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/LMA/" rel="tag">LMA</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Linker-Script/" rel="tag">Linker Script</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Linux/" rel="tag">Linux</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/PIC/" rel="tag">PIC</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/RISC-V/" rel="tag">RISC-V</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/RT-Thread/" rel="tag">RT-Thread</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/SOTA/" rel="tag">SOTA</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/TC375/" rel="tag">TC375</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/TriCore/" rel="tag">TriCore</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/U%E7%9B%98%E5%90%AF%E5%8A%A8%E7%9B%98/" rel="tag">U盘启动盘</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/VMA/" rel="tag">VMA</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Ventoy/" rel="tag">Ventoy</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/XIP/" rel="tag">XIP</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/opencode/" rel="tag">opencode</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/x86/" rel="tag">x86</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86/" rel="tag">内存管理</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%86%85%E6%A0%B8/" rel="tag">内核</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%90%AF%E5%8A%A8%E8%BF%87%E7%A8%8B/" rel="tag">启动过程</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/" rel="tag">学习笔记</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%B5%8C%E5%85%A5%E5%BC%8F/" rel="tag">嵌入式</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%BA%95%E5%B1%82%E5%8E%9F%E7%90%86/" rel="tag">底层原理</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%BC%80%E5%8F%91/" rel="tag">开发</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%BC%95%E5%AF%BC/" rel="tag">引导</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E6%8C%87%E9%92%88/" rel="tag">指针</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E6%95%88%E7%8E%87%E5%B7%A5%E5%85%B7/" rel="tag">效率工具</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E6%B1%87%E7%BC%96/" rel="tag">汇编</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E6%B1%87%E7%BC%96%E8%AF%AD%E8%A8%80/" rel="tag">汇编语言</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E6%B1%BD%E8%BD%A6%E7%94%B5%E5%AD%90/" rel="tag">汽车电子</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E6%B5%8B%E8%AF%95/" rel="tag">测试</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E7%94%B5%E5%8A%9B%E7%94%B5%E5%AD%90/" rel="tag">电力电子</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E7%94%B5%E6%9C%BA%E6%8E%A7%E5%88%B6/" rel="tag">电机控制</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E7%B3%BB%E7%BB%9F%E5%AE%89%E8%A3%85/" rel="tag">系统安装</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E7%BC%96%E8%AF%91%E9%93%BE%E6%8E%A5/" rel="tag">编译链接</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E8%8B%B1%E9%A3%9E%E5%87%8C/" rel="tag">英飞凌</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E8%A3%85%E6%9C%BA%E5%B7%A5%E5%85%B7/" rel="tag">装机工具</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E8%BF%9B%E9%98%B6/" rel="tag">进阶</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E9%83%A8%E7%BD%B2/" rel="tag">部署</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E9%93%BE%E6%8E%A5%E8%84%9A%E6%9C%AC/" rel="tag">链接脚本</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E9%A3%9E%E4%B9%A6/" rel="tag">飞书</a></li></ul>
+      <ul class="tag-list" itemprop="keywords"><li class="tag-list-item"><a class="tag-list-link" href="/tags/AI-Agent/" rel="tag">AI Agent</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/ARM/" rel="tag">ARM</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/AURIX/" rel="tag">AURIX</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/AUTOSAR/" rel="tag">AUTOSAR</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/CANoe/" rel="tag">CANoe</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/CAPL/" rel="tag">CAPL</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/C%E8%AF%AD%E8%A8%80/" rel="tag">C语言</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/FOC/" rel="tag">FOC</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/GCC/" rel="tag">GCC</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/LMA/" rel="tag">LMA</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Linker-Script/" rel="tag">Linker Script</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Linux/" rel="tag">Linux</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/PIC/" rel="tag">PIC</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/RISC-V/" rel="tag">RISC-V</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/RT-Thread/" rel="tag">RT-Thread</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/SOTA/" rel="tag">SOTA</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/TC375/" rel="tag">TC375</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/TriCore/" rel="tag">TriCore</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/U%E7%9B%98%E5%90%AF%E5%8A%A8%E7%9B%98/" rel="tag">U盘启动盘</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/VMA/" rel="tag">VMA</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Ventoy/" rel="tag">Ventoy</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/XIP/" rel="tag">XIP</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/opencode/" rel="tag">opencode</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/x86/" rel="tag">x86</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%85%A5%E9%97%A8/" rel="tag">入门</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86/" rel="tag">内存管理</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%86%85%E6%A0%B8/" rel="tag">内核</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%90%AF%E5%8A%A8%E8%BF%87%E7%A8%8B/" rel="tag">启动过程</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%9F%BA%E7%A1%80/" rel="tag">基础</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/" rel="tag">学习笔记</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%B5%8C%E5%85%A5%E5%BC%8F/" rel="tag">嵌入式</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%BA%95%E5%B1%82%E5%8E%9F%E7%90%86/" rel="tag">底层原理</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%BC%80%E5%8F%91/" rel="tag">开发</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%BC%95%E5%AF%BC/" rel="tag">引导</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E6%8C%87%E9%92%88/" rel="tag">指针</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E6%95%88%E7%8E%87%E5%B7%A5%E5%85%B7/" rel="tag">效率工具</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E6%B1%87%E7%BC%96/" rel="tag">汇编</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E6%B1%87%E7%BC%96%E8%AF%AD%E8%A8%80/" rel="tag">汇编语言</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E6%B1%BD%E8%BD%A6%E7%94%B5%E5%AD%90/" rel="tag">汽车电子</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E6%B5%8B%E8%AF%95/" rel="tag">测试</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E7%94%B5%E5%8A%9B%E7%94%B5%E5%AD%90/" rel="tag">电力电子</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E7%94%B5%E6%9C%BA%E6%8E%A7%E5%88%B6/" rel="tag">电机控制</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E7%B3%BB%E7%BB%9F%E5%AE%89%E8%A3%85/" rel="tag">系统安装</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E7%BC%96%E8%AF%91%E9%93%BE%E6%8E%A5/" rel="tag">编译链接</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E8%8B%B1%E9%A3%9E%E5%87%8C/" rel="tag">英飞凌</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E8%A3%85%E6%9C%BA%E5%B7%A5%E5%85%B7/" rel="tag">装机工具</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E8%AF%AD%E6%B3%95/" rel="tag">语法</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E8%BF%9B%E9%98%B6/" rel="tag">进阶</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E9%83%A8%E7%BD%B2/" rel="tag">部署</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E9%93%BE%E6%8E%A5%E8%84%9A%E6%9C%AC/" rel="tag">链接脚本</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E9%A3%9E%E4%B9%A6/" rel="tag">飞书</a></li></ul>
     </div>
   </div>
 
@@ -4088,7 +3692,7 @@
   <div class="widget-wrap">
     <h3 class="widget-title">Tag Cloud</h3>
     <div class="widget tagcloud">
-      <a href="/tags/AI-Agent/" style="font-size: 15px;">AI Agent</a> <a href="/tags/ARM/" style="font-size: 10px;">ARM</a> <a href="/tags/AURIX/" style="font-size: 15px;">AURIX</a> <a href="/tags/AUTOSAR/" style="font-size: 15px;">AUTOSAR</a> <a href="/tags/CANoe/" style="font-size: 10px;">CANoe</a> <a href="/tags/CAPL/" style="font-size: 10px;">CAPL</a> <a href="/tags/C%E8%AF%AD%E8%A8%80/" style="font-size: 10px;">C语言</a> <a href="/tags/FOC/" style="font-size: 10px;">FOC</a> <a href="/tags/GCC/" style="font-size: 10px;">GCC</a> <a href="/tags/LMA/" style="font-size: 10px;">LMA</a> <a href="/tags/Linker-Script/" style="font-size: 15px;">Linker Script</a> <a href="/tags/Linux/" style="font-size: 20px;">Linux</a> <a href="/tags/PIC/" style="font-size: 10px;">PIC</a> <a href="/tags/RISC-V/" style="font-size: 10px;">RISC-V</a> <a href="/tags/RT-Thread/" style="font-size: 10px;">RT-Thread</a> <a href="/tags/SOTA/" style="font-size: 10px;">SOTA</a> <a href="/tags/TC375/" style="font-size: 15px;">TC375</a> <a href="/tags/TriCore/" style="font-size: 15px;">TriCore</a> <a href="/tags/U%E7%9B%98%E5%90%AF%E5%8A%A8%E7%9B%98/" style="font-size: 10px;">U盘启动盘</a> <a href="/tags/VMA/" style="font-size: 10px;">VMA</a> <a href="/tags/Ventoy/" style="font-size: 10px;">Ventoy</a> <a href="/tags/XIP/" style="font-size: 10px;">XIP</a> <a href="/tags/opencode/" style="font-size: 15px;">opencode</a> <a href="/tags/x86/" style="font-size: 10px;">x86</a> <a href="/tags/%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86/" style="font-size: 15px;">内存管理</a> <a href="/tags/%E5%86%85%E6%A0%B8/" style="font-size: 15px;">内核</a> <a href="/tags/%E5%90%AF%E5%8A%A8%E8%BF%87%E7%A8%8B/" style="font-size: 10px;">启动过程</a> <a href="/tags/%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/" style="font-size: 10px;">学习笔记</a> <a href="/tags/%E5%B5%8C%E5%85%A5%E5%BC%8F/" style="font-size: 20px;">嵌入式</a> <a href="/tags/%E5%BA%95%E5%B1%82%E5%8E%9F%E7%90%86/" style="font-size: 15px;">底层原理</a> <a href="/tags/%E5%BC%80%E5%8F%91/" style="font-size: 10px;">开发</a> <a href="/tags/%E5%BC%95%E5%AF%BC/" style="font-size: 10px;">引导</a> <a href="/tags/%E6%8C%87%E9%92%88/" style="font-size: 10px;">指针</a> <a href="/tags/%E6%95%88%E7%8E%87%E5%B7%A5%E5%85%B7/" style="font-size: 15px;">效率工具</a> <a href="/tags/%E6%B1%87%E7%BC%96/" style="font-size: 15px;">汇编</a> <a href="/tags/%E6%B1%87%E7%BC%96%E8%AF%AD%E8%A8%80/" style="font-size: 10px;">汇编语言</a> <a href="/tags/%E6%B1%BD%E8%BD%A6%E7%94%B5%E5%AD%90/" style="font-size: 10px;">汽车电子</a> <a href="/tags/%E6%B5%8B%E8%AF%95/" style="font-size: 15px;">测试</a> <a href="/tags/%E7%94%B5%E5%8A%9B%E7%94%B5%E5%AD%90/" style="font-size: 10px;">电力电子</a> <a href="/tags/%E7%94%B5%E6%9C%BA%E6%8E%A7%E5%88%B6/" style="font-size: 10px;">电机控制</a> <a href="/tags/%E7%B3%BB%E7%BB%9F%E5%AE%89%E8%A3%85/" style="font-size: 10px;">系统安装</a> <a href="/tags/%E7%BC%96%E8%AF%91%E9%93%BE%E6%8E%A5/" style="font-size: 10px;">编译链接</a> <a href="/tags/%E8%8B%B1%E9%A3%9E%E5%87%8C/" style="font-size: 15px;">英飞凌</a> <a href="/tags/%E8%A3%85%E6%9C%BA%E5%B7%A5%E5%85%B7/" style="font-size: 10px;">装机工具</a> <a href="/tags/%E8%BF%9B%E9%98%B6/" style="font-size: 10px;">进阶</a> <a href="/tags/%E9%83%A8%E7%BD%B2/" style="font-size: 10px;">部署</a> <a href="/tags/%E9%93%BE%E6%8E%A5%E8%84%9A%E6%9C%AC/" style="font-size: 15px;">链接脚本</a> <a href="/tags/%E9%A3%9E%E4%B9%A6/" style="font-size: 10px;">飞书</a>
+      <a href="/tags/AI-Agent/" style="font-size: 15px;">AI Agent</a> <a href="/tags/ARM/" style="font-size: 10px;">ARM</a> <a href="/tags/AURIX/" style="font-size: 15px;">AURIX</a> <a href="/tags/AUTOSAR/" style="font-size: 15px;">AUTOSAR</a> <a href="/tags/CANoe/" style="font-size: 10px;">CANoe</a> <a href="/tags/CAPL/" style="font-size: 10px;">CAPL</a> <a href="/tags/C%E8%AF%AD%E8%A8%80/" style="font-size: 15px;">C语言</a> <a href="/tags/FOC/" style="font-size: 10px;">FOC</a> <a href="/tags/GCC/" style="font-size: 10px;">GCC</a> <a href="/tags/LMA/" style="font-size: 10px;">LMA</a> <a href="/tags/Linker-Script/" style="font-size: 15px;">Linker Script</a> <a href="/tags/Linux/" style="font-size: 20px;">Linux</a> <a href="/tags/PIC/" style="font-size: 10px;">PIC</a> <a href="/tags/RISC-V/" style="font-size: 10px;">RISC-V</a> <a href="/tags/RT-Thread/" style="font-size: 10px;">RT-Thread</a> <a href="/tags/SOTA/" style="font-size: 10px;">SOTA</a> <a href="/tags/TC375/" style="font-size: 15px;">TC375</a> <a href="/tags/TriCore/" style="font-size: 15px;">TriCore</a> <a href="/tags/U%E7%9B%98%E5%90%AF%E5%8A%A8%E7%9B%98/" style="font-size: 10px;">U盘启动盘</a> <a href="/tags/VMA/" style="font-size: 10px;">VMA</a> <a href="/tags/Ventoy/" style="font-size: 10px;">Ventoy</a> <a href="/tags/XIP/" style="font-size: 10px;">XIP</a> <a href="/tags/opencode/" style="font-size: 15px;">opencode</a> <a href="/tags/x86/" style="font-size: 10px;">x86</a> <a href="/tags/%E5%85%A5%E9%97%A8/" style="font-size: 10px;">入门</a> <a href="/tags/%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86/" style="font-size: 15px;">内存管理</a> <a href="/tags/%E5%86%85%E6%A0%B8/" style="font-size: 15px;">内核</a> <a href="/tags/%E5%90%AF%E5%8A%A8%E8%BF%87%E7%A8%8B/" style="font-size: 10px;">启动过程</a> <a href="/tags/%E5%9F%BA%E7%A1%80/" style="font-size: 10px;">基础</a> <a href="/tags/%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/" style="font-size: 15px;">学习笔记</a> <a href="/tags/%E5%B5%8C%E5%85%A5%E5%BC%8F/" style="font-size: 20px;">嵌入式</a> <a href="/tags/%E5%BA%95%E5%B1%82%E5%8E%9F%E7%90%86/" style="font-size: 15px;">底层原理</a> <a href="/tags/%E5%BC%80%E5%8F%91/" style="font-size: 10px;">开发</a> <a href="/tags/%E5%BC%95%E5%AF%BC/" style="font-size: 10px;">引导</a> <a href="/tags/%E6%8C%87%E9%92%88/" style="font-size: 10px;">指针</a> <a href="/tags/%E6%95%88%E7%8E%87%E5%B7%A5%E5%85%B7/" style="font-size: 15px;">效率工具</a> <a href="/tags/%E6%B1%87%E7%BC%96/" style="font-size: 15px;">汇编</a> <a href="/tags/%E6%B1%87%E7%BC%96%E8%AF%AD%E8%A8%80/" style="font-size: 10px;">汇编语言</a> <a href="/tags/%E6%B1%BD%E8%BD%A6%E7%94%B5%E5%AD%90/" style="font-size: 10px;">汽车电子</a> <a href="/tags/%E6%B5%8B%E8%AF%95/" style="font-size: 15px;">测试</a> <a href="/tags/%E7%94%B5%E5%8A%9B%E7%94%B5%E5%AD%90/" style="font-size: 10px;">电力电子</a> <a href="/tags/%E7%94%B5%E6%9C%BA%E6%8E%A7%E5%88%B6/" style="font-size: 10px;">电机控制</a> <a href="/tags/%E7%B3%BB%E7%BB%9F%E5%AE%89%E8%A3%85/" style="font-size: 10px;">系统安装</a> <a href="/tags/%E7%BC%96%E8%AF%91%E9%93%BE%E6%8E%A5/" style="font-size: 10px;">编译链接</a> <a href="/tags/%E8%8B%B1%E9%A3%9E%E5%87%8C/" style="font-size: 15px;">英飞凌</a> <a href="/tags/%E8%A3%85%E6%9C%BA%E5%B7%A5%E5%85%B7/" style="font-size: 10px;">装机工具</a> <a href="/tags/%E8%AF%AD%E6%B3%95/" style="font-size: 10px;">语法</a> <a href="/tags/%E8%BF%9B%E9%98%B6/" style="font-size: 10px;">进阶</a> <a href="/tags/%E9%83%A8%E7%BD%B2/" style="font-size: 10px;">部署</a> <a href="/tags/%E9%93%BE%E6%8E%A5%E8%84%9A%E6%9C%AC/" style="font-size: 15px;">链接脚本</a> <a href="/tags/%E9%A3%9E%E4%B9%A6/" style="font-size: 10px;">飞书</a>
     </div>
   </div>
 
@@ -4110,6 +3714,10 @@
       <ul>
         
           <li>
+            <a href="/2026/08/02/C%E8%AF%AD%E8%A8%80%E5%9F%BA%E7%A1%80%E7%9F%A5%E8%AF%86%E7%82%B9%E8%AF%A6%E8%A7%A3/">C语言基础知识点详解</a>
+          </li>
+        
+          <li>
             <a href="/2026/08/02/C%E8%AF%AD%E8%A8%80%E8%BF%9B%E9%98%B6%E7%9F%A5%E8%AF%86%E7%82%B9%E8%AF%A6%E8%A7%A3/">C语言进阶知识点详解</a>
           </li>
         
@@ -4123,10 +3731,6 @@
         
           <li>
             <a href="/2026/08/01/%E5%B5%8C%E5%85%A5%E5%BC%8F%E9%93%BE%E6%8E%A5%E8%84%9A%E6%9C%AC%E8%AF%A6%E8%A7%A3%EF%BC%9A%E4%BB%8E%E9%9B%B6%E7%90%86%E8%A7%A3Linker-Script/">嵌入式链接脚本详解：以英飞凌TC375为例</a>
-          </li>
-        
-          <li>
-            <a href="/2026/08/01/Linux%E8%BD%AF%E4%BB%B6%E5%90%AF%E5%8A%A8%E8%BF%87%E7%A8%8B%E8%AF%A6%E8%A7%A3/">Linux软件启动过程详解</a>
           </li>
         
       </ul>
