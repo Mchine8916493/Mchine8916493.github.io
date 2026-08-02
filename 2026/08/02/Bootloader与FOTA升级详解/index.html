@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  
+  
+  <title>Bootloader与FOTA升级详解 | Hexo</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <meta name="description" content="Bootloader（引导加载程序）是嵌入式系统上电后最先运行的程序，负责初始化硬件、加载并启动应用固件。FOTA（Firmware Over-The-Air）则是通过无线网络远程升级固件的能力，是智能网联汽车的”标配”。两者结合，构成了汽车 ECU 软件升级的基础设施。本文从 Bootloader 原理讲到 FOTA 全流程设计。 一、Bootloader 是什么1.1 定义与职责Bootloa">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Bootloader与FOTA升级详解">
+<meta property="og:url" content="http://example.com/2026/08/02/Bootloader%E4%B8%8EFOTA%E5%8D%87%E7%BA%A7%E8%AF%A6%E8%A7%A3/index.html">
+<meta property="og:site_name" content="Hexo">
+<meta property="og:description" content="Bootloader（引导加载程序）是嵌入式系统上电后最先运行的程序，负责初始化硬件、加载并启动应用固件。FOTA（Firmware Over-The-Air）则是通过无线网络远程升级固件的能力，是智能网联汽车的”标配”。两者结合，构成了汽车 ECU 软件升级的基础设施。本文从 Bootloader 原理讲到 FOTA 全流程设计。 一、Bootloader 是什么1.1 定义与职责Bootloa">
+<meta property="og:locale" content="en_US">
+<meta property="article:published_time" content="2026-08-02T09:00:00.000Z">
+<meta property="article:modified_time" content="2026-08-02T08:59:19.730Z">
+<meta property="article:author" content="John Doe">
+<meta property="article:tag" content="汽车电子">
+<meta property="article:tag" content="嵌入式">
+<meta property="article:tag" content="底层原理">
+<meta property="article:tag" content="Bootloader">
+<meta property="article:tag" content="FOTA">
+<meta property="article:tag" content="OTA">
+<meta property="article:tag" content="Flash">
+<meta name="twitter:card" content="summary">
+  
+    <link rel="alternate" href="/atom.xml" title="Hexo" type="application/atom+xml">
+  
+  
+    <link rel="shortcut icon" href="/favicon.png">
+  
+  
+  
+<link rel="stylesheet" href="/css/style.css">
+
+  
+    
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.min.css">
+
+  
+  
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fork-awesome@1.2.0/css/fork-awesome.min.css">
+
+<meta name="generator" content="Hexo 7.3.0"></head>
+
+<body>
+  <div id="container">
+    <div id="wrap">
+      <header id="header">
+  <div id="banner"></div>
+  <div id="header-outer" class="outer">
+    <div id="header-title" class="inner">
+      <h1 id="logo-wrap">
+        <a href="/" id="logo">Hexo</a>
+      </h1>
+      
+    </div>
+    <div id="header-inner" class="inner">
+      <nav id="main-nav">
+        <a id="main-nav-toggle" class="nav-icon"><span class="fa fa-bars"></span></a>
+        
+          <a class="main-nav-link" href="/">Home</a>
+        
+          <a class="main-nav-link" href="/archives">Archives</a>
+        
+      </nav>
+      <nav id="sub-nav">
+        
+        
+          <a class="nav-icon" href="/atom.xml" title="RSS Feed"><span class="fa fa-rss"></span></a>
+        
+        <a class="nav-icon nav-search-btn" title="Search"><span class="fa fa-search"></span></a>
+      </nav>
+      <div id="search-form-wrap">
+        <form action="//google.com/search" method="get" accept-charset="UTF-8" class="search-form"><input type="search" name="q" class="search-form-input" placeholder="Search"><button type="submit" class="search-form-submit">&#xF002;</button><input type="hidden" name="sitesearch" value="http://example.com"></form>
+      </div>
+    </div>
+  </div>
+</header>
+
+      <div class="outer">
+        <section id="main"><article id="post-Bootloader与FOTA升级详解" class="h-entry article article-type-post" itemprop="blogPost" itemscope itemtype="https://schema.org/BlogPosting">
+  <div class="article-meta">
+    <a href="/2026/08/02/Bootloader%E4%B8%8EFOTA%E5%8D%87%E7%BA%A7%E8%AF%A6%E8%A7%A3/" class="article-date">
+  <time class="dt-published" datetime="2026-08-02T09:00:00.000Z" itemprop="datePublished">2026-08-02</time>
+</a>
+    
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 class="p-name article-title" itemprop="headline name">
+      Bootloader与FOTA升级详解
+    </h1>
+  
+
+      </header>
+    
+    <div class="e-content article-entry" itemprop="articleBody">
+      
+        <p>Bootloader（引导加载程序）是嵌入式系统上电后最先运行的程序，负责初始化硬件、加载并启动应用固件。FOTA（Firmware Over-The-Air）则是通过无线网络远程升级固件的能力，是智能网联汽车的”标配”。两者结合，构成了汽车 ECU 软件升级的基础设施。本文从 Bootloader 原理讲到 FOTA 全流程设计。</p>
+<h1 id="一、Bootloader-是什么"><a href="#一、Bootloader-是什么" class="headerlink" title="一、Bootloader 是什么"></a>一、Bootloader 是什么</h1><h2 id="1-1-定义与职责"><a href="#1-1-定义与职责" class="headerlink" title="1.1 定义与职责"></a>1.1 定义与职责</h2><p>Bootloader 是固化在 MCU 中、上电后第一个执行的程序（运行在 Flash 的固定地址，通常是 0x00000000 或独立扇区）。核心职责：</p>
+<ol>
+<li><strong>硬件初始化</strong>：时钟、内存、外设基础配置</li>
+<li><strong>启动决策</strong>：决定进入<strong>应用模式</strong>还是<strong>编程模式</strong></li>
+<li><strong>程序跳转</strong>：把控制权交给应用固件</li>
+<li><strong>固件升级</strong>：接收新固件、写入 Flash（编程模式）</li>
+</ol>
+<h2 id="1-2-为什么需要-Bootloader"><a href="#1-2-为什么需要-Bootloader" class="headerlink" title="1.2 为什么需要 Bootloader"></a>1.2 为什么需要 Bootloader</h2><table>
+<thead>
+<tr>
+<th>原因</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>现场升级</strong></td>
+<td>不拆 ECU 即可更新软件</td>
+</tr>
+<tr>
+<td><strong>FOTA 基础</strong></td>
+<td>无线升级的本地执行端</td>
+</tr>
+<tr>
+<td><strong>防变砖</strong></td>
+<td>应用损坏时 Bootloader 仍可恢复</td>
+</tr>
+<tr>
+<td><strong>产线烧录</strong></td>
+<td>生产线上通过 Bootloader 烧录应用</td>
+</tr>
+</tbody></table>
+<h2 id="1-3-运行模式"><a href="#1-3-运行模式" class="headerlink" title="1.3 运行模式"></a>1.3 运行模式</h2><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">上电/复位</span><br><span class="line">    │</span><br><span class="line">    ▼</span><br><span class="line">┌─────────┐    条件判定     ┌─────────┐</span><br><span class="line">│Bootloader│ ─────────────▶│ 应用固件 │</span><br><span class="line">│(启动模式)│   跳转条件      │(应用模式)│</span><br><span class="line">└─────────┘                └─────────┘</span><br><span class="line">    │</span><br><span class="line">    │ 升级请求</span><br><span class="line">    ▼</span><br><span class="line">┌─────────┐</span><br><span class="line">│Bootloader│</span><br><span class="line">│(编程模式)│ ← 接收固件、擦写 Flash</span><br><span class="line">└─────────┘</span><br></pre></td></tr></table></figure>
+
+<p><strong>跳转条件</strong>（由编程标志&#x2F;校验决定）：</p>
+<ul>
+<li>应用区有效（CRC&#x2F;签名校验通过）→ 跳转应用</li>
+<li>应用区无效 → 进入编程模式</li>
+<li>收到升级请求标志 → 进入编程模式</li>
+</ul>
+<hr>
+<h1 id="二、Flash-存储布局"><a href="#二、Flash-存储布局" class="headerlink" title="二、Flash 存储布局"></a>二、Flash 存储布局</h1><h2 id="2-1-典型分区"><a href="#2-1-典型分区" class="headerlink" title="2.1 典型分区"></a>2.1 典型分区</h2><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">0x00000000 ┌────────────────────┐</span><br><span class="line">           │  Bootloader        │  ← 固定地址，不受升级影响</span><br><span class="line">           ├────────────────────┤</span><br><span class="line">           │  向量表重映射区    │</span><br><span class="line">           ├────────────────────┤</span><br><span class="line">           │  Application A     │  ← 运行中的应用</span><br><span class="line">           ├────────────────────┤</span><br><span class="line">           │  Application B     │  ← 备份/新固件</span><br><span class="line">           ├────────────────────┤</span><br><span class="line">           │  参数区（校准数据）│</span><br><span class="line">           ├────────────────────┤</span><br><span class="line">           │  升级标志区        │</span><br><span class="line">           └────────────────────┘</span><br></pre></td></tr></table></figure>
+
+<h2 id="2-2-双区（A-B）架构"><a href="#2-2-双区（A-B）架构" class="headerlink" title="2.2 双区（A&#x2F;B）架构"></a>2.2 双区（A&#x2F;B）架构</h2><table>
+<thead>
+<tr>
+<th>特性</th>
+<th>单区</th>
+<th>双区（A&#x2F;B）</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>升级安全</td>
+<td>升级中断可能变砖</td>
+<td>中断可回滚</td>
+</tr>
+<tr>
+<td>Flash 占用</td>
+<td>1 倍固件</td>
+<td>2 倍固件</td>
+</tr>
+<tr>
+<td>升级速度</td>
+<td>就地升级</td>
+<td>后台写入+切换</td>
+</tr>
+<tr>
+<td>典型场景</td>
+<td>产线&#x2F;售后工具</td>
+<td><strong>FOTA 必备</strong></td>
+</tr>
+</tbody></table>
+<h3 id="A-B-切换流程"><a href="#A-B-切换流程" class="headerlink" title="A&#x2F;B 切换流程"></a>A&#x2F;B 切换流程</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">① 从 A 区运行</span><br><span class="line">② 新固件下载到 B 区（后台，不中断运行）</span><br><span class="line">③ 校验 B 区（签名/CRC）</span><br><span class="line">④ 设置启动标志指向 B</span><br><span class="line">⑤ 复位，Bootloader 从 B 启动</span><br><span class="line">⑥ 若 B 启动失败，回滚 A</span><br></pre></td></tr></table></figure>
+
+<h2 id="2-3-向量表重映射"><a href="#2-3-向量表重映射" class="headerlink" title="2.3 向量表重映射"></a>2.3 向量表重映射</h2><p>应用运行后需要重映射中断向量表，否则中断会跳回 Bootloader：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// Cortex-M：SCB-&gt;VTOR 指向应用向量表</span></span><br><span class="line">SCB-&gt;VTOR = APP_START_ADDR;   <span class="comment">// 如 0x08008000</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>链接脚本关键点</strong>：应用固件编译时必须用偏移地址</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">FLASH (rx) : ORIGIN = 0x08008000, LENGTH = 60K</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h1 id="三、Bootloader-启动流程详解"><a href="#三、Bootloader-启动流程详解" class="headerlink" title="三、Bootloader 启动流程详解"></a>三、Bootloader 启动流程详解</h1><h2 id="3-1-启动判定逻辑"><a href="#3-1-启动判定逻辑" class="headerlink" title="3.1 启动判定逻辑"></a>3.1 启动判定逻辑</h2><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">void</span> <span class="title function_">main</span><span class="params">(<span class="type">void</span>)</span> &#123;</span><br><span class="line">    init_clock();</span><br><span class="line">    init_uart();          <span class="comment">// 升级通信接口</span></span><br><span class="line">    init_flash();</span><br><span class="line"></span><br><span class="line">    <span class="type">uint32_t</span> flag = read_boot_flag();</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 1. 检查升级请求</span></span><br><span class="line">    <span class="keyword">if</span> (flag == REQ_UPDATE) &#123;</span><br><span class="line">        enter_update_mode();     <span class="comment">// 进入编程模式</span></span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 2. 校验应用固件</span></span><br><span class="line">    <span class="keyword">if</span> (verify_app_fw() == OK) &#123;</span><br><span class="line">        jump_to_app();           <span class="comment">// 跳转应用</span></span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        enter_update_mode();     <span class="comment">// 应用无效，等待升级</span></span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="3-2-跳转应用函数"><a href="#3-2-跳转应用函数" class="headerlink" title="3.2 跳转应用函数"></a>3.2 跳转应用函数</h2><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">void</span> <span class="title function_">jump_to_app</span><span class="params">(<span class="type">void</span>)</span> &#123;</span><br><span class="line">    <span class="comment">// 应用向量表首元素是初始栈顶地址</span></span><br><span class="line">    <span class="type">uint32_t</span> app_sp = *(<span class="keyword">volatile</span> <span class="type">uint32_t</span> *)APP_START_ADDR;</span><br><span class="line">    <span class="comment">// 第二个元素是复位向量</span></span><br><span class="line">    <span class="type">uint32_t</span> app_pc = *(<span class="keyword">volatile</span> <span class="type">uint32_t</span> *)(APP_START_ADDR + <span class="number">4</span>);</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 设置新的栈顶</span></span><br><span class="line">    __set_MSP(app_sp);</span><br><span class="line">    <span class="comment">// 跳转到应用复位处理</span></span><br><span class="line">    <span class="type">void</span> (*reset_handler)(<span class="type">void</span>) = (<span class="type">void</span> (*)(<span class="type">void</span>))app_pc;</span><br><span class="line">    reset_handler();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="3-3-升级流程（CAN-串口通道为例）"><a href="#3-3-升级流程（CAN-串口通道为例）" class="headerlink" title="3.3 升级流程（CAN&#x2F;串口通道为例）"></a>3.3 升级流程（CAN&#x2F;串口通道为例）</h2><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">① 上位机发送握手请求（进入编程模式）</span><br><span class="line">② 擦除目标 Flash 扇区</span><br><span class="line">③ 上位机分包发送固件（带序列号+校验）</span><br><span class="line">④ 每包校验，出错重发</span><br><span class="line">⑤ 全部接收后整体 CRC/签名校验</span><br><span class="line">⑥ 设置应用有效标志</span><br><span class="line">⑦ 复位跳转新应用</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h1 id="四、升级通信协议"><a href="#四、升级通信协议" class="headerlink" title="四、升级通信协议"></a>四、升级通信协议</h1><h2 id="4-1-自定义协议-vs-标准协议"><a href="#4-1-自定义协议-vs-标准协议" class="headerlink" title="4.1 自定义协议 vs 标准协议"></a>4.1 自定义协议 vs 标准协议</h2><table>
+<thead>
+<tr>
+<th>方式</th>
+<th>优点</th>
+<th>缺点</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>自定义简单协议</strong></td>
+<td>简单、可控</td>
+<td>不可复用、难测试</td>
+</tr>
+<tr>
+<td><strong>ISO 15765 &#x2F; UDS 诊断</strong></td>
+<td>标准化、工具支持</td>
+<td>帧格式较复杂</td>
+</tr>
+<tr>
+<td><strong>XMODEM&#x2F;YMODEM</strong></td>
+<td>简单成熟</td>
+<td>无安全校验、无断点续传</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p>汽车 ECU 升级普遍基于 <strong>UDS 诊断协议</strong>（0x34&#x2F;0x36&#x2F;0x37 服务），见《UDS诊断协议详解》。</p>
+</blockquote>
+<h2 id="4-2-分包与校验"><a href="#4-2-分包与校验" class="headerlink" title="4.2 分包与校验"></a>4.2 分包与校验</h2><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 升级帧格式示例</span></span><br><span class="line"><span class="keyword">typedef</span> <span class="class"><span class="keyword">struct</span> &#123;</span></span><br><span class="line">    <span class="type">uint8_t</span>  cmd;        <span class="comment">// 命令：0x01 写数据 0x02 校验</span></span><br><span class="line">    <span class="type">uint16_t</span> seq;        <span class="comment">// 包序号</span></span><br><span class="line">    <span class="type">uint16_t</span> len;        <span class="comment">// 数据长度</span></span><br><span class="line">    <span class="type">uint8_t</span>  data[MAX];  <span class="comment">// 固件数据</span></span><br><span class="line">    <span class="type">uint16_t</span> crc;        <span class="comment">// CRC16 校验</span></span><br><span class="line">&#125; UpgradeFrame;</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li><strong>分包大小</strong>：受 Flash 页大小、RAM 缓冲、通信速率共同限制</li>
+<li><strong>CRC</strong>：每包 CRC16 + 整包 CRC32 双重校验</li>
+<li><strong>断点续传</strong>：记录已写入位置，重连后继续</li>
+</ul>
+<hr>
+<h1 id="五、FOTA-全流程"><a href="#五、FOTA-全流程" class="headerlink" title="五、FOTA 全流程"></a>五、FOTA 全流程</h1><h2 id="5-1-FOTA-系统架构"><a href="#5-1-FOTA-系统架构" class="headerlink" title="5.1 FOTA 系统架构"></a>5.1 FOTA 系统架构</h2><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">┌────────────┐      ┌────────────┐      ┌─────────────┐</span><br><span class="line">│  云端平台  │      │   车机端    │      │  ECU（目标）│</span><br><span class="line">│ 固件仓库    │ ←──▶│ OTA 客户端  │ ←──▶│  Bootloader │</span><br><span class="line">│ 签名/加密   │ HTTP │ 下载/校验   │ CAN  │  写入 Flash │</span><br><span class="line">└────────────┘      └────────────┘      └─────────────┘</span><br></pre></td></tr></table></figure>
+
+<h2 id="5-2-FOTA-升级时序"><a href="#5-2-FOTA-升级时序" class="headerlink" title="5.2 FOTA 升级时序"></a>5.2 FOTA 升级时序</h2><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">① 云端下发升级通知（版本/大小/校验值）</span><br><span class="line">② 车机端下载固件包（后台，可断点续传）</span><br><span class="line">③ 完整性校验（哈希）</span><br><span class="line">④ 解密 + 验签（密钥在 HSM 中）</span><br><span class="line">⑤ 通过 CAN/UDS 将固件传给目标 ECU</span><br><span class="line">⑥ ECU Bootloader 擦写 Flash</span><br><span class="line">⑦ 激活新版本并自检</span><br><span class="line">⑧ 上报升级结果，云端记录</span><br></pre></td></tr></table></figure>
+
+<h2 id="5-3-安全-FOTA-要点"><a href="#5-3-安全-FOTA-要点" class="headerlink" title="5.3 安全 FOTA 要点"></a>5.3 安全 FOTA 要点</h2><table>
+<thead>
+<tr>
+<th>环节</th>
+<th>安全措施</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>传输</td>
+<td>HTTPS &#x2F; TLS 加密通道</td>
+</tr>
+<tr>
+<td>固件</td>
+<td>数字签名（防篡改）+ 加密（防逆向）</td>
+</tr>
+<tr>
+<td>版本</td>
+<td>版本号 + 回滚计数（防降级攻击）</td>
+</tr>
+<tr>
+<td>校验</td>
+<td>下载后 Hash 校验 + 写入后 CRC 校验</td>
+</tr>
+<tr>
+<td>回滚</td>
+<td>A&#x2F;B 双区 + 启动失败自动回滚</td>
+</tr>
+<tr>
+<td>认证</td>
+<td>云端与 ECU 双向认证</td>
+</tr>
+</tbody></table>
+<h2 id="5-4-FOTA-与诊断模式"><a href="#5-4-FOTA-与诊断模式" class="headerlink" title="5.4 FOTA 与诊断模式"></a>5.4 FOTA 与诊断模式</h2><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">正常模式：应用固件运行，OTA 客户端在后台工作</span><br><span class="line">▼</span><br><span class="line">进入扩展诊断模式（0x10 03）</span><br><span class="line">▼</span><br><span class="line">Bootloader 编程会话（0x10 02）</span><br><span class="line">▼</span><br><span class="line">执行 0x34(请求下载) / 0x36(传输数据) / 0x37(退出传输)</span><br><span class="line">▼</span><br><span class="line">0x11(ECU 复位) 重启进入新固件</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h1 id="六、Bootloader-开发要点"><a href="#六、Bootloader-开发要点" class="headerlink" title="六、Bootloader 开发要点"></a>六、Bootloader 开发要点</h1><h2 id="6-1-内存边界与保护"><a href="#6-1-内存边界与保护" class="headerlink" title="6.1 内存边界与保护"></a>6.1 内存边界与保护</h2><ul>
+<li>Bootloader 区设为<strong>只读&#x2F;写保护</strong>，防止应用误写</li>
+<li>分区地址用编译期常量，杜绝硬编码混乱</li>
+<li>Flash 擦写期间<strong>关中断</strong>，防止中断向量跳转冲突</li>
+</ul>
+<h2 id="6-2-通信接口选择"><a href="#6-2-通信接口选择" class="headerlink" title="6.2 通信接口选择"></a>6.2 通信接口选择</h2><table>
+<thead>
+<tr>
+<th>接口</th>
+<th>速率</th>
+<th>适用</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>UART</td>
+<td>慢</td>
+<td>产线、调试</td>
+</tr>
+<tr>
+<td>CAN&#x2F;CAN FD</td>
+<td>中</td>
+<td>车内 ECU 升级</td>
+</tr>
+<tr>
+<td>USB</td>
+<td>快</td>
+<td>售后刷写工具</td>
+</tr>
+<tr>
+<td>以太网</td>
+<td>快</td>
+<td>车载以太网 ECU</td>
+</tr>
+</tbody></table>
+<h2 id="6-3-常见坑"><a href="#6-3-常见坑" class="headerlink" title="6.3 常见坑"></a>6.3 常见坑</h2><ol>
+<li><strong>擦除中断变砖</strong>：升级断电导致 Flash 半擦半写 → 用 A&#x2F;B 双区或”先擦后用”</li>
+<li><strong>向量表没重映射</strong>：中断全跑回 Bootloader → 设置 VTOR</li>
+<li><strong>栈顶错误</strong>：跳转前 MSR 设置新栈，避免用旧的</li>
+<li><strong>看门狗</strong>：擦写期间喂狗，防止升级中途复位</li>
+<li><strong>Flash 对齐</strong>：页擦除&#x2F;写入需对齐到页边界</li>
+</ol>
+<hr>
+<h1 id="七、Bootloader-安全增强"><a href="#七、Bootloader-安全增强" class="headerlink" title="七、Bootloader 安全增强"></a>七、Bootloader 安全增强</h1><table>
+<thead>
+<tr>
+<th>安全机制</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>安全启动</strong></td>
+<td>上电验证应用签名</td>
+</tr>
+<tr>
+<td><strong>刷写认证</strong></td>
+<td>进入编程模式需密钥认证（种子密钥算法）</td>
+</tr>
+<tr>
+<td><strong>固件加密</strong></td>
+<td>固件密文存储，运行时解密</td>
+</tr>
+<tr>
+<td><strong>回滚保护</strong></td>
+<td>版本号单调递增</td>
+</tr>
+<tr>
+<td><strong>刷写计数</strong></td>
+<td>防刷写次数被篡改</td>
+</tr>
+<tr>
+<td><strong>防降级</strong></td>
+<td>新固件版本必须 ≥ 当前版本</td>
+</tr>
+</tbody></table>
+<h3 id="种子密钥（Seed-Key）认证示例"><a href="#种子密钥（Seed-Key）认证示例" class="headerlink" title="种子密钥（Seed-Key）认证示例"></a>种子密钥（Seed-Key）认证示例</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">① 上位机发 0x27 01（请求种子）</span><br><span class="line">② Bootloader 返回随机种子 Seed</span><br><span class="line">③ 上位机按算法计算 Key = f(Seed, 密钥)</span><br><span class="line">④ 发送 0x27 02 + Key</span><br><span class="line">⑤ Bootloader 验证通过才允许刷写</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h1 id="八、FOTA-发展趋势"><a href="#八、FOTA-发展趋势" class="headerlink" title="八、FOTA 发展趋势"></a>八、FOTA 发展趋势</h1><h2 id="8-1-升级策略演进"><a href="#8-1-升级策略演进" class="headerlink" title="8.1 升级策略演进"></a>8.1 升级策略演进</h2><table>
+<thead>
+<tr>
+<th>阶段</th>
+<th>特点</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>单区就地升级</td>
+<td>简单，风险高</td>
+</tr>
+<tr>
+<td>双区 A&#x2F;B 升级</td>
+<td>安全回滚，主流方案</td>
+</tr>
+<tr>
+<td>增量升级（Delta）</td>
+<td>只传输差异部分，流量大降</td>
+</tr>
+<tr>
+<td>分层升级</td>
+<td>应用&#x2F;中间件&#x2F;驱动分层独立升级</td>
+</tr>
+<tr>
+<td>车云协同</td>
+<td>大数据分析驱动定向升级</td>
+</tr>
+</tbody></table>
+<h2 id="8-2-法规要求"><a href="#8-2-法规要求" class="headerlink" title="8.2 法规要求"></a>8.2 法规要求</h2><ul>
+<li><strong>UN R156</strong>（SUMS）：软件更新管理体系，OTA 需经过认证</li>
+<li>所有固件版本<strong>可追溯、可验证</strong></li>
+<li>升级失败需能<strong>恢复到安全状态</strong></li>
+</ul>
+<hr>
+<h1 id="九、学习路径与工具"><a href="#九、学习路径与工具" class="headerlink" title="九、学习路径与工具"></a>九、学习路径与工具</h1><ol>
+<li><strong>打好基础</strong>：C 语言、STM32&#x2F;ARM、Flash 读写、链接脚本（见博客《嵌入式链接脚本详解》）</li>
+<li><strong>Mini Bootloader 项目</strong>：<ul>
+<li>实现串口接收 + Flash 写入 + 跳转应用</li>
+<li>加 CRC 校验、分包协议</li>
+<li>升级过程断电模拟测试（防变砖验证）</li>
+</ul>
+</li>
+<li><strong>标准协议</strong>：学习 UDS 0x34&#x2F;0x36&#x2F;0x37 刷写服务</li>
+<li><strong>安全增强</strong>：签名验签、Seed-Key、双区回滚</li>
+<li><strong>FOTA 扩展</strong>：加解密、云端模拟、断点续传</li>
+</ol>
+<p><strong>常用工具</strong>：</p>
+<ul>
+<li>STM32CubeProgrammer（ST 烧录）</li>
+<li>Vector CANoe &#x2F; 诊断仪（CAN 刷写）</li>
+<li>J-Flash &#x2F; OpenOCD（调试烧录）</li>
+<li>MCU Flash 模拟器（QEMU 等）</li>
+</ul>
+<hr>
+<h1 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h1><p>Bootloader 与 FOTA 的知识主线：</p>
+<blockquote>
+<p><strong>Bootloader 原理（启动判定&#x2F;跳转）→ Flash 布局（A&#x2F;B 双区）→ 升级协议（UDS&#x2F;CRC）→ 安全机制（签名&#x2F;Seed-Key&#x2F;回滚）→ FOTA 全流程（下载&#x2F;验签&#x2F;写入&#x2F;激活）→ 法规合规（UN R156）</strong></p>
+</blockquote>
+<p><strong>核心设计思想</strong>：<strong>可靠性优先</strong>——升级任何时候都可能失败，因此必须保证”升不坏、可恢复、能回滚”。</p>
+<blockquote>
+<p><strong>一句话记住</strong>：Bootloader 是 ECU 的”安全守门员”，FOTA 是”远程手术”——门必须永远开得了（防变砖），手术必须验明正身（安全认证），失败了还要能退回原样（双区回滚）。</p>
+</blockquote>
+
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="http://example.com/2026/08/02/Bootloader%E4%B8%8EFOTA%E5%8D%87%E7%BA%A7%E8%AF%A6%E8%A7%A3/" data-id="cmsbkkypz0001velm4mzsc9rp" data-title="Bootloader与FOTA升级详解" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      
+      
+      
+  <ul class="article-tag-list" itemprop="keywords"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Bootloader/" rel="tag">Bootloader</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/FOTA/" rel="tag">FOTA</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Flash/" rel="tag">Flash</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/OTA/" rel="tag">OTA</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/%E5%B5%8C%E5%85%A5%E5%BC%8F/" rel="tag">嵌入式</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/%E5%BA%95%E5%B1%82%E5%8E%9F%E7%90%86/" rel="tag">底层原理</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/%E6%B1%BD%E8%BD%A6%E7%94%B5%E5%AD%90/" rel="tag">汽车电子</a></li></ul>
+
+    </footer>
+  </div>
+  
+    
+<nav id="article-nav">
+  
+    <a href="/2026/08/02/UDS%E8%AF%8A%E6%96%AD%E5%8D%8F%E8%AE%AE%E8%AF%A6%E8%A7%A3/" id="article-nav-newer" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">Newer</strong>
+      <div class="article-nav-title">
+        
+          UDS诊断协议详解
+        
+      </div>
+    </a>
+  
+  
+    <a href="/2026/08/02/%E4%BF%A1%E6%81%AF%E5%AE%89%E5%85%A8%E5%9B%BA%E4%BB%B6%E5%BC%80%E5%8F%91%E8%AF%A6%E8%A7%A3/" id="article-nav-older" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">Older</strong>
+      <div class="article-nav-title">信息安全固件开发详解</div>
+    </a>
+  
+</nav>
+
+  
+</article>
+
+
+</section>
+        
+          <aside id="sidebar">
+  
+    
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Tags</h3>
+    <div class="widget">
+      <ul class="tag-list" itemprop="keywords"><li class="tag-list-item"><a class="tag-list-link" href="/tags/AI-Agent/" rel="tag">AI Agent</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/ARM/" rel="tag">ARM</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/AURIX/" rel="tag">AURIX</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/AUTOSAR/" rel="tag">AUTOSAR</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/BSW/" rel="tag">BSW</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Bootloader/" rel="tag">Bootloader</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/CAN/" rel="tag">CAN</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/CANoe/" rel="tag">CANoe</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/CAPL/" rel="tag">CAPL</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/C%E8%AF%AD%E8%A8%80/" rel="tag">C语言</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/DTC/" rel="tag">DTC</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/FOC/" rel="tag">FOC</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/FOTA/" rel="tag">FOTA</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Flash/" rel="tag">Flash</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/GCC/" rel="tag">GCC</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/HSM/" rel="tag">HSM</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/ISO14229/" rel="tag">ISO14229</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/LMA/" rel="tag">LMA</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Linker-Script/" rel="tag">Linker Script</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Linux/" rel="tag">Linux</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/MCAL/" rel="tag">MCAL</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/OTA/" rel="tag">OTA</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/PIC/" rel="tag">PIC</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/RISC-V/" rel="tag">RISC-V</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/RT-Thread/" rel="tag">RT-Thread</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/RTE/" rel="tag">RTE</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/SOTA/" rel="tag">SOTA</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/SecOC/" rel="tag">SecOC</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/TC375/" rel="tag">TC375</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/TriCore/" rel="tag">TriCore</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/UDS/" rel="tag">UDS</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/U%E7%9B%98%E5%90%AF%E5%8A%A8%E7%9B%98/" rel="tag">U盘启动盘</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/VMA/" rel="tag">VMA</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Ventoy/" rel="tag">Ventoy</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/XIP/" rel="tag">XIP</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/opencode/" rel="tag">opencode</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/x86/" rel="tag">x86</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E4%BF%A1%E6%81%AF%E5%AE%89%E5%85%A8/" rel="tag">信息安全</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%85%A5%E9%97%A8/" rel="tag">入门</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86/" rel="tag">内存管理</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%86%85%E6%A0%B8/" rel="tag">内核</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%86%85%E8%81%94%E6%B1%87%E7%BC%96/" rel="tag">内联汇编</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%90%AF%E5%8A%A8%E8%BF%87%E7%A8%8B/" rel="tag">启动过程</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%9B%BA%E4%BB%B6%E5%BC%80%E5%8F%91/" rel="tag">固件开发</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%9F%BA%E7%A1%80/" rel="tag">基础</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%9F%BA%E7%A1%80%E8%BD%AF%E4%BB%B6/" rel="tag">基础软件</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/" rel="tag">学习笔记</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%AE%89%E5%85%A8%E5%90%AF%E5%8A%A8/" rel="tag">安全启动</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%B5%8C%E5%85%A5%E5%BC%8F/" rel="tag">嵌入式</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%B5%8C%E5%85%A5%E5%BC%8F%E6%B1%87%E7%BC%96/" rel="tag">嵌入式汇编</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%BA%95%E5%B1%82%E5%8E%9F%E7%90%86/" rel="tag">底层原理</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%BC%80%E5%8F%91/" rel="tag">开发</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%BC%95%E5%AF%BC/" rel="tag">引导</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E6%8C%87%E9%92%88/" rel="tag">指针</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E6%95%88%E7%8E%87%E5%B7%A5%E5%85%B7/" rel="tag">效率工具</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E6%B1%87%E7%BC%96/" rel="tag">汇编</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E6%B1%87%E7%BC%96%E8%AF%AD%E8%A8%80/" rel="tag">汇编语言</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E6%B1%BD%E8%BD%A6%E7%94%B5%E5%AD%90/" rel="tag">汽车电子</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E6%B5%8B%E8%AF%95/" rel="tag">测试</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E7%94%B5%E5%8A%9B%E7%94%B5%E5%AD%90/" rel="tag">电力电子</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E7%94%B5%E6%9C%BA%E6%8E%A7%E5%88%B6/" rel="tag">电机控制</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E7%B3%BB%E7%BB%9F%E5%AE%89%E8%A3%85/" rel="tag">系统安装</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E7%BC%96%E8%AF%91%E9%93%BE%E6%8E%A5/" rel="tag">编译链接</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E8%8B%B1%E9%A3%9E%E5%87%8C/" rel="tag">英飞凌</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E8%A3%85%E6%9C%BA%E5%B7%A5%E5%85%B7/" rel="tag">装机工具</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E8%AF%8A%E6%96%AD%E5%8D%8F%E8%AE%AE/" rel="tag">诊断协议</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E8%AF%AD%E6%B3%95/" rel="tag">语法</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E8%BF%9B%E9%98%B6/" rel="tag">进阶</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E9%83%A8%E7%BD%B2/" rel="tag">部署</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E9%93%BE%E6%8E%A5%E8%84%9A%E6%9C%AC/" rel="tag">链接脚本</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E9%A3%9E%E4%B9%A6/" rel="tag">飞书</a></li></ul>
+    </div>
+  </div>
+
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Tag Cloud</h3>
+    <div class="widget tagcloud">
+      <a href="/tags/AI-Agent/" style="font-size: 12px;">AI Agent</a> <a href="/tags/ARM/" style="font-size: 12px;">ARM</a> <a href="/tags/AURIX/" style="font-size: 12px;">AURIX</a> <a href="/tags/AUTOSAR/" style="font-size: 16px;">AUTOSAR</a> <a href="/tags/BSW/" style="font-size: 10px;">BSW</a> <a href="/tags/Bootloader/" style="font-size: 10px;">Bootloader</a> <a href="/tags/CAN/" style="font-size: 10px;">CAN</a> <a href="/tags/CANoe/" style="font-size: 10px;">CANoe</a> <a href="/tags/CAPL/" style="font-size: 10px;">CAPL</a> <a href="/tags/C%E8%AF%AD%E8%A8%80/" style="font-size: 14px;">C语言</a> <a href="/tags/DTC/" style="font-size: 10px;">DTC</a> <a href="/tags/FOC/" style="font-size: 10px;">FOC</a> <a href="/tags/FOTA/" style="font-size: 10px;">FOTA</a> <a href="/tags/Flash/" style="font-size: 10px;">Flash</a> <a href="/tags/GCC/" style="font-size: 12px;">GCC</a> <a href="/tags/HSM/" style="font-size: 10px;">HSM</a> <a href="/tags/ISO14229/" style="font-size: 10px;">ISO14229</a> <a href="/tags/LMA/" style="font-size: 10px;">LMA</a> <a href="/tags/Linker-Script/" style="font-size: 12px;">Linker Script</a> <a href="/tags/Linux/" style="font-size: 14px;">Linux</a> <a href="/tags/MCAL/" style="font-size: 10px;">MCAL</a> <a href="/tags/OTA/" style="font-size: 10px;">OTA</a> <a href="/tags/PIC/" style="font-size: 10px;">PIC</a> <a href="/tags/RISC-V/" style="font-size: 10px;">RISC-V</a> <a href="/tags/RT-Thread/" style="font-size: 10px;">RT-Thread</a> <a href="/tags/RTE/" style="font-size: 10px;">RTE</a> <a href="/tags/SOTA/" style="font-size: 10px;">SOTA</a> <a href="/tags/SecOC/" style="font-size: 10px;">SecOC</a> <a href="/tags/TC375/" style="font-size: 12px;">TC375</a> <a href="/tags/TriCore/" style="font-size: 12px;">TriCore</a> <a href="/tags/UDS/" style="font-size: 10px;">UDS</a> <a href="/tags/U%E7%9B%98%E5%90%AF%E5%8A%A8%E7%9B%98/" style="font-size: 10px;">U盘启动盘</a> <a href="/tags/VMA/" style="font-size: 10px;">VMA</a> <a href="/tags/Ventoy/" style="font-size: 10px;">Ventoy</a> <a href="/tags/XIP/" style="font-size: 10px;">XIP</a> <a href="/tags/opencode/" style="font-size: 12px;">opencode</a> <a href="/tags/x86/" style="font-size: 10px;">x86</a> <a href="/tags/%E4%BF%A1%E6%81%AF%E5%AE%89%E5%85%A8/" style="font-size: 10px;">信息安全</a> <a href="/tags/%E5%85%A5%E9%97%A8/" style="font-size: 10px;">入门</a> <a href="/tags/%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86/" style="font-size: 12px;">内存管理</a> <a href="/tags/%E5%86%85%E6%A0%B8/" style="font-size: 12px;">内核</a> <a href="/tags/%E5%86%85%E8%81%94%E6%B1%87%E7%BC%96/" style="font-size: 10px;">内联汇编</a> <a href="/tags/%E5%90%AF%E5%8A%A8%E8%BF%87%E7%A8%8B/" style="font-size: 10px;">启动过程</a> <a href="/tags/%E5%9B%BA%E4%BB%B6%E5%BC%80%E5%8F%91/" style="font-size: 10px;">固件开发</a> <a href="/tags/%E5%9F%BA%E7%A1%80/" style="font-size: 10px;">基础</a> <a href="/tags/%E5%9F%BA%E7%A1%80%E8%BD%AF%E4%BB%B6/" style="font-size: 10px;">基础软件</a> <a href="/tags/%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/" style="font-size: 12px;">学习笔记</a> <a href="/tags/%E5%AE%89%E5%85%A8%E5%90%AF%E5%8A%A8/" style="font-size: 10px;">安全启动</a> <a href="/tags/%E5%B5%8C%E5%85%A5%E5%BC%8F/" style="font-size: 20px;">嵌入式</a> <a href="/tags/%E5%B5%8C%E5%85%A5%E5%BC%8F%E6%B1%87%E7%BC%96/" style="font-size: 10px;">嵌入式汇编</a> <a href="/tags/%E5%BA%95%E5%B1%82%E5%8E%9F%E7%90%86/" style="font-size: 20px;">底层原理</a> <a href="/tags/%E5%BC%80%E5%8F%91/" style="font-size: 10px;">开发</a> <a href="/tags/%E5%BC%95%E5%AF%BC/" style="font-size: 10px;">引导</a> <a href="/tags/%E6%8C%87%E9%92%88/" style="font-size: 10px;">指针</a> <a href="/tags/%E6%95%88%E7%8E%87%E5%B7%A5%E5%85%B7/" style="font-size: 12px;">效率工具</a> <a href="/tags/%E6%B1%87%E7%BC%96/" style="font-size: 12px;">汇编</a> <a href="/tags/%E6%B1%87%E7%BC%96%E8%AF%AD%E8%A8%80/" style="font-size: 12px;">汇编语言</a> <a href="/tags/%E6%B1%BD%E8%BD%A6%E7%94%B5%E5%AD%90/" style="font-size: 18px;">汽车电子</a> <a href="/tags/%E6%B5%8B%E8%AF%95/" style="font-size: 12px;">测试</a> <a href="/tags/%E7%94%B5%E5%8A%9B%E7%94%B5%E5%AD%90/" style="font-size: 10px;">电力电子</a> <a href="/tags/%E7%94%B5%E6%9C%BA%E6%8E%A7%E5%88%B6/" style="font-size: 10px;">电机控制</a> <a href="/tags/%E7%B3%BB%E7%BB%9F%E5%AE%89%E8%A3%85/" style="font-size: 10px;">系统安装</a> <a href="/tags/%E7%BC%96%E8%AF%91%E9%93%BE%E6%8E%A5/" style="font-size: 10px;">编译链接</a> <a href="/tags/%E8%8B%B1%E9%A3%9E%E5%87%8C/" style="font-size: 12px;">英飞凌</a> <a href="/tags/%E8%A3%85%E6%9C%BA%E5%B7%A5%E5%85%B7/" style="font-size: 10px;">装机工具</a> <a href="/tags/%E8%AF%8A%E6%96%AD%E5%8D%8F%E8%AE%AE/" style="font-size: 10px;">诊断协议</a> <a href="/tags/%E8%AF%AD%E6%B3%95/" style="font-size: 10px;">语法</a> <a href="/tags/%E8%BF%9B%E9%98%B6/" style="font-size: 10px;">进阶</a> <a href="/tags/%E9%83%A8%E7%BD%B2/" style="font-size: 10px;">部署</a> <a href="/tags/%E9%93%BE%E6%8E%A5%E8%84%9A%E6%9C%AC/" style="font-size: 12px;">链接脚本</a> <a href="/tags/%E9%A3%9E%E4%B9%A6/" style="font-size: 10px;">飞书</a>
+    </div>
+  </div>
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Archives</h3>
+    <div class="widget">
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2026/08/">August 2026</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2026/07/">July 2026</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2026/05/">May 2026</a></li></ul>
+    </div>
+  </div>
+
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Recent Posts</h3>
+    <div class="widget">
+      <ul>
+        
+          <li>
+            <a href="/2026/08/02/UDS%E8%AF%8A%E6%96%AD%E5%8D%8F%E8%AE%AE%E8%AF%A6%E8%A7%A3/">UDS诊断协议详解</a>
+          </li>
+        
+          <li>
+            <a href="/2026/08/02/Bootloader%E4%B8%8EFOTA%E5%8D%87%E7%BA%A7%E8%AF%A6%E8%A7%A3/">Bootloader与FOTA升级详解</a>
+          </li>
+        
+          <li>
+            <a href="/2026/08/02/%E4%BF%A1%E6%81%AF%E5%AE%89%E5%85%A8%E5%9B%BA%E4%BB%B6%E5%BC%80%E5%8F%91%E8%AF%A6%E8%A7%A3/">信息安全固件开发详解</a>
+          </li>
+        
+          <li>
+            <a href="/2026/08/02/AUTOSAR%E5%9F%BA%E7%A1%80%E8%BD%AF%E4%BB%B6%E5%BC%80%E5%8F%91%E8%AF%A6%E8%A7%A3/">AUTOSAR基础软件开发详解</a>
+          </li>
+        
+          <li>
+            <a href="/2026/08/02/C%E8%AF%AD%E8%A8%80%E5%B5%8C%E5%85%A5%E5%BC%8F%E6%B1%87%E7%BC%96%E8%AF%A6%E8%A7%A3/">C语言嵌入式汇编详解</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+
+  
+</aside>
+        
+      </div>
+      <footer id="footer">
+  
+  <div class="outer">
+    <div id="footer-info" class="inner">
+      
+      &copy; 2026 John Doe<br>
+      Powered by <a href="https://hexo.io/" target="_blank">Hexo</a>
+    </div>
+  </div>
+</footer>
+
+    </div>
+    <nav id="mobile-nav">
+  
+    <a href="/" class="mobile-nav-link">Home</a>
+  
+    <a href="/archives" class="mobile-nav-link">Archives</a>
+  
+</nav>
+    
+
+
+<script src="/js/jquery-3.6.4.min.js"></script>
+
+
+
+  
+<script src="/fancybox/jquery.fancybox.min.js"></script>
+
+
+
+
+<script src="/js/script.js"></script>
+
+
+
+
+
+  </div>
+</body>
+</html>

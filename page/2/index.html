@@ -71,6 +71,345 @@
       <div class="outer">
         <section id="main">
   
+    <article id="post-Linux软件启动过程详解" class="h-entry article article-type-post" itemprop="blogPost" itemscope itemtype="https://schema.org/BlogPosting">
+  <div class="article-meta">
+    <a href="/2026/08/01/Linux%E8%BD%AF%E4%BB%B6%E5%90%AF%E5%8A%A8%E8%BF%87%E7%A8%8B%E8%AF%A6%E8%A7%A3/" class="article-date">
+  <time class="dt-published" datetime="2026-08-01T06:20:00.000Z" itemprop="datePublished">2026-08-01</time>
+</a>
+    
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 itemprop="name">
+      <a class="p-name article-title" href="/2026/08/01/Linux%E8%BD%AF%E4%BB%B6%E5%90%AF%E5%8A%A8%E8%BF%87%E7%A8%8B%E8%AF%A6%E8%A7%A3/">Linux软件启动过程详解</a>
+    </h1>
+  
+
+      </header>
+    
+    <div class="e-content article-entry" itemprop="articleBody">
+      
+        <h1 id="Linux-软件启动过程详解"><a href="#Linux-软件启动过程详解" class="headerlink" title="Linux 软件启动过程详解"></a>Linux 软件启动过程详解</h1><blockquote>
+<p>当你按下电源键，到屏幕上出现熟悉的桌面或登录提示符，中间发生了什么？本文从经典的 Linux 0.12 内核引导代码出发，逐阶段拆解一台 x86 机器「从上电到 shell」的完整软件启动链路，并对照现代 Linux 的演进。</p>
+</blockquote>
+<h2 id="一、启动流程总览"><a href="#一、启动流程总览" class="headerlink" title="一、启动流程总览"></a>一、启动流程总览</h2><p>Linux 的启动是一条接力赛，每一棒都把自己的运行环境”打扫”好再交给下一棒：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line">按下电源</span><br><span class="line">   │</span><br><span class="line">   ▼</span><br><span class="line">① BIOS/UEFI 固件（POST、自检、定位引导设备）</span><br><span class="line">   │</span><br><span class="line">   ▼</span><br><span class="line">② Bootloader（GRUB2）—— 加载内核映像到内存</span><br><span class="line">   │</span><br><span class="line">   ▼</span><br><span class="line">③ 内核引导阶段（实模式汇编）—— bootsect.s → setup.s → head.s</span><br><span class="line">   │</span><br><span class="line">   ▼</span><br><span class="line">④ 内核主初始化（C 语言）—— start_kernel() 及各子系统</span><br><span class="line">   │</span><br><span class="line">   ▼</span><br><span class="line">⑤ 用户态启动 —— init 进程（PID 1，systemd）</span><br><span class="line">   │</span><br><span class="line">   ▼</span><br><span class="line">⑥ 登录 shell / 桌面环境</span><br></pre></td></tr></table></figure>
+
+<p>整个过程中，CPU 需要完成一次<strong>实模式 → 保护模式</strong>的切换，内存从”一维线性”变为”分段 + 分页”的多层结构，控制权也从固件交给引导器、再从引导器交给内核、最后交给用户态进程。</p>
+<h2 id="二、第一阶段：固件与引导加载"><a href="#二、第一阶段：固件与引导加载" class="headerlink" title="二、第一阶段：固件与引导加载"></a>二、第一阶段：固件与引导加载</h2><h3 id="2-1-BIOS-与-UEFI"><a href="#2-1-BIOS-与-UEFI" class="headerlink" title="2.1 BIOS 与 UEFI"></a>2.1 BIOS 与 UEFI</h3><table>
+<thead>
+<tr>
+<th>项目</th>
+<th>传统 BIOS</th>
+<th>UEFI</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>接口</td>
+<td>16 位实模式中断调用（Int 13h 等）</td>
+<td>64 位固件服务（Boot Services）</td>
+</tr>
+<tr>
+<td>磁盘分区表</td>
+<td>MBR（主引导记录）</td>
+<td>GPT（GUID 分区表）</td>
+</tr>
+<tr>
+<td>引导方式</td>
+<td>读取 MBR 第 512 字节引导代码</td>
+<td>直接读取 EFI 系统分区（ESP）内的 <code>.efi</code> 引导程序</td>
+</tr>
+<tr>
+<td>安全启动</td>
+<td>无</td>
+<td>Secure Boot 签名校验</td>
+</tr>
+</tbody></table>
+<p>上电后 CPU 首先执行<strong>复位向量</strong>（x86 复位后 CS:IP &#x3D; <code>0xFFFF:0xFFF0</code>，即物理地址 <code>0xFFFFF0</code>），跳入固件代码。固件完成 POST 自检后，按启动顺序查找可引导设备，把控制权交给引导加载程序。</p>
+<h3 id="2-2-Bootloader：GRUB2-的角色"><a href="#2-2-Bootloader：GRUB2-的角色" class="headerlink" title="2.2 Bootloader：GRUB2 的角色"></a>2.2 Bootloader：GRUB2 的角色</h3><p>GRUB2 的核心职责有三：</p>
+<ol>
+<li><strong>加载内核映像</strong>：从 <code>/boot/vmlinuz-*</code> 读取内核，放到内存中的约定位置；</li>
+<li><strong>加载 initramfs</strong>：把包含驱动和启动脚本的初始 RAM 文件系统装入内存；</li>
+<li><strong>设置启动参数</strong>：把 <code>root=</code>, <code>quiet</code>, <code>splash</code> 等内核命令行参数放入零页（Zero Page），供内核读取。</li>
+</ol>
+<p>GRUB 加载完毕后，通过一条 <code>jmp</code> 或远跳转指令把 CPU 交给内核的第一行代码。</p>
+<h2 id="三、第二阶段：内核引导（Linux-0-12-经典流程）"><a href="#三、第二阶段：内核引导（Linux-0-12-经典流程）" class="headerlink" title="三、第二阶段：内核引导（Linux 0.12 经典流程）"></a>三、第二阶段：内核引导（Linux 0.12 经典流程）</h2><p>Linux 0.12 的引导代码只有三个汇编文件，却能一步步把 CPU 从”裸机实模式”带到”C 语言环境”。这是理解整个内核初始化逻辑的最佳入口。</p>
+<h3 id="3-1-bootsect-s-——-引导扇区"><a href="#3-1-bootsect-s-——-引导扇区" class="headerlink" title="3.1 bootsect.s —— 引导扇区"></a>3.1 bootsect.s —— 引导扇区</h3><ul>
+<li>BIOS 从磁盘 <strong>0 磁道 0 扇区</strong>读入 512 字节到物理地址 **<code>0x7C00</code>**，这就是引导扇区，即 <code>bootsect.s</code> 编译出的代码；</li>
+<li>它做的第一件事是把自身**从 <code>0x7C00</code> 搬到 <code>0x90000</code>**，腾出空间给后续模块；</li>
+<li>然后从磁盘加载 <code>setup</code> 模块到 <code>0x90200</code>，加载 <code>system</code> 模块（内核主体）到 <code>0x10000</code>；</li>
+<li>最后跳转到 <code>0x90200</code> 处的 setup 代码。</li>
+</ul>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">0x90000  ┌─────────────┐</span><br><span class="line">         │  bootsect   │  引导代码（自身，512B）</span><br><span class="line">0x90200  ├─────────────┤</span><br><span class="line">         │   setup     │  设置模块（读取硬件参数）</span><br><span class="line">         ├─────────────┤</span><br><span class="line">         │   system    │  内核主体（head + main + 各子系统）</span><br><span class="line">0x10000  └─────────────┘</span><br></pre></td></tr></table></figure>
+
+<h3 id="3-2-setup-s-——-读取硬件信息并进入保护模式"><a href="#3-2-setup-s-——-读取硬件信息并进入保护模式" class="headerlink" title="3.2 setup.s —— 读取硬件信息并进入保护模式"></a>3.2 setup.s —— 读取硬件信息并进入保护模式</h3><p>setup 模块承担两个任务：</p>
+<ol>
+<li><strong>收集硬件参数</strong>：通过 BIOS 中断读取内存大小（<code>Int 15h</code> 功能号 88h）、磁盘参数（<code>Int 13h</code>）、光标位置、显示模式等，存入以 <code>0x90000</code> 为基址的<strong>参数表</strong>（<code>setup</code> 把自己的代码段基址设为 0x90000），这些参数稍后供 <code>main.c</code> 使用；</li>
+<li><strong>切换到保护模式</strong>：把 <code>cr0</code> 寄存器的 PE 位（第 0 位）置 1，CPU 从 16 位实模式进入 32 位保护模式。</li>
+</ol>
+<p>这里的关键是<strong>临时 GDT&#x2F;IDT</strong>：在保护模式下，所有内存访问都要经过 GDT 查找段描述符。setup 设置了一个<strong>临时 GDT</strong>（只含内核代码段、数据段两个描述符，基址为 0、限长 8MB）和<strong>临时 IDT</strong>（全部为空），保证 <code>ljmp</code> 远跳转后 CPU 能正常工作。</p>
+<h3 id="3-3-head-s-——-中断、页表、跳转-C-语言"><a href="#3-3-head-s-——-中断、页表、跳转-C-语言" class="headerlink" title="3.3 head.s —— 中断、页表、跳转 C 语言"></a>3.3 head.s —— 中断、页表、跳转 C 语言</h3><p><code>head.s</code> 是引导的最后一棒，运行在保护模式下，按照真实源码顺序依次完成：</p>
+<ol>
+<li><strong>建立 IDT 与 GDT</strong>：<code>call setup_idt</code> 建立包含 256 个中断门的 IDT（初始全部指向 <code>ignore_int</code> 处理函数），<code>call setup_gdt</code> 建立真正的 GDT（内核代码段 <code>0x08</code>、数据段 <code>0x10</code>）；随后检查 A20 地址线是否真的打开、检测数学协处理器（<code>check_x87</code>）；</li>
+<li><strong>建立页目录和页表</strong>：<code>setup_paging</code> 在 <code>0x0000</code> 处建立页目录表，用 4 个页表（<code>pg0~pg3</code>，位于 <code>.org 0x1000</code> 起）覆盖前 16MB 物理内存，页目录项把线性地址恒等映射到相同的物理地址；</li>
+<li>**开启分页并跳转 main()**：设置 <code>cr0</code> 的 PG 位开启分页，然后通过 <code>after_page_tables</code> 把 main 的四个参数压栈、再 <code>ret</code> 跳转到 C 语言入口 <code>main()</code>（现代内核对应 <code>start_kernel</code>）。</li>
+</ol>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">head.s 结束时的 CPU 状态：</span><br><span class="line">  cr0:  PE=1（保护模式）  PG=1（分页开启）</span><br><span class="line">  IDT:  256 个中断门 → ignore_int</span><br><span class="line">  GDT:  内核代码段 0x08 / 数据段 0x10</span><br><span class="line">  页表: 恒等映射 0 ~ 16MB</span><br><span class="line">  栈:   已设置为内核栈</span><br><span class="line">  下一条: 进入 C 语言 main()</span><br></pre></td></tr></table></figure>
+
+<h3 id="3-4-main-c-——-C-语言环境下的初始化"><a href="#3-4-main-c-——-C-语言环境下的初始化" class="headerlink" title="3.4 main.c —— C 语言环境下的初始化"></a>3.4 main.c —— C 语言环境下的初始化</h3><p>进入 <code>main()</code> 后，内核按真实源码中的顺序初始化各子系统（<code>init/main.c</code>）：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">void</span> <span class="title function_">main</span><span class="params">(<span class="type">void</span>)</span> &#123;</span><br><span class="line">  ROOT_DEV = ORIG_ROOT_DEV;          <span class="comment">// 取 setup 保存的根设备号</span></span><br><span class="line">  memory_end = (<span class="number">1</span>&lt;&lt;<span class="number">20</span>) + (EXT_MEM_K&lt;&lt;<span class="number">10</span>);   <span class="comment">// 由 setup 读的内存大小计算</span></span><br><span class="line">  ...</span><br><span class="line">  mem_init(main_memory_start, memory_end);  <span class="comment">// 1. 内存管理</span></span><br><span class="line">  trap_init();                              <span class="comment">// 2. 中断向量初始化</span></span><br><span class="line">  blk_dev_init();                           <span class="comment">//    块设备初始化</span></span><br><span class="line">  chr_dev_init();                           <span class="comment">//    字符设备初始化</span></span><br><span class="line">  tty_init();                               <span class="comment">//    终端初始化</span></span><br><span class="line">  time_init();                              <span class="comment">//    时钟时间初始化</span></span><br><span class="line">  sched_init();                             <span class="comment">//    调度器（任务 0、时钟中断 0x20）</span></span><br><span class="line">  buffer_init(buffer_memory_end);           <span class="comment">// 3. 高速缓冲</span></span><br><span class="line">  hd_init();                                <span class="comment">//    硬盘中断</span></span><br><span class="line">  floppy_init();                            <span class="comment">//    软盘中断</span></span><br><span class="line">  sti();                                    <span class="comment">// 4. 打开中断</span></span><br><span class="line">  move_to_user_mode();                      <span class="comment">// 5. 进入用户态执行任务 0</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><code>move_to_user_mode()</code> 通过构造一个”假装从内核态返回”的栈帧触发中断返回指令 <code>iret</code>，让 CPU 特权级从 0 降到 3，从此<strong>任务 0 以用户态运行</strong>——这就是 Linux 第一个进程的诞生。</p>
+<h2 id="四、第三阶段：现代内核初始化"><a href="#四、第三阶段：现代内核初始化" class="headerlink" title="四、第三阶段：现代内核初始化"></a>四、第三阶段：现代内核初始化</h2><p>现代 Linux（x86-64）不再使用 bootsect&#x2F;setup，引导汇编被压缩为 <code>arch/x86/boot/</code> 下的少量代码，主体收敛到 C 语言的 **<code>start_kernel()</code>**（位于 <code>init/main.c</code>），初始化步骤包括：</p>
+<table>
+<thead>
+<tr>
+<th>步骤</th>
+<th>功能</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>setup_arch()</code></td>
+<td>解析启动参数、初始化内存布局、建立页表</td>
+</tr>
+<tr>
+<td><code>trap_init()</code> &#x2F; <code>init_IRQ()</code></td>
+<td>建立中断向量表与硬件中断</td>
+</tr>
+<tr>
+<td><code>mm_init()</code></td>
+<td>伙伴系统、SLUB 分配器、VM 区初始化</td>
+</tr>
+<tr>
+<td><code>sched_init()</code></td>
+<td>进程调度器（CFS）初始化</td>
+</tr>
+<tr>
+<td><code>vfs_caches_init()</code></td>
+<td>VFS 与文件系统缓存初始化</td>
+</tr>
+<tr>
+<td><code>rest_init()</code></td>
+<td>创建 <strong>kernel_init</strong>（PID 1）与 <strong>kthreadd</strong>（PID 2）两个内核线程</td>
+</tr>
+</tbody></table>
+<p>现代内核同时引入了 <strong>initramfs</strong>（<code>initramfs-*.img</code>）：早期用户态（initramfs）里自带驱动模块和 <code>init</code> 脚本，先挂载根文件系统所需的块设备驱动，再 <code>switch_root</code> 切换到真正的根分区，最后启动真正的 init。</p>
+<h2 id="五、第四阶段：用户态启动"><a href="#五、第四阶段：用户态启动" class="headerlink" title="五、第四阶段：用户态启动"></a>五、第四阶段：用户态启动</h2><h3 id="5-1-init-进程（PID-1）"><a href="#5-1-init-进程（PID-1）" class="headerlink" title="5.1 init 进程（PID 1）"></a>5.1 init 进程（PID 1）</h3><p>内核初始化完成后，<code>kernel_init</code> 通过 <code>execve(&quot;/sbin/init&quot;)</code> 变成用户态的 <strong>PID 1</strong>。PID 1 的特殊地位：</p>
+<ul>
+<li>它是所有进程的祖先（孤儿进程会被它收养）；</li>
+<li>若 PID 1 退出，内核会触发 <strong>panic</strong>（<code>kernel panic - not syncing: Attempted to kill init!</code>）。</li>
+</ul>
+<h3 id="5-2-systemd-的目标（Target）与服务（Unit）"><a href="#5-2-systemd-的目标（Target）与服务（Unit）" class="headerlink" title="5.2 systemd 的目标（Target）与服务（Unit）"></a>5.2 systemd 的目标（Target）与服务（Unit）</h3><p>传统发行版用 SysVinit 的 <code>rc</code> 脚本按运行级别启动服务；现代主流用 <strong>systemd</strong>：</p>
+<ul>
+<li><strong>Unit</strong>：把要启动的东西抽象成单元（服务 <code>.service</code>、挂载 <code>.mount</code>、套接字 <code>.socket</code> 等）；</li>
+<li><strong>Target</strong>：把一组 Unit 打包成”目标状态”（<code>multi-user.target</code>、<code>graphical.target</code>），取代 SysV 运行级别；</li>
+<li>systemd 采用<strong>并行启动</strong>：互相独立的服务同时拉起，大幅缩短开机时间；</li>
+<li>系统最后执行 <code>getty</code> 打开终端，或启动显示管理器（gdm&#x2F;sddm）进入桌面。</li>
+</ul>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">kernel → systemd(PID 1)</span><br><span class="line">          ├── systemd-journald      日志服务</span><br><span class="line">          ├── systemd-udevd         设备管理</span><br><span class="line">          ├── networkd / NetworkManager  网络</span><br><span class="line">          ├── getty@tty1            ── 控制台登录</span><br><span class="line">          └── display-manager       ── 图形界面</span><br></pre></td></tr></table></figure>
+
+<h2 id="六、贯穿全程的关键机制"><a href="#六、贯穿全程的关键机制" class="headerlink" title="六、贯穿全程的关键机制"></a>六、贯穿全程的关键机制</h2><h3 id="6-1-实模式-→-保护模式"><a href="#6-1-实模式-→-保护模式" class="headerlink" title="6.1 实模式 → 保护模式"></a>6.1 实模式 → 保护模式</h3><table>
+<thead>
+<tr>
+<th>模式</th>
+<th>寻址方式</th>
+<th>地址空间</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>实模式</td>
+<td>段基址×16 + 偏移</td>
+<td>1MB</td>
+<td>引导阶段，兼容 BIOS 调用</td>
+</tr>
+<tr>
+<td>保护模式</td>
+<td>段描述符 + 分页</td>
+<td>4GB+</td>
+<td>内核与用户态运行</td>
+</tr>
+</tbody></table>
+<p>切换靠修改 <code>cr0</code> 的 PE 位完成，切换后<strong>段选择子必须重新加载</strong>，且需要一次远跳转刷新流水线。</p>
+<h3 id="6-2-分段与分页"><a href="#6-2-分段与分页" class="headerlink" title="6.2 分段与分页"></a>6.2 分段与分页</h3><p>保护模式的内存访问两级转换：<strong>分段</strong>（逻辑地址 → 线性地址）→ <strong>分页</strong>（线性地址 → 物理地址）。Linux 采用平坦内存模型，把所有段的基址设为 0，弱化分段、强化分页；页表结构从 0.12 的两级（页目录+页表）演进到 x86-64 的四级（PGD&#x2F;PUD&#x2F;PMD&#x2F;PTE）。</p>
+<h3 id="6-3-系统调用入口"><a href="#6-3-系统调用入口" class="headerlink" title="6.3 系统调用入口"></a>6.3 系统调用入口</h3><p>0.12 时代所有系统调用统一走 <strong><code>int 0x80</code></strong> 中断，中断处理程序根据 <code>eax</code> 里的系统调用号查表跳转；现代内核已用 <code>syscall</code>&#x2F;<code>sysret</code> 指令取代（更快），但”用户态陷入内核态执行”的模型不变。</p>
+<h3 id="6-4-特权级转换的常见入口"><a href="#6-4-特权级转换的常见入口" class="headerlink" title="6.4 特权级转换的常见入口"></a>6.4 特权级转换的常见入口</h3><p>启动过程中特权级切换一共发生两次关键跳变：</p>
+<ol>
+<li>**实模式(0) → 保护模式(0)**：setup.s 打开 PE 位，仍在内核态；</li>
+<li>**内核态(0) → 用户态(3)**：main() 结束时用 <code>iret</code> 构造返回帧，任务 0 从此以用户态执行——之后每次用户态调用系统调用，都经 <code>int 0x80</code> &#x2F; <code>syscall</code> 陷入内核再返回。</li>
+</ol>
+<h2 id="七、小结"><a href="#七、小结" class="headerlink" title="七、小结"></a>七、小结</h2><p>Linux 启动过程可以浓缩成一句话：</p>
+<blockquote>
+<p><strong>固件找引导器，引导器加载内核，汇编铺好内存与中断环境，C 语言初始化子系统，最后把控制权交给用户态 PID 1。</strong></p>
+</blockquote>
+<p>每一棒都只做”自己够得着”的事：bootsect 只知道搬自己、setup 只负责拿参数和开保护模式、head 负责页表和 IDT、main&#x2F;start_kernel 负责所有子系统、systemd 负责拉起整个用户态世界。理解了这条接力链，无论是排查内核 panic、理解开机慢的原因，还是为嵌入式设备裁剪启动流程，都能有的放矢。</p>
+<blockquote>
+<p>参考：《Linux内核完全剖析——基于0.12内核（15周年版）》赵炯 编著</p>
+</blockquote>
+
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="http://example.com/2026/08/01/Linux%E8%BD%AF%E4%BB%B6%E5%90%AF%E5%8A%A8%E8%BF%87%E7%A8%8B%E8%AF%A6%E8%A7%A3/" data-id="cmsbkkyq9000avelm0kk73740" data-title="Linux软件启动过程详解" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      
+      
+      
+  <ul class="article-tag-list" itemprop="keywords"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Linux/" rel="tag">Linux</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/%E5%86%85%E6%A0%B8/" rel="tag">内核</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/%E5%90%AF%E5%8A%A8%E8%BF%87%E7%A8%8B/" rel="tag">启动过程</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/%E5%BC%95%E5%AF%BC/" rel="tag">引导</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/%E6%B1%87%E7%BC%96/" rel="tag">汇编</a></li></ul>
+
+    </footer>
+  </div>
+  
+</article>
+
+
+
+  
+    <article id="post-如何开发部署AUTOSAR-Agent" class="h-entry article article-type-post" itemprop="blogPost" itemscope itemtype="https://schema.org/BlogPosting">
+  <div class="article-meta">
+    <a href="/2026/08/01/%E5%A6%82%E4%BD%95%E5%BC%80%E5%8F%91%E9%83%A8%E7%BD%B2AUTOSAR-Agent/" class="article-date">
+  <time class="dt-published" datetime="2026-08-01T04:36:54.000Z" itemprop="datePublished">2026-08-01</time>
+</a>
+    
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 itemprop="name">
+      <a class="p-name article-title" href="/2026/08/01/%E5%A6%82%E4%BD%95%E5%BC%80%E5%8F%91%E9%83%A8%E7%BD%B2AUTOSAR-Agent/">如何开发部署AUTOSAR-Agent</a>
+    </h1>
+  
+
+      </header>
+    
+    <div class="e-content article-entry" itemprop="articleBody">
+      
+        <h1 id="如何开发部署一个-AUTOSAR-Agent"><a href="#如何开发部署一个-AUTOSAR-Agent" class="headerlink" title="如何开发部署一个 AUTOSAR Agent"></a>如何开发部署一个 AUTOSAR Agent</h1><blockquote>
+<p>需求：让 AI 能真正读懂 ARXML、管理 SWC、配置 RTE 和 BSW，成为汽车电子工程师的「AUTOSAR 架构专家」队友。这篇文章完整记录基于 opencode 从零开发到一键部署 AUTOSAR Agent 的全过程。</p>
+</blockquote>
+<h2 id="一、整体思路"><a href="#一、整体思路" class="headerlink" title="一、整体思路"></a>一、整体思路</h2><h3 id="为什么选-opencode-作为底座"><a href="#为什么选-opencode-作为底座" class="headerlink" title="为什么选 opencode 作为底座"></a>为什么选 opencode 作为底座</h3><p>AUTOSAR 生态没有现成的 AI 工具链，但可以基于通用 AI Agent 框架搭建。opencode 提供了一套轻量、可裁剪的 Agent 定义机制：</p>
+<table>
+<thead>
+<tr>
+<th>能力</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Agent 定义</td>
+<td><code>agent.md</code> 文件即可定义一个领域专家，支持 front-matter 声明元数据</td>
+</tr>
+<tr>
+<td>Skill 机制</td>
+<td>每个 skill 是一个 <code>SKILL.md</code>，随对话按需加载，注入专业工作流</td>
+</tr>
+<tr>
+<td>Command 机制</td>
+<td><code>/</code> 斜杠命令，快速触发固定任务</td>
+</tr>
+<tr>
+<td>模型可配</td>
+<td>front-matter 中指定 <code>model</code>，可切换任意 Provider</td>
+</tr>
+<tr>
+<td>权限管控</td>
+<td><code>permission.skill</code> 声明允许自动执行的 skill</td>
+</tr>
+</tbody></table>
+<p>这套机制非常适合「领域知识专家型 Agent」：领域知识沉淀在 skill 里，通用推理交给模型，各司其职。</p>
+<h3 id="架构总览"><a href="#架构总览" class="headerlink" title="架构总览"></a>架构总览</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line">用户终端</span><br><span class="line">   │  执行 `autosar` 命令</span><br><span class="line">   ▼</span><br><span class="line">scripts/autosar.sh          ← 启动器：git pull 更新 + 环境变量 + 启动 agent</span><br><span class="line">   │</span><br><span class="line">   ▼</span><br><span class="line">opencode --agent autosar    ← 加载 .opencode/agents/autosar/agent.md</span><br><span class="line">   │</span><br><span class="line">   ├── .opencode/skills/    ← 领域技能（按需注入）</span><br><span class="line">   │     ├── arxml-validate    ARXML 验证</span><br><span class="line">   │     ├── swc-manager        SWC 组件管理</span><br><span class="line">   │     ├── rte-config         RTE 配置</span><br><span class="line">   │     ├── ecu-extract        ECU Extract 管理</span><br><span class="line">   │     ├── bsw-config         BSW 模块配置</span><br><span class="line">   │     ├── autosar-code-gen   RTE/SWC 代码生成</span><br><span class="line">   │     ├── diagram-draw       Graphviz 架构图</span><br><span class="line">   │     └── pdf-parse          PDF 解析</span><br><span class="line">   │</span><br><span class="line">   └── .opencode/commands/  ← 斜杠命令</span><br><span class="line">         ├── autosar-init      初始化项目结构</span><br><span class="line">         ├── autosar-skill-list 列出技能</span><br><span class="line">         └── code-review        代码审查</span><br></pre></td></tr></table></figure>
+
+<h2 id="二、开发过程"><a href="#二、开发过程" class="headerlink" title="二、开发过程"></a>二、开发过程</h2><h3 id="1-定义-Agent（agent-md）"><a href="#1-定义-Agent（agent-md）" class="headerlink" title="1. 定义 Agent（agent.md）"></a>1. 定义 Agent（agent.md）</h3><p>一个 Agent 的核心就是一个 Markdown 文件，front-matter 声明元数据，正文是系统提示词：</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">---</span></span><br><span class="line"><span class="attr">name:</span> <span class="string">autosar</span></span><br><span class="line"><span class="attr">description:</span> <span class="string">AUTOSAR</span> <span class="string">架构专家，处理</span> <span class="string">ARXML、SWC、RTE、BSW、ECU</span> <span class="string">Extract</span> <span class="string">等任务</span></span><br><span class="line"><span class="attr">model:</span> <span class="string">opencode/deepseek-v4-flash-free</span></span><br><span class="line"><span class="attr">permission:</span></span><br><span class="line">  <span class="attr">skill:</span></span><br><span class="line">    <span class="attr">arxml-validate:</span> <span class="string">allow</span></span><br><span class="line">    <span class="attr">swc-manager:</span> <span class="string">allow</span></span><br><span class="line">    <span class="string">...</span></span><br><span class="line"><span class="meta">---</span></span><br></pre></td></tr></table></figure>
+
+<p>正文部分要写清楚三件事：</p>
+<ul>
+<li><strong>核心能力</strong>：ARXML 解析&#x2F;验证&#x2F;生成、SWC 设计与配置、RTE 配置、ECU Extract 管理、BSW 配置、文档与代码生成</li>
+<li><strong>工作流程</strong>：启动时切回用户原始工作目录（通过环境变量 <code>AUTOSAR_ORIG_DIR</code>）、先理解已有 ARXML 结构、再调用对应 skill、变更必须兼容 AUTOSAR 标准、用 Git 管理版本</li>
+<li><strong>约束</strong>：严格遵守 AUTOSAR 命名规范（CamelCase 模块名、大写包名）、优先复用已有 SWC 与数据类型定义、ECU Extract 不覆盖系统级配置</li>
+</ul>
+<h3 id="2-开发-Skill（SKILL-md）"><a href="#2-开发-Skill（SKILL-md）" class="headerlink" title="2. 开发 Skill（SKILL.md）"></a>2. 开发 Skill（SKILL.md）</h3><p>Skill 是领域知识的最小单元。每个 skill 目录下放一个 <code>SKILL.md</code>，同样用 front-matter 声明元数据：</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">---</span></span><br><span class="line"><span class="attr">name:</span> <span class="string">swc-manager</span></span><br><span class="line"><span class="attr">description:</span> <span class="string">AUTOSAR</span> <span class="string">Software</span> <span class="string">Component</span> <span class="string">应用层组件的创建、配置与管理</span></span><br><span class="line"><span class="attr">license:</span> <span class="string">MIT</span></span><br><span class="line"><span class="attr">compatibility:</span> <span class="string">opencode</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">domain:</span> <span class="string">autosar</span></span><br><span class="line"><span class="meta">---</span></span><br></pre></td></tr></table></figure>
+
+<p>正文则描述该 skill 的<strong>职责</strong>、<strong>工作方式</strong>和<strong>约束</strong>。比如 <code>swc-manager</code> 负责创建 Application &#x2F; SensorActuator &#x2F; Composition 三类 SWC、配置 P-Port &#x2F; R-Port、配置端口接口与数据类型等，并明确约束：Composition 不含 Runables、端口接口引用必须已存在于 <code>AR-PACKAGES</code>。</p>
+<p>这套设计的价值在于：<strong>模型不需要把 AUTOSAR 全量知识背在上下文里</strong>，用到什么 skill 再加载，省 token 且更精准。</p>
+<h3 id="3-开发-Command（commands-）"><a href="#3-开发-Command（commands-）" class="headerlink" title="3. 开发 Command（commands&#x2F;）"></a>3. 开发 Command（commands&#x2F;）</h3><p>Command 用于快速触发固定任务，同样是一个 Markdown 文件加 front-matter：</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">---</span></span><br><span class="line"><span class="attr">description:</span> <span class="string">初始化</span> <span class="string">AUTOSAR</span> <span class="string">项目目录结构和骨架</span> <span class="string">ARXML</span></span><br><span class="line"><span class="meta">---</span></span><br></pre></td></tr></table></figure>
+
+<p><code>autosar-init</code> 会创建 <code>system/</code>、<code>ecu/</code>、<code>swc/</code>、<code>bsw/</code>、<code>generate/</code>、<code>tools/</code> 目录结构、骨架 ARXML 和 <code>.gitignore</code>，并自动 <code>git init</code> 提交初始结构。这样成员在新项目中第一次使用即可一键初始化工程骨架。</p>
+<h3 id="4-编写项目文档（AGENTS-md）"><a href="#4-编写项目文档（AGENTS-md）" class="headerlink" title="4. 编写项目文档（AGENTS.md）"></a>4. 编写项目文档（AGENTS.md）</h3><p>仓库根目录的 <code>AGENTS.md</code> 是团队协作的「说明书」，包含：</p>
+<ul>
+<li>项目定位（个人笔记&#x2F;参考目录，非软件项目）</li>
+<li>安装&#x2F;启动命令（<code>npm i -g opencode-ai</code>、<code>opencode serve</code>）</li>
+<li>项目结构说明</li>
+<li>各 Agent 的能力清单</li>
+<li><strong>发布安全强制规则</strong>：任何发布到公网的操作必须先执行 <code>sensitive-info-review</code> skill</li>
+</ul>
+<h3 id="5-版本管理"><a href="#5-版本管理" class="headerlink" title="5. 版本管理"></a>5. 版本管理</h3><p>整个仓库用 Git 管理，提交信息遵循 Conventional Commits：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">git add .</span><br><span class="line">git commit -m <span class="string">&quot;feat: add swc-manager skill for SWC component management&quot;</span></span><br><span class="line">git push origin master</span><br></pre></td></tr></table></figure>
+
+<h2 id="三、部署过程"><a href="#三、部署过程" class="headerlink" title="三、部署过程"></a>三、部署过程</h2><h3 id="1-源码托管"><a href="#1-源码托管" class="headerlink" title="1. 源码托管"></a>1. 源码托管</h3><p>源码托管在 Gitee 私有仓库，作为团队的安装源和更新源。</p>
+<h3 id="2-一键安装脚本（scripts-install-sh）"><a href="#2-一键安装脚本（scripts-install-sh）" class="headerlink" title="2. 一键安装脚本（scripts&#x2F;install.sh）"></a>2. 一键安装脚本（scripts&#x2F;install.sh）</h3><p>团队成员安装只需一条命令：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">curl -fsSL https://gitee.com/&lt;org&gt;/&lt;repo&gt;/raw/main/scripts/install.sh | bash</span><br></pre></td></tr></table></figure>
+
+<p><code>install.sh</code> 自动完成 5 件事：</p>
+<ol>
+<li><strong>检查依赖</strong>：缺 git 报错；缺 opencode 自动安装（<code>curl -fsSL https://opencode.ai/install | bash</code>）</li>
+<li><strong>克隆&#x2F;更新仓库</strong>：已存在则 <code>git pull --rebase --autostash</code>，不存在则 <code>git clone</code> 到 <code>~/.autosar-agent</code></li>
+<li><strong>安装启动命令</strong>：在 <code>~/.local/bin/autosar</code> 写入一个包装脚本，转发到 <code>scripts/autosar.sh</code></li>
+<li><strong>配置 PATH</strong>：自动检测 shell（zsh&#x2F;bash），把 <code>~/.local/bin</code> 追加到 <code>.zshrc</code> &#x2F; <code>.bashrc</code></li>
+<li><strong>提示配置模型</strong>：首次使用需执行 <code>opencode connect</code> 配置 Provider</li>
+</ol>
+<h3 id="3-启动器（scripts-autosar-sh）"><a href="#3-启动器（scripts-autosar-sh）" class="headerlink" title="3. 启动器（scripts&#x2F;autosar.sh）"></a>3. 启动器（scripts&#x2F;autosar.sh）</h3><p><code>autosar</code> 命令启动时的行为：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">AUTOSAR_HOME=<span class="string">&quot;<span class="variable">$&#123;AUTOSAR_HOME:-<span class="variable">$HOME</span>/.autosar-agent&#125;</span>&quot;</span></span><br><span class="line">ORIG_DIR=<span class="string">&quot;<span class="subst">$(pwd)</span>&quot;</span>                       <span class="comment"># 记录用户当前目录</span></span><br><span class="line"><span class="built_in">cd</span> <span class="string">&quot;<span class="variable">$AUTOSAR_HOME</span>&quot;</span> &amp;&amp; git pull --rebase --autostash   <span class="comment"># 自动更新到最新版</span></span><br><span class="line"><span class="built_in">export</span> AUTOSAR_ORIG_DIR=<span class="string">&quot;<span class="variable">$ORIG_DIR</span>&quot;</span>     <span class="comment"># 让 agent 能切回用户工作目录</span></span><br><span class="line"><span class="built_in">exec</span> opencode <span class="string">&quot;<span class="variable">$ORIG_DIR</span>&quot;</span> --agent autosar</span><br></pre></td></tr></table></figure>
+
+<p>几个关键设计：</p>
+<ul>
+<li><strong>自动更新</strong>：每次启动先 <code>git pull</code>，成员永远用最新技能，无需手动升级</li>
+<li><strong>工作目录保真</strong>：通过 <code>AUTOSAR_ORIG_DIR</code> 环境变量把用户启动时的目录传给 agent，agent 在 <code>agent.md</code> 里声明启动时 <code>cd &quot;$AUTOSAR_ORIG_DIR&quot;</code>，解决「在 <code>~/.autosar-agent</code> 下启动导致工作目录错乱」的问题</li>
+<li><strong>可选飞书桥接</strong>：检测到 <code>feishu/.env</code> 配置时自动拉起 <code>opencode serve</code> 和飞书桥接服务，实现手机远程操控（详见本站另一篇《用飞书连接 AUTOSAR-Agent 手机远程操控指南》）</li>
+</ul>
+<h3 id="4-知识文档发布（本博客）"><a href="#4-知识文档发布（本博客）" class="headerlink" title="4. 知识文档发布（本博客）"></a>4. 知识文档发布（本博客）</h3><p>Agent 的能力说明和实战指南通过 Hexo 博客发布，与源码仓库解耦，方便成员在浏览器里查阅。发布流程：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">cd</span> ~/mchine8916493.github.io</span><br><span class="line">npx hexo new <span class="string">&quot;文章标题&quot;</span>          <span class="comment"># 创建文章</span></span><br><span class="line"><span class="comment"># 编辑 source/_posts/文章标题.md</span></span><br><span class="line">npx hexo clean &amp;&amp; npx hexo generate &amp;&amp; npx hexo deploy   <span class="comment"># 构建并部署到 gh-pages</span></span><br><span class="line">git add -A &amp;&amp; git commit -m <span class="string">&quot;新增文章：文章标题&quot;</span> &amp;&amp; git push origin master  <span class="comment"># 备份源码</span></span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p>⚠️ 强制规则：<strong>任何发布到公网的操作</strong>（git push、hexo deploy、上传等）之前，必须先运行 <code>sensitive-info-review</code> skill 做敏感信息审查，确认无 API 密钥、口令、私钥等泄露后才能发布。</p>
+</blockquote>
+<h2 id="四、持续迭代的实践经验"><a href="#四、持续迭代的实践经验" class="headerlink" title="四、持续迭代的实践经验"></a>四、持续迭代的实践经验</h2><ol>
+<li><strong>沉淀优先于重复</strong>：每次手工解答用户问题后，如果发现是重复性任务，就把它固化成 skill 或 command，形成知识飞轮</li>
+<li><strong>一次只改一个点</strong>：开发新 skill 时用 Git 分支，验证通过再合并，避免破坏在用的 agent</li>
+<li><strong>文档与代码同仓</strong>：<code>AGENTS.md</code>、skill、脚本、安装器放在同一个仓库，成员 clone 一次全部拿到</li>
+<li><strong>发布前必做安全审查</strong>：扫描密钥&#x2F;口令&#x2F;私钥模式，检查 <code>.env</code>、<code>*.log</code>、<code>state.json</code> 等运行时产物是否被意外入库</li>
+</ol>
+<h2 id="五、总结"><a href="#五、总结" class="headerlink" title="五、总结"></a>五、总结</h2><p>基于 opencode 搭建领域专家型 Agent 的完整链路是：</p>
+<blockquote>
+<p><strong>写 agent.md 定义角色 → 写 SKILL.md 沉淀领域知识 → 写 command 固化高频操作 → Git 管理 → 一键安装脚本分发 → 启动器自动更新 → 博客发布知识文档</strong></p>
+</blockquote>
+<p>这套模式的精髓在于「<strong>配置即代码</strong>」：整个 Agent 就是一个可版本化、可分发、可一键部署的 Git 仓库，团队成员既能直接使用，也能 fork 后按自己的领域裁剪。AUTOSAR Agent 只是第一个例子——同样的方法可以复制出 LIN&#x2F;以太网协议栈专家、ISO 26262 功能安全专家、CANoe 脚本专家等更多领域队友。</p>
+
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="http://example.com/2026/08/01/%E5%A6%82%E4%BD%95%E5%BC%80%E5%8F%91%E9%83%A8%E7%BD%B2AUTOSAR-Agent/" data-id="cmsbkkyqe000hvelmbnfr0zh2" data-title="如何开发部署AUTOSAR-Agent" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      
+      
+      
+  <ul class="article-tag-list" itemprop="keywords"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/AI-Agent/" rel="tag">AI Agent</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/AUTOSAR/" rel="tag">AUTOSAR</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/opencode/" rel="tag">opencode</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/%E5%BC%80%E5%8F%91/" rel="tag">开发</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/%E6%95%88%E7%8E%87%E5%B7%A5%E5%85%B7/" rel="tag">效率工具</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/%E9%83%A8%E7%BD%B2/" rel="tag">部署</a></li></ul>
+
+    </footer>
+  </div>
+  
+</article>
+
+
+
+  
     <article id="post-电机控制知识体系入门：从电机原理到FOC实战" class="h-entry article article-type-post" itemprop="blogPost" itemscope itemtype="https://schema.org/BlogPosting">
   <div class="article-meta">
     <a href="/2026/08/01/%E7%94%B5%E6%9C%BA%E6%8E%A7%E5%88%B6%E7%9F%A5%E8%AF%86%E4%BD%93%E7%B3%BB%E5%85%A5%E9%97%A8%EF%BC%9A%E4%BB%8E%E7%94%B5%E6%9C%BA%E5%8E%9F%E7%90%86%E5%88%B0FOC%E5%AE%9E%E6%88%98/" class="article-date">
@@ -782,7 +1121,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2026/08/01/%E7%94%B5%E6%9C%BA%E6%8E%A7%E5%88%B6%E7%9F%A5%E8%AF%86%E4%BD%93%E7%B3%BB%E5%85%A5%E9%97%A8%EF%BC%9A%E4%BB%8E%E7%94%B5%E6%9C%BA%E5%8E%9F%E7%90%86%E5%88%B0FOC%E5%AE%9E%E6%88%98/" data-id="cmsbkesdf000owilmf2no5yz3" data-title="电机控制知识体系入门：从电机原理到FOC实战" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2026/08/01/%E7%94%B5%E6%9C%BA%E6%8E%A7%E5%88%B6%E7%9F%A5%E8%AF%86%E4%BD%93%E7%B3%BB%E5%85%A5%E9%97%A8%EF%BC%9A%E4%BB%8E%E7%94%B5%E6%9C%BA%E5%8E%9F%E7%90%86%E5%88%B0FOC%E5%AE%9E%E6%88%98/" data-id="cmsbkkyqj000rvelm303p382r" data-title="电机控制知识体系入门：从电机原理到FOC实战" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
@@ -1028,7 +1367,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2026/08/01/%E4%BD%BF%E7%94%A8-Ventoy-%E5%88%B6%E4%BD%9C-U-%E7%9B%98%E5%90%AF%E5%8A%A8%E7%9B%98%E5%AE%8C%E5%85%A8%E6%8C%87%E5%8D%97/" data-id="cmsbkesd8000bwilm6954eq7a" data-title="使用 Ventoy 制作 U 盘启动盘完全指南" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2026/08/01/%E4%BD%BF%E7%94%A8-Ventoy-%E5%88%B6%E4%BD%9C-U-%E7%9B%98%E5%90%AF%E5%8A%A8%E7%9B%98%E5%AE%8C%E5%85%A8%E6%8C%87%E5%8D%97/" data-id="cmsbkkyqc000evelm7p0b8tq5" data-title="使用 Ventoy 制作 U 盘启动盘完全指南" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
@@ -1191,7 +1530,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2026/07/31/%E7%94%A8%E9%A3%9E%E4%B9%A6%E8%BF%9E%E6%8E%A5AUTOSAR-Agent-%E6%89%8B%E6%9C%BA%E8%BF%9C%E7%A8%8B%E6%93%8D%E6%8E%A7%E6%8C%87%E5%8D%97/" data-id="cmsbkesdf000nwilmg1vadyv2" data-title="用飞书连接AUTOSAR-Agent-手机远程操控指南" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2026/07/31/%E7%94%A8%E9%A3%9E%E4%B9%A6%E8%BF%9E%E6%8E%A5AUTOSAR-Agent-%E6%89%8B%E6%9C%BA%E8%BF%9C%E7%A8%8B%E6%93%8D%E6%8E%A7%E6%8C%87%E5%8D%97/" data-id="cmsbkkyqj000qvelm5k8w3bb3" data-title="用飞书连接AUTOSAR-Agent-手机远程操控指南" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
@@ -1945,7 +2284,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2026/07/31/CANoe-CAPL%E8%84%9A%E6%9C%AC%E6%B5%8B%E8%AF%95%E5%85%A5%E9%97%A8%E4%B8%8E%E5%AE%9E%E8%B7%B5/" data-id="cmsbkescx0001wilm6t61dyoy" data-title="CANoe CAPL脚本测试入门与实践" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2026/07/31/CANoe-CAPL%E8%84%9A%E6%9C%AC%E6%B5%8B%E8%AF%95%E5%85%A5%E9%97%A8%E4%B8%8E%E5%AE%9E%E8%B7%B5/" data-id="cmsbkkyq30003velm1g6y18x0" data-title="CANoe CAPL脚本测试入门与实践" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
@@ -2296,7 +2635,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2026/07/31/Linux%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86%E8%AF%A6%E8%A7%A3/" data-id="cmsbkesd30005wilmemhjd4ix" data-title="Linux内存管理详解" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2026/07/31/Linux%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86%E8%AF%A6%E8%A7%A3/" data-id="cmsbkkyq80008velmebybdux3" data-title="Linux内存管理详解" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
@@ -2342,7 +2681,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2026/07/31/%E6%B5%8B%E8%AF%95%E6%96%87%E7%AB%A0-%E8%87%AA%E5%8A%A8%E9%83%A8%E7%BD%B2%E9%AA%8C%E8%AF%81/" data-id="cmsbkesde000lwilm6goweq45" data-title="测试文章-自动部署验证" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2026/07/31/%E6%B5%8B%E8%AF%95%E6%96%87%E7%AB%A0-%E8%87%AA%E5%8A%A8%E9%83%A8%E7%BD%B2%E9%AA%8C%E8%AF%81/" data-id="cmsbkkyqi000ovelm7x6ff3n1" data-title="测试文章-自动部署验证" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
@@ -2395,7 +2734,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2026/07/31/hello-world/" data-id="cmsbkesd7000awilmgv9i5o5b" data-title="Hello World" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2026/07/31/hello-world/" data-id="cmsbkkyqb000dvelm2his0lgm" data-title="Hello World" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
@@ -2433,7 +2772,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2026/05/01/%E6%B1%BD%E8%BD%A6%E7%94%B5%E5%AD%90%E5%9B%BA%E4%BB%B6%E5%AE%89%E5%85%A8%E5%AD%A6%E4%B9%A0%E8%B7%AF%E7%BA%BF/" data-id="cmsbkesdd000kwilm1aeagn3j" data-title="汽车电子固件安全学习路线" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2026/05/01/%E6%B1%BD%E8%BD%A6%E7%94%B5%E5%AD%90%E5%9B%BA%E4%BB%B6%E5%AE%89%E5%85%A8%E5%AD%A6%E4%B9%A0%E8%B7%AF%E7%BA%BF/" data-id="cmsbkkyqh000nvelm0uaahzlw" data-title="汽车电子固件安全学习路线" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
@@ -2463,7 +2802,7 @@
   <div class="widget-wrap">
     <h3 class="widget-title">Tags</h3>
     <div class="widget">
-      <ul class="tag-list" itemprop="keywords"><li class="tag-list-item"><a class="tag-list-link" href="/tags/AI-Agent/" rel="tag">AI Agent</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/ARM/" rel="tag">ARM</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/AURIX/" rel="tag">AURIX</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/AUTOSAR/" rel="tag">AUTOSAR</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/BSW/" rel="tag">BSW</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/CANoe/" rel="tag">CANoe</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/CAPL/" rel="tag">CAPL</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/C%E8%AF%AD%E8%A8%80/" rel="tag">C语言</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/FOC/" rel="tag">FOC</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/GCC/" rel="tag">GCC</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/HSM/" rel="tag">HSM</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/LMA/" rel="tag">LMA</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Linker-Script/" rel="tag">Linker Script</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Linux/" rel="tag">Linux</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/MCAL/" rel="tag">MCAL</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/PIC/" rel="tag">PIC</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/RISC-V/" rel="tag">RISC-V</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/RT-Thread/" rel="tag">RT-Thread</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/RTE/" rel="tag">RTE</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/SOTA/" rel="tag">SOTA</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/SecOC/" rel="tag">SecOC</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/TC375/" rel="tag">TC375</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/TriCore/" rel="tag">TriCore</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/U%E7%9B%98%E5%90%AF%E5%8A%A8%E7%9B%98/" rel="tag">U盘启动盘</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/VMA/" rel="tag">VMA</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Ventoy/" rel="tag">Ventoy</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/XIP/" rel="tag">XIP</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/opencode/" rel="tag">opencode</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/x86/" rel="tag">x86</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E4%BF%A1%E6%81%AF%E5%AE%89%E5%85%A8/" rel="tag">信息安全</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%85%A5%E9%97%A8/" rel="tag">入门</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86/" rel="tag">内存管理</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%86%85%E6%A0%B8/" rel="tag">内核</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%86%85%E8%81%94%E6%B1%87%E7%BC%96/" rel="tag">内联汇编</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%90%AF%E5%8A%A8%E8%BF%87%E7%A8%8B/" rel="tag">启动过程</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%9B%BA%E4%BB%B6%E5%BC%80%E5%8F%91/" rel="tag">固件开发</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%9F%BA%E7%A1%80/" rel="tag">基础</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%9F%BA%E7%A1%80%E8%BD%AF%E4%BB%B6/" rel="tag">基础软件</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/" rel="tag">学习笔记</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%AE%89%E5%85%A8%E5%90%AF%E5%8A%A8/" rel="tag">安全启动</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%B5%8C%E5%85%A5%E5%BC%8F/" rel="tag">嵌入式</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%B5%8C%E5%85%A5%E5%BC%8F%E6%B1%87%E7%BC%96/" rel="tag">嵌入式汇编</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%BA%95%E5%B1%82%E5%8E%9F%E7%90%86/" rel="tag">底层原理</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%BC%80%E5%8F%91/" rel="tag">开发</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%BC%95%E5%AF%BC/" rel="tag">引导</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E6%8C%87%E9%92%88/" rel="tag">指针</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E6%95%88%E7%8E%87%E5%B7%A5%E5%85%B7/" rel="tag">效率工具</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E6%B1%87%E7%BC%96/" rel="tag">汇编</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E6%B1%87%E7%BC%96%E8%AF%AD%E8%A8%80/" rel="tag">汇编语言</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E6%B1%BD%E8%BD%A6%E7%94%B5%E5%AD%90/" rel="tag">汽车电子</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E6%B5%8B%E8%AF%95/" rel="tag">测试</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E7%94%B5%E5%8A%9B%E7%94%B5%E5%AD%90/" rel="tag">电力电子</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E7%94%B5%E6%9C%BA%E6%8E%A7%E5%88%B6/" rel="tag">电机控制</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E7%B3%BB%E7%BB%9F%E5%AE%89%E8%A3%85/" rel="tag">系统安装</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E7%BC%96%E8%AF%91%E9%93%BE%E6%8E%A5/" rel="tag">编译链接</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E8%8B%B1%E9%A3%9E%E5%87%8C/" rel="tag">英飞凌</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E8%A3%85%E6%9C%BA%E5%B7%A5%E5%85%B7/" rel="tag">装机工具</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E8%AF%AD%E6%B3%95/" rel="tag">语法</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E8%BF%9B%E9%98%B6/" rel="tag">进阶</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E9%83%A8%E7%BD%B2/" rel="tag">部署</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E9%93%BE%E6%8E%A5%E8%84%9A%E6%9C%AC/" rel="tag">链接脚本</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E9%A3%9E%E4%B9%A6/" rel="tag">飞书</a></li></ul>
+      <ul class="tag-list" itemprop="keywords"><li class="tag-list-item"><a class="tag-list-link" href="/tags/AI-Agent/" rel="tag">AI Agent</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/ARM/" rel="tag">ARM</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/AURIX/" rel="tag">AURIX</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/AUTOSAR/" rel="tag">AUTOSAR</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/BSW/" rel="tag">BSW</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Bootloader/" rel="tag">Bootloader</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/CAN/" rel="tag">CAN</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/CANoe/" rel="tag">CANoe</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/CAPL/" rel="tag">CAPL</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/C%E8%AF%AD%E8%A8%80/" rel="tag">C语言</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/DTC/" rel="tag">DTC</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/FOC/" rel="tag">FOC</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/FOTA/" rel="tag">FOTA</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Flash/" rel="tag">Flash</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/GCC/" rel="tag">GCC</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/HSM/" rel="tag">HSM</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/ISO14229/" rel="tag">ISO14229</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/LMA/" rel="tag">LMA</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Linker-Script/" rel="tag">Linker Script</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Linux/" rel="tag">Linux</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/MCAL/" rel="tag">MCAL</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/OTA/" rel="tag">OTA</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/PIC/" rel="tag">PIC</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/RISC-V/" rel="tag">RISC-V</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/RT-Thread/" rel="tag">RT-Thread</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/RTE/" rel="tag">RTE</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/SOTA/" rel="tag">SOTA</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/SecOC/" rel="tag">SecOC</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/TC375/" rel="tag">TC375</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/TriCore/" rel="tag">TriCore</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/UDS/" rel="tag">UDS</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/U%E7%9B%98%E5%90%AF%E5%8A%A8%E7%9B%98/" rel="tag">U盘启动盘</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/VMA/" rel="tag">VMA</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Ventoy/" rel="tag">Ventoy</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/XIP/" rel="tag">XIP</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/opencode/" rel="tag">opencode</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/x86/" rel="tag">x86</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E4%BF%A1%E6%81%AF%E5%AE%89%E5%85%A8/" rel="tag">信息安全</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%85%A5%E9%97%A8/" rel="tag">入门</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86/" rel="tag">内存管理</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%86%85%E6%A0%B8/" rel="tag">内核</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%86%85%E8%81%94%E6%B1%87%E7%BC%96/" rel="tag">内联汇编</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%90%AF%E5%8A%A8%E8%BF%87%E7%A8%8B/" rel="tag">启动过程</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%9B%BA%E4%BB%B6%E5%BC%80%E5%8F%91/" rel="tag">固件开发</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%9F%BA%E7%A1%80/" rel="tag">基础</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%9F%BA%E7%A1%80%E8%BD%AF%E4%BB%B6/" rel="tag">基础软件</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/" rel="tag">学习笔记</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%AE%89%E5%85%A8%E5%90%AF%E5%8A%A8/" rel="tag">安全启动</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%B5%8C%E5%85%A5%E5%BC%8F/" rel="tag">嵌入式</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%B5%8C%E5%85%A5%E5%BC%8F%E6%B1%87%E7%BC%96/" rel="tag">嵌入式汇编</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%BA%95%E5%B1%82%E5%8E%9F%E7%90%86/" rel="tag">底层原理</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%BC%80%E5%8F%91/" rel="tag">开发</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%BC%95%E5%AF%BC/" rel="tag">引导</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E6%8C%87%E9%92%88/" rel="tag">指针</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E6%95%88%E7%8E%87%E5%B7%A5%E5%85%B7/" rel="tag">效率工具</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E6%B1%87%E7%BC%96/" rel="tag">汇编</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E6%B1%87%E7%BC%96%E8%AF%AD%E8%A8%80/" rel="tag">汇编语言</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E6%B1%BD%E8%BD%A6%E7%94%B5%E5%AD%90/" rel="tag">汽车电子</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E6%B5%8B%E8%AF%95/" rel="tag">测试</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E7%94%B5%E5%8A%9B%E7%94%B5%E5%AD%90/" rel="tag">电力电子</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E7%94%B5%E6%9C%BA%E6%8E%A7%E5%88%B6/" rel="tag">电机控制</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E7%B3%BB%E7%BB%9F%E5%AE%89%E8%A3%85/" rel="tag">系统安装</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E7%BC%96%E8%AF%91%E9%93%BE%E6%8E%A5/" rel="tag">编译链接</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E8%8B%B1%E9%A3%9E%E5%87%8C/" rel="tag">英飞凌</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E8%A3%85%E6%9C%BA%E5%B7%A5%E5%85%B7/" rel="tag">装机工具</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E8%AF%8A%E6%96%AD%E5%8D%8F%E8%AE%AE/" rel="tag">诊断协议</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E8%AF%AD%E6%B3%95/" rel="tag">语法</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E8%BF%9B%E9%98%B6/" rel="tag">进阶</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E9%83%A8%E7%BD%B2/" rel="tag">部署</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E9%93%BE%E6%8E%A5%E8%84%9A%E6%9C%AC/" rel="tag">链接脚本</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E9%A3%9E%E4%B9%A6/" rel="tag">飞书</a></li></ul>
     </div>
   </div>
 
@@ -2473,7 +2812,7 @@
   <div class="widget-wrap">
     <h3 class="widget-title">Tag Cloud</h3>
     <div class="widget tagcloud">
-      <a href="/tags/AI-Agent/" style="font-size: 12.5px;">AI Agent</a> <a href="/tags/ARM/" style="font-size: 12.5px;">ARM</a> <a href="/tags/AURIX/" style="font-size: 12.5px;">AURIX</a> <a href="/tags/AUTOSAR/" style="font-size: 17.5px;">AUTOSAR</a> <a href="/tags/BSW/" style="font-size: 10px;">BSW</a> <a href="/tags/CANoe/" style="font-size: 10px;">CANoe</a> <a href="/tags/CAPL/" style="font-size: 10px;">CAPL</a> <a href="/tags/C%E8%AF%AD%E8%A8%80/" style="font-size: 15px;">C语言</a> <a href="/tags/FOC/" style="font-size: 10px;">FOC</a> <a href="/tags/GCC/" style="font-size: 12.5px;">GCC</a> <a href="/tags/HSM/" style="font-size: 10px;">HSM</a> <a href="/tags/LMA/" style="font-size: 10px;">LMA</a> <a href="/tags/Linker-Script/" style="font-size: 12.5px;">Linker Script</a> <a href="/tags/Linux/" style="font-size: 15px;">Linux</a> <a href="/tags/MCAL/" style="font-size: 10px;">MCAL</a> <a href="/tags/PIC/" style="font-size: 10px;">PIC</a> <a href="/tags/RISC-V/" style="font-size: 10px;">RISC-V</a> <a href="/tags/RT-Thread/" style="font-size: 10px;">RT-Thread</a> <a href="/tags/RTE/" style="font-size: 10px;">RTE</a> <a href="/tags/SOTA/" style="font-size: 10px;">SOTA</a> <a href="/tags/SecOC/" style="font-size: 10px;">SecOC</a> <a href="/tags/TC375/" style="font-size: 12.5px;">TC375</a> <a href="/tags/TriCore/" style="font-size: 12.5px;">TriCore</a> <a href="/tags/U%E7%9B%98%E5%90%AF%E5%8A%A8%E7%9B%98/" style="font-size: 10px;">U盘启动盘</a> <a href="/tags/VMA/" style="font-size: 10px;">VMA</a> <a href="/tags/Ventoy/" style="font-size: 10px;">Ventoy</a> <a href="/tags/XIP/" style="font-size: 10px;">XIP</a> <a href="/tags/opencode/" style="font-size: 12.5px;">opencode</a> <a href="/tags/x86/" style="font-size: 10px;">x86</a> <a href="/tags/%E4%BF%A1%E6%81%AF%E5%AE%89%E5%85%A8/" style="font-size: 10px;">信息安全</a> <a href="/tags/%E5%85%A5%E9%97%A8/" style="font-size: 10px;">入门</a> <a href="/tags/%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86/" style="font-size: 12.5px;">内存管理</a> <a href="/tags/%E5%86%85%E6%A0%B8/" style="font-size: 12.5px;">内核</a> <a href="/tags/%E5%86%85%E8%81%94%E6%B1%87%E7%BC%96/" style="font-size: 10px;">内联汇编</a> <a href="/tags/%E5%90%AF%E5%8A%A8%E8%BF%87%E7%A8%8B/" style="font-size: 10px;">启动过程</a> <a href="/tags/%E5%9B%BA%E4%BB%B6%E5%BC%80%E5%8F%91/" style="font-size: 10px;">固件开发</a> <a href="/tags/%E5%9F%BA%E7%A1%80/" style="font-size: 10px;">基础</a> <a href="/tags/%E5%9F%BA%E7%A1%80%E8%BD%AF%E4%BB%B6/" style="font-size: 10px;">基础软件</a> <a href="/tags/%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/" style="font-size: 12.5px;">学习笔记</a> <a href="/tags/%E5%AE%89%E5%85%A8%E5%90%AF%E5%8A%A8/" style="font-size: 10px;">安全启动</a> <a href="/tags/%E5%B5%8C%E5%85%A5%E5%BC%8F/" style="font-size: 20px;">嵌入式</a> <a href="/tags/%E5%B5%8C%E5%85%A5%E5%BC%8F%E6%B1%87%E7%BC%96/" style="font-size: 10px;">嵌入式汇编</a> <a href="/tags/%E5%BA%95%E5%B1%82%E5%8E%9F%E7%90%86/" style="font-size: 17.5px;">底层原理</a> <a href="/tags/%E5%BC%80%E5%8F%91/" style="font-size: 10px;">开发</a> <a href="/tags/%E5%BC%95%E5%AF%BC/" style="font-size: 10px;">引导</a> <a href="/tags/%E6%8C%87%E9%92%88/" style="font-size: 10px;">指针</a> <a href="/tags/%E6%95%88%E7%8E%87%E5%B7%A5%E5%85%B7/" style="font-size: 12.5px;">效率工具</a> <a href="/tags/%E6%B1%87%E7%BC%96/" style="font-size: 12.5px;">汇编</a> <a href="/tags/%E6%B1%87%E7%BC%96%E8%AF%AD%E8%A8%80/" style="font-size: 12.5px;">汇编语言</a> <a href="/tags/%E6%B1%BD%E8%BD%A6%E7%94%B5%E5%AD%90/" style="font-size: 15px;">汽车电子</a> <a href="/tags/%E6%B5%8B%E8%AF%95/" style="font-size: 12.5px;">测试</a> <a href="/tags/%E7%94%B5%E5%8A%9B%E7%94%B5%E5%AD%90/" style="font-size: 10px;">电力电子</a> <a href="/tags/%E7%94%B5%E6%9C%BA%E6%8E%A7%E5%88%B6/" style="font-size: 10px;">电机控制</a> <a href="/tags/%E7%B3%BB%E7%BB%9F%E5%AE%89%E8%A3%85/" style="font-size: 10px;">系统安装</a> <a href="/tags/%E7%BC%96%E8%AF%91%E9%93%BE%E6%8E%A5/" style="font-size: 10px;">编译链接</a> <a href="/tags/%E8%8B%B1%E9%A3%9E%E5%87%8C/" style="font-size: 12.5px;">英飞凌</a> <a href="/tags/%E8%A3%85%E6%9C%BA%E5%B7%A5%E5%85%B7/" style="font-size: 10px;">装机工具</a> <a href="/tags/%E8%AF%AD%E6%B3%95/" style="font-size: 10px;">语法</a> <a href="/tags/%E8%BF%9B%E9%98%B6/" style="font-size: 10px;">进阶</a> <a href="/tags/%E9%83%A8%E7%BD%B2/" style="font-size: 10px;">部署</a> <a href="/tags/%E9%93%BE%E6%8E%A5%E8%84%9A%E6%9C%AC/" style="font-size: 12.5px;">链接脚本</a> <a href="/tags/%E9%A3%9E%E4%B9%A6/" style="font-size: 10px;">飞书</a>
+      <a href="/tags/AI-Agent/" style="font-size: 12px;">AI Agent</a> <a href="/tags/ARM/" style="font-size: 12px;">ARM</a> <a href="/tags/AURIX/" style="font-size: 12px;">AURIX</a> <a href="/tags/AUTOSAR/" style="font-size: 16px;">AUTOSAR</a> <a href="/tags/BSW/" style="font-size: 10px;">BSW</a> <a href="/tags/Bootloader/" style="font-size: 10px;">Bootloader</a> <a href="/tags/CAN/" style="font-size: 10px;">CAN</a> <a href="/tags/CANoe/" style="font-size: 10px;">CANoe</a> <a href="/tags/CAPL/" style="font-size: 10px;">CAPL</a> <a href="/tags/C%E8%AF%AD%E8%A8%80/" style="font-size: 14px;">C语言</a> <a href="/tags/DTC/" style="font-size: 10px;">DTC</a> <a href="/tags/FOC/" style="font-size: 10px;">FOC</a> <a href="/tags/FOTA/" style="font-size: 10px;">FOTA</a> <a href="/tags/Flash/" style="font-size: 10px;">Flash</a> <a href="/tags/GCC/" style="font-size: 12px;">GCC</a> <a href="/tags/HSM/" style="font-size: 10px;">HSM</a> <a href="/tags/ISO14229/" style="font-size: 10px;">ISO14229</a> <a href="/tags/LMA/" style="font-size: 10px;">LMA</a> <a href="/tags/Linker-Script/" style="font-size: 12px;">Linker Script</a> <a href="/tags/Linux/" style="font-size: 14px;">Linux</a> <a href="/tags/MCAL/" style="font-size: 10px;">MCAL</a> <a href="/tags/OTA/" style="font-size: 10px;">OTA</a> <a href="/tags/PIC/" style="font-size: 10px;">PIC</a> <a href="/tags/RISC-V/" style="font-size: 10px;">RISC-V</a> <a href="/tags/RT-Thread/" style="font-size: 10px;">RT-Thread</a> <a href="/tags/RTE/" style="font-size: 10px;">RTE</a> <a href="/tags/SOTA/" style="font-size: 10px;">SOTA</a> <a href="/tags/SecOC/" style="font-size: 10px;">SecOC</a> <a href="/tags/TC375/" style="font-size: 12px;">TC375</a> <a href="/tags/TriCore/" style="font-size: 12px;">TriCore</a> <a href="/tags/UDS/" style="font-size: 10px;">UDS</a> <a href="/tags/U%E7%9B%98%E5%90%AF%E5%8A%A8%E7%9B%98/" style="font-size: 10px;">U盘启动盘</a> <a href="/tags/VMA/" style="font-size: 10px;">VMA</a> <a href="/tags/Ventoy/" style="font-size: 10px;">Ventoy</a> <a href="/tags/XIP/" style="font-size: 10px;">XIP</a> <a href="/tags/opencode/" style="font-size: 12px;">opencode</a> <a href="/tags/x86/" style="font-size: 10px;">x86</a> <a href="/tags/%E4%BF%A1%E6%81%AF%E5%AE%89%E5%85%A8/" style="font-size: 10px;">信息安全</a> <a href="/tags/%E5%85%A5%E9%97%A8/" style="font-size: 10px;">入门</a> <a href="/tags/%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86/" style="font-size: 12px;">内存管理</a> <a href="/tags/%E5%86%85%E6%A0%B8/" style="font-size: 12px;">内核</a> <a href="/tags/%E5%86%85%E8%81%94%E6%B1%87%E7%BC%96/" style="font-size: 10px;">内联汇编</a> <a href="/tags/%E5%90%AF%E5%8A%A8%E8%BF%87%E7%A8%8B/" style="font-size: 10px;">启动过程</a> <a href="/tags/%E5%9B%BA%E4%BB%B6%E5%BC%80%E5%8F%91/" style="font-size: 10px;">固件开发</a> <a href="/tags/%E5%9F%BA%E7%A1%80/" style="font-size: 10px;">基础</a> <a href="/tags/%E5%9F%BA%E7%A1%80%E8%BD%AF%E4%BB%B6/" style="font-size: 10px;">基础软件</a> <a href="/tags/%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/" style="font-size: 12px;">学习笔记</a> <a href="/tags/%E5%AE%89%E5%85%A8%E5%90%AF%E5%8A%A8/" style="font-size: 10px;">安全启动</a> <a href="/tags/%E5%B5%8C%E5%85%A5%E5%BC%8F/" style="font-size: 20px;">嵌入式</a> <a href="/tags/%E5%B5%8C%E5%85%A5%E5%BC%8F%E6%B1%87%E7%BC%96/" style="font-size: 10px;">嵌入式汇编</a> <a href="/tags/%E5%BA%95%E5%B1%82%E5%8E%9F%E7%90%86/" style="font-size: 20px;">底层原理</a> <a href="/tags/%E5%BC%80%E5%8F%91/" style="font-size: 10px;">开发</a> <a href="/tags/%E5%BC%95%E5%AF%BC/" style="font-size: 10px;">引导</a> <a href="/tags/%E6%8C%87%E9%92%88/" style="font-size: 10px;">指针</a> <a href="/tags/%E6%95%88%E7%8E%87%E5%B7%A5%E5%85%B7/" style="font-size: 12px;">效率工具</a> <a href="/tags/%E6%B1%87%E7%BC%96/" style="font-size: 12px;">汇编</a> <a href="/tags/%E6%B1%87%E7%BC%96%E8%AF%AD%E8%A8%80/" style="font-size: 12px;">汇编语言</a> <a href="/tags/%E6%B1%BD%E8%BD%A6%E7%94%B5%E5%AD%90/" style="font-size: 18px;">汽车电子</a> <a href="/tags/%E6%B5%8B%E8%AF%95/" style="font-size: 12px;">测试</a> <a href="/tags/%E7%94%B5%E5%8A%9B%E7%94%B5%E5%AD%90/" style="font-size: 10px;">电力电子</a> <a href="/tags/%E7%94%B5%E6%9C%BA%E6%8E%A7%E5%88%B6/" style="font-size: 10px;">电机控制</a> <a href="/tags/%E7%B3%BB%E7%BB%9F%E5%AE%89%E8%A3%85/" style="font-size: 10px;">系统安装</a> <a href="/tags/%E7%BC%96%E8%AF%91%E9%93%BE%E6%8E%A5/" style="font-size: 10px;">编译链接</a> <a href="/tags/%E8%8B%B1%E9%A3%9E%E5%87%8C/" style="font-size: 12px;">英飞凌</a> <a href="/tags/%E8%A3%85%E6%9C%BA%E5%B7%A5%E5%85%B7/" style="font-size: 10px;">装机工具</a> <a href="/tags/%E8%AF%8A%E6%96%AD%E5%8D%8F%E8%AE%AE/" style="font-size: 10px;">诊断协议</a> <a href="/tags/%E8%AF%AD%E6%B3%95/" style="font-size: 10px;">语法</a> <a href="/tags/%E8%BF%9B%E9%98%B6/" style="font-size: 10px;">进阶</a> <a href="/tags/%E9%83%A8%E7%BD%B2/" style="font-size: 10px;">部署</a> <a href="/tags/%E9%93%BE%E6%8E%A5%E8%84%9A%E6%9C%AC/" style="font-size: 12px;">链接脚本</a> <a href="/tags/%E9%A3%9E%E4%B9%A6/" style="font-size: 10px;">飞书</a>
     </div>
   </div>
 
@@ -2495,6 +2834,14 @@
       <ul>
         
           <li>
+            <a href="/2026/08/02/UDS%E8%AF%8A%E6%96%AD%E5%8D%8F%E8%AE%AE%E8%AF%A6%E8%A7%A3/">UDS诊断协议详解</a>
+          </li>
+        
+          <li>
+            <a href="/2026/08/02/Bootloader%E4%B8%8EFOTA%E5%8D%87%E7%BA%A7%E8%AF%A6%E8%A7%A3/">Bootloader与FOTA升级详解</a>
+          </li>
+        
+          <li>
             <a href="/2026/08/02/%E4%BF%A1%E6%81%AF%E5%AE%89%E5%85%A8%E5%9B%BA%E4%BB%B6%E5%BC%80%E5%8F%91%E8%AF%A6%E8%A7%A3/">信息安全固件开发详解</a>
           </li>
         
@@ -2504,14 +2851,6 @@
         
           <li>
             <a href="/2026/08/02/C%E8%AF%AD%E8%A8%80%E5%B5%8C%E5%85%A5%E5%BC%8F%E6%B1%87%E7%BC%96%E8%AF%A6%E8%A7%A3/">C语言嵌入式汇编详解</a>
-          </li>
-        
-          <li>
-            <a href="/2026/08/02/C%E8%AF%AD%E8%A8%80%E5%9F%BA%E7%A1%80%E7%9F%A5%E8%AF%86%E7%82%B9%E8%AF%A6%E8%A7%A3/">C语言基础知识点详解</a>
-          </li>
-        
-          <li>
-            <a href="/2026/08/02/C%E8%AF%AD%E8%A8%80%E8%BF%9B%E9%98%B6%E7%9F%A5%E8%AF%86%E7%82%B9%E8%AF%A6%E8%A7%A3/">C语言进阶知识点详解</a>
           </li>
         
       </ul>
