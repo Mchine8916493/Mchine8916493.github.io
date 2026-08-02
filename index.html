@@ -362,70 +362,370 @@
 <p><strong>否定响应</strong>：服务号 0x7F + 请求服务号 + NRC</p>
 <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">响应：03 7F 22 31     ← 服务 0x22 返回 NRC=0x31</span><br></pre></td></tr></table></figure>
 
-<h2 id="5-2-否定响应码（NRC）"><a href="#5-2-否定响应码（NRC）" class="headerlink" title="5.2 否定响应码（NRC）"></a>5.2 否定响应码（NRC）</h2><table>
+<h2 id="5-2-否定响应码（NRC）完整解析"><a href="#5-2-否定响应码（NRC）完整解析" class="headerlink" title="5.2 否定响应码（NRC）完整解析"></a>5.2 否定响应码（NRC）完整解析</h2><p>当 ECU 无法肯定响应时，返回否定响应：<code>0x7F + 请求服务号 + NRC</code>。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">响应：03 7F 22 31     ← 服务 0x22 返回 NRC=0x31</span><br></pre></td></tr></table></figure>
+
+<p>NRC（Negative Response Code，否定响应码）按 ISO 14229-1 定义，配合请求服务号指明失败原因。完整含义如下：</p>
+<h3 id="通用类（0x1x）"><a href="#通用类（0x1x）" class="headerlink" title="通用类（0x1x）"></a>通用类（0x1x）</h3><table>
 <thead>
 <tr>
 <th>NRC</th>
+<th>英文名</th>
 <th>含义</th>
 </tr>
 </thead>
 <tbody><tr>
 <td>0x10</td>
-<td>一般拒绝</td>
+<td>generalReject</td>
+<td><strong>一般拒绝</strong>：请求在接收时被错误处理，无更具体原因</td>
 </tr>
 <tr>
 <td>0x11</td>
-<td>服务不支持</td>
+<td>serviceNotSupported</td>
+<td><strong>服务不支持</strong>：请求的服务 ID 不存在（如未实现 0x2E）</td>
 </tr>
 <tr>
 <td>0x12</td>
-<td>子功能不支持</td>
+<td>subFunctionNotSupported</td>
+<td><strong>子功能不支持</strong>：服务存在但该子功能不支持（如 0x19 02）</td>
 </tr>
 <tr>
 <td>0x13</td>
-<td>长度错误</td>
+<td>incorrectMessageLengthOrInvalidFormat</td>
+<td><strong>消息长度错误或格式无效</strong>：长度与规定不符、无效字节</td>
 </tr>
 <tr>
 <td>0x14</td>
-<td>条件不满足</td>
+<td>responseTooLong</td>
+<td><strong>响应信息过长</strong>：响应数据超出一帧&#x2F;缓冲区容量</td>
+</tr>
+<tr>
+<td>0x15</td>
+<td>busyRepeatRequest</td>
+<td><strong>忙，重复请求</strong>：ECU 忙，请稍后重试</td>
+</tr>
+<tr>
+<td>0x16</td>
+<td>incorrectInactiveSession</td>
+<td><strong>会话错误</strong>：请求在不正确的会话中发出</td>
+</tr>
+<tr>
+<td>0x17</td>
+<td>requestNotCorrectlyReceived</td>
+<td><strong>请求未正确接收</strong>：接收时校验失败</td>
+</tr>
+</tbody></table>
+<h3 id="条件与序列类（0x2x）"><a href="#条件与序列类（0x2x）" class="headerlink" title="条件与序列类（0x2x）"></a>条件与序列类（0x2x）</h3><table>
+<thead>
+<tr>
+<th>NRC</th>
+<th>英文名</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>0x21</td>
+<td>busyRepeatRequest</td>
+<td><strong>忙碌，重复请求</strong>：ECU 正在处理其他操作</td>
 </tr>
 <tr>
 <td>0x22</td>
-<td>条件不满足（相同）</td>
+<td>conditionsNotCorrect</td>
+<td><strong>条件不正确</strong>：前置条件未满足（如未安全解锁就写数据）</td>
+</tr>
+<tr>
+<td>0x23</td>
+<td>badSupportedFunction</td>
+<td><strong>不支持&#x2F;无效功能组合</strong>：请求的功能不被当前配置支持</td>
 </tr>
 <tr>
 <td>0x24</td>
-<td>请求序列错误</td>
+<td>requestSequenceError</td>
+<td><strong>请求序列错误</strong>：违反规定的时序（如未 0x34 就发 0x36）</td>
 </tr>
 <tr>
+<td>0x25</td>
+<td>noResponseFromSubnetComponent</td>
+<td><strong>子网组件无响应</strong>：子网内的组件没有响应</td>
+</tr>
+<tr>
+<td>0x26</td>
+<td>failurePreventsExecutionOfRequestedAction</td>
+<td><strong>故障阻止执行</strong>：因某故障无法执行请求动作</td>
+</tr>
+<tr>
+<td>0x27</td>
+<td>busyRequestedAction</td>
+<td><strong>动作忙</strong>：请求的动作当前正忙</td>
+</tr>
+<tr>
+<td>0x28</td>
+<td>conditionsNotCorrectForRequestedAction</td>
+<td><strong>请求动作条件不满足</strong></td>
+</tr>
+<tr>
+<td>0x29</td>
+<td>requestSequenceErrorForSubnetComponent</td>
+<td><strong>子网组件请求序列错误</strong></td>
+</tr>
+<tr>
+<td>0x2A</td>
+<td>actionNotSupportedForClient</td>
+<td><strong>不支持客户端动作</strong></td>
+</tr>
+<tr>
+<td>0x2B</td>
+<td>maxNumberOfReceivedPacketsExceeded</td>
+<td><strong>接收包数超过上限</strong></td>
+</tr>
+<tr>
+<td>0x2C</td>
+<td>invalidFrameNumber</td>
+<td><strong>无效帧号</strong></td>
+</tr>
+</tbody></table>
+<h3 id="数据与范围类（0x3x）"><a href="#数据与范围类（0x3x）" class="headerlink" title="数据与范围类（0x3x）"></a>数据与范围类（0x3x）</h3><table>
+<thead>
+<tr>
+<th>NRC</th>
+<th>英文名</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody><tr>
 <td>0x31</td>
-<td>请求超出范围</td>
+<td>requestOutOfRange</td>
+<td><strong>请求超出范围</strong>：DID&#x2F;DTC&#x2F;参数超出有效范围（最常见错误之一）</td>
+</tr>
+<tr>
+<td>0x32</td>
+<td>requestOutOfRangeSubnetComponent</td>
+<td><strong>子网组件参数超出范围</strong></td>
 </tr>
 <tr>
 <td>0x33</td>
-<td>安全访问被拒绝</td>
+<td>securityAccessDenied</td>
+<td><strong>安全访问被拒绝</strong>：未解锁就执行需要安全的操作</td>
 </tr>
 <tr>
 <td>0x34</td>
-<td>锁止（安全锁定）</td>
+<td>authenticationFailed</td>
+<td><strong>认证失败</strong>：身份验证不通过</td>
+</tr>
+<tr>
+<td>0x35</td>
+<td>invalidKey</td>
+<td><strong>密钥无效</strong>：0x27 解锁回传的 Key 计算错误</td>
+</tr>
+<tr>
+<td>0x36</td>
+<td>exceedNumberOfAttempts</td>
+<td><strong>超出尝试次数</strong>：解锁尝试次数过多被锁定</td>
+</tr>
+<tr>
+<td>0x37</td>
+<td>requiredTimeDelayNotExpired</td>
+<td><strong>时间延迟未过</strong>：连续请求太频繁，需等待</td>
+</tr>
+<tr>
+<td>0x38</td>
+<td>secureDataTransmissionRequired</td>
+<td><strong>需要安全传输</strong>：要求加密&#x2F;安全数据连接</td>
+</tr>
+<tr>
+<td>0x39</td>
+<td>secureDataTransmissionNotSupported</td>
+<td><strong>不支持安全传输</strong></td>
+</tr>
+<tr>
+<td>0x3A</td>
+<td>secureDataTransmissionNotAllowed</td>
+<td><strong>不允许安全传输</strong></td>
+</tr>
+<tr>
+<td>0x3B</td>
+<td>certificateVerificationFailed</td>
+<td><strong>证书验证失败</strong></td>
+</tr>
+<tr>
+<td>0x3C</td>
+<td>certificateExpired</td>
+<td><strong>证书已过期</strong></td>
+</tr>
+<tr>
+<td>0x3D</td>
+<td>certificateInvalid</td>
+<td><strong>证书无效</strong></td>
+</tr>
+<tr>
+<td>0x3E</td>
+<td>certificateCouldNotBeUsed</td>
+<td><strong>证书无法使用</strong></td>
+</tr>
+<tr>
+<td>0x3F</td>
+<td>certificateCouldNotBeFound</td>
+<td><strong>找不到证书</strong></td>
+</tr>
+</tbody></table>
+<h3 id="内部与硬件类（0x4x）"><a href="#内部与硬件类（0x4x）" class="headerlink" title="内部与硬件类（0x4x）"></a>内部与硬件类（0x4x）</h3><table>
+<thead>
+<tr>
+<th>NRC</th>
+<th>英文名</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>0x40</td>
+<td>softwareError</td>
+<td><strong>软件内部错误</strong>：内部逻辑异常</td>
+</tr>
+<tr>
+<td>0x41</td>
+<td>hardwareError</td>
+<td><strong>硬件内部错误</strong>：控制器硬件异常</td>
+</tr>
+<tr>
+<td>0x42</td>
+<td>externalTestEquipmentError</td>
+<td><strong>外部测试设备错误</strong></td>
+</tr>
+<tr>
+<td>0x43</td>
+<td>externalTestEquipmentOverloaded</td>
+<td><strong>外部设备过载</strong></td>
+</tr>
+<tr>
+<td>0x44</td>
+<td>errorDetectedByExternalTestEquipment</td>
+<td><strong>外部设备检测到错误</strong></td>
+</tr>
+<tr>
+<td>0x45</td>
+<td>targetNotPresent</td>
+<td><strong>目标不存在</strong></td>
+</tr>
+<tr>
+<td>0x46</td>
+<td>subComponentMissingOrFailed</td>
+<td><strong>子组件缺失或失效</strong></td>
+</tr>
+<tr>
+<td>0x47</td>
+<td>internalFlashError</td>
+<td><strong>内部 Flash 错误</strong></td>
+</tr>
+<tr>
+<td>0x48</td>
+<td>dataNotAvailable</td>
+<td><strong>数据不可用</strong></td>
+</tr>
+</tbody></table>
+<h3 id="编程-刷写类（0x7x）"><a href="#编程-刷写类（0x7x）" class="headerlink" title="编程&#x2F;刷写类（0x7x）"></a>编程&#x2F;刷写类（0x7x）</h3><table>
+<thead>
+<tr>
+<th>NRC</th>
+<th>英文名</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>0x70</td>
+<td>uploadDownloadNotAccepted</td>
+<td><strong>上载&#x2F;下载被拒绝</strong>：刷写前置条件不满足</td>
+</tr>
+<tr>
+<td>0x71</td>
+<td>transferDataSuspended</td>
+<td><strong>传输数据挂起</strong></td>
 </tr>
 <tr>
 <td>0x72</td>
-<td>内存不足</td>
+<td>generalProgrammingFailure</td>
+<td><strong>一般编程失败</strong>：擦写 Flash 失败</td>
+</tr>
+<tr>
+<td>0x73</td>
+<td>wrongBlockSequenceCounter</td>
+<td><strong>块序列计数器错误</strong>：0x36 序号不连续（丢帧）</td>
+</tr>
+<tr>
+<td>0x74</td>
+<td>requestCorrectlyReceived_ResponsePending</td>
+<td><strong>已正确接收-响应待定</strong>（处理中，稍后补发正式响应）</td>
+</tr>
+<tr>
+<td>0x75</td>
+<td>incorrectCombinationMethod</td>
+<td><strong>组合方法错误</strong>：子功能与服务组合无效</td>
+</tr>
+<tr>
+<td>0x76</td>
+<td>sessionNotSupported</td>
+<td><strong>会话不支持</strong>：当前会话不允许该服务</td>
+</tr>
+<tr>
+<td>0x77</td>
+<td>serviceNotSupportedInActiveSession</td>
+<td><strong>服务在当前会话不支持</strong>（如默认会话下禁止刷写）</td>
 </tr>
 <tr>
 <td>0x78</td>
-<td>响应待定（长任务）</td>
+<td>rspPending</td>
+<td><strong>响应待定&#x2F;等待</strong>：长任务进行中，需上位机等待并轮询</td>
+</tr>
+<tr>
+<td>0x79</td>
+<td>moduleIdentificationNotSupported</td>
+<td><strong>模块识别不支持</strong></td>
+</tr>
+<tr>
+<td>0x7A</td>
+<td>missingIdentifier</td>
+<td><strong>缺少标识符（ID）</strong></td>
+</tr>
+<tr>
+<td>0x7B</td>
+<td>unexpectedIdentifier</td>
+<td><strong>意外的标识符</strong></td>
+</tr>
+<tr>
+<td>0x7C</td>
+<td>toMuchData</td>
+<td><strong>数据过多</strong>：超出允许范围</td>
+</tr>
+<tr>
+<td>0x7D</td>
+<td>invalidDiagnosticMessageType</td>
+<td><strong>无效诊断消息类型</strong></td>
 </tr>
 <tr>
 <td>0x7E</td>
-<td>子功能不支持</td>
+<td>subFunctionNotSupportedInActiveSession</td>
+<td><strong>子功能在当前会话不支持</strong></td>
 </tr>
 <tr>
 <td>0x7F</td>
-<td>服务在会话中不可用</td>
+<td>serviceNotSupportedInActiveSession</td>
+<td><strong>服务在当前会话不支持</strong></td>
+</tr>
+<tr>
+<td>0x80</td>
+<td>wrongModel</td>
+<td><strong>型号错误</strong></td>
 </tr>
 </tbody></table>
+<blockquote>
+<p>表中 0x7E &#x2F; 0x7F 是”当前会话不支持”的两个常见变体，和 0x11 &#x2F; 0x12（”根本不支持”）的区别在于：<strong>前者换了会话就能用，后者任何会话都不能用</strong>。</p>
+</blockquote>
+<h3 id="NRC-使用要点"><a href="#NRC-使用要点" class="headerlink" title="NRC 使用要点"></a>NRC 使用要点</h3><ol>
+<li><strong>优先返回最具体的原因</strong>：如既能返回 0x22 又能返回 0x31，选更贴合实际的那个</li>
+<li>**0x78 是”软响应”**：长任务（刷写、自检）用 0x78 先占位，避免上位机超时，完成后补发正常响应</li>
+<li><strong>0x33&#x2F;0x35</strong> 常与 0x27 解锁相关，连续 0x35 过多会触发 0x36 锁定</li>
+<li><strong>0x31 返回值排第一</strong>：读&#x2F;写不存在的 DID、参数超范围，几乎都会见到 0x31</li>
+<li><strong>刷写常见组合</strong>：0x70（没解锁&#x2F;前置不满足）→ 0x24（0x34&#x2F;0x36 顺序错）→ 0x73（丢帧序号错）</li>
+</ol>
 <hr>
 <h1 id="六、诊断栈实现（AUTOSAR）"><a href="#六、诊断栈实现（AUTOSAR）" class="headerlink" title="六、诊断栈实现（AUTOSAR）"></a>六、诊断栈实现（AUTOSAR）</h1><h2 id="6-1-AUTOSAR-诊断模块"><a href="#6-1-AUTOSAR-诊断模块" class="headerlink" title="6.1 AUTOSAR 诊断模块"></a>6.1 AUTOSAR 诊断模块</h2><table>
 <thead>
@@ -561,7 +861,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2026/08/02/UDS%E8%AF%8A%E6%96%AD%E5%8D%8F%E8%AE%AE%E8%AF%A6%E8%A7%A3/" data-id="cmsbkkyqa000bvelm4j1s1kl7" data-title="UDS诊断协议详解" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2026/08/02/UDS%E8%AF%8A%E6%96%AD%E5%8D%8F%E8%AE%AE%E8%AF%A6%E8%A7%A3/" data-id="cmsbkx7od000bwmlmexkq6173" data-title="UDS诊断协议详解" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
@@ -902,7 +1202,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2026/08/02/Bootloader%E4%B8%8EFOTA%E5%8D%87%E7%BA%A7%E8%AF%A6%E8%A7%A3/" data-id="cmsbkkypz0001velm4mzsc9rp" data-title="Bootloader与FOTA升级详解" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2026/08/02/Bootloader%E4%B8%8EFOTA%E5%8D%87%E7%BA%A7%E8%AF%A6%E8%A7%A3/" data-id="cmsbkx7o30001wmlm65biewiz" data-title="Bootloader与FOTA升级详解" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
@@ -1517,7 +1817,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2026/08/02/%E4%BF%A1%E6%81%AF%E5%AE%89%E5%85%A8%E5%9B%BA%E4%BB%B6%E5%BC%80%E5%8F%91%E8%AF%A6%E8%A7%A3/" data-id="cmsbkkyqd000gvelm8t3h4sot" data-title="信息安全固件开发详解" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2026/08/02/%E4%BF%A1%E6%81%AF%E5%AE%89%E5%85%A8%E5%9B%BA%E4%BB%B6%E5%BC%80%E5%8F%91%E8%AF%A6%E8%A7%A3/" data-id="cmsbkx7oh000gwmlmc4q54cgu" data-title="信息安全固件开发详解" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
@@ -2124,7 +2424,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2026/08/02/AUTOSAR%E5%9F%BA%E7%A1%80%E8%BD%AF%E4%BB%B6%E5%BC%80%E5%8F%91%E8%AF%A6%E8%A7%A3/" data-id="cmsbkkyps0000velmee3f29mo" data-title="AUTOSAR基础软件开发详解" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2026/08/02/AUTOSAR%E5%9F%BA%E7%A1%80%E8%BD%AF%E4%BB%B6%E5%BC%80%E5%8F%91%E8%AF%A6%E8%A7%A3/" data-id="cmsbkx7nw0000wmlm7euy2mrt" data-title="AUTOSAR基础软件开发详解" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
@@ -2471,7 +2771,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2026/08/02/C%E8%AF%AD%E8%A8%80%E5%B5%8C%E5%85%A5%E5%BC%8F%E6%B1%87%E7%BC%96%E8%AF%A6%E8%A7%A3/" data-id="cmsbkkyq50005velm8inadh55" data-title="C语言嵌入式汇编详解" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2026/08/02/C%E8%AF%AD%E8%A8%80%E5%B5%8C%E5%85%A5%E5%BC%8F%E6%B1%87%E7%BC%96%E8%AF%A6%E8%A7%A3/" data-id="cmsbkx7o90005wmlm4dj35elm" data-title="C语言嵌入式汇编详解" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
@@ -2829,7 +3129,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2026/08/02/C%E8%AF%AD%E8%A8%80%E5%9F%BA%E7%A1%80%E7%9F%A5%E8%AF%86%E7%82%B9%E8%AF%A6%E8%A7%A3/" data-id="cmsbkkyq40004velmh5bu8ot9" data-title="C语言基础知识点详解" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2026/08/02/C%E8%AF%AD%E8%A8%80%E5%9F%BA%E7%A1%80%E7%9F%A5%E8%AF%86%E7%82%B9%E8%AF%A6%E8%A7%A3/" data-id="cmsbkx7o80004wmlm9gx3ee99" data-title="C语言基础知识点详解" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
@@ -3402,7 +3702,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2026/08/02/C%E8%AF%AD%E8%A8%80%E8%BF%9B%E9%98%B6%E7%9F%A5%E8%AF%86%E7%82%B9%E8%AF%A6%E8%A7%A3/" data-id="cmsbkkyq70007velmg3188ckn" data-title="C语言进阶知识点详解" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2026/08/02/C%E8%AF%AD%E8%A8%80%E8%BF%9B%E9%98%B6%E7%9F%A5%E8%AF%86%E7%82%B9%E8%AF%A6%E8%A7%A3/" data-id="cmsbkx7oa0007wmlmbhe28ryn" data-title="C语言进阶知识点详解" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
@@ -3885,7 +4185,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2026/08/02/%E6%B1%87%E7%BC%96%E8%AF%AD%E8%A8%80%E7%9F%A5%E8%AF%86%E7%82%B9%E8%AF%A6%E8%A7%A3/" data-id="cmsbkkyqg000lvelm4g3g3d5k" data-title="汇编语言知识点详解" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2026/08/02/%E6%B1%87%E7%BC%96%E8%AF%AD%E8%A8%80%E7%9F%A5%E8%AF%86%E7%82%B9%E8%AF%A6%E8%A7%A3/" data-id="cmsbkx7ol000lwmlm70gndmaj" data-title="汇编语言知识点详解" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
@@ -4545,7 +4845,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2026/08/02/%E5%B5%8C%E5%85%A5%E5%BC%8F%E5%9B%BA%E4%BB%B6%E5%9C%B0%E5%9D%80%E4%B8%89%E4%BB%B6%E5%A5%97-LMA-VMA-XIP%E4%B8%8EPIC/" data-id="cmsbkkyqf000ivelm9vcn4luh" data-title="嵌入式固件地址三件套：加载地址、运行时地址、XIP 与 PIC" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2026/08/02/%E5%B5%8C%E5%85%A5%E5%BC%8F%E5%9B%BA%E4%BB%B6%E5%9C%B0%E5%9D%80%E4%B8%89%E4%BB%B6%E5%A5%97-LMA-VMA-XIP%E4%B8%8EPIC/" data-id="cmsbkx7oj000iwmlmhaf79b3f" data-title="嵌入式固件地址三件套：加载地址、运行时地址、XIP 与 PIC" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
@@ -4591,7 +4891,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2026/08/01/%E5%B5%8C%E5%85%A5%E5%BC%8F%E9%93%BE%E6%8E%A5%E8%84%9A%E6%9C%AC%E8%AF%A6%E8%A7%A3%EF%BC%9A%E4%BB%8E%E9%9B%B6%E7%90%86%E8%A7%A3Linker-Script/" data-id="cmsbkkyqg000kvelm47fteahe" data-title="嵌入式链接脚本详解：以英飞凌TC375为例" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2026/08/01/%E5%B5%8C%E5%85%A5%E5%BC%8F%E9%93%BE%E6%8E%A5%E8%84%9A%E6%9C%AC%E8%AF%A6%E8%A7%A3%EF%BC%9A%E4%BB%8E%E9%9B%B6%E7%90%86%E8%A7%A3Linker-Script/" data-id="cmsbkx7ok000kwmlme5dre8l4" data-title="嵌入式链接脚本详解：以英飞凌TC375为例" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
