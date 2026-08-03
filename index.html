@@ -71,12 +71,271 @@
       <div class="outer">
         <section id="main">
   
+    <article id="post-perl从入门到精通" class="h-entry article article-type-post" itemprop="blogPost" itemscope itemtype="https://schema.org/BlogPosting">
+  <div class="article-meta">
+    <a href="/2026/08/03/perl%E4%BB%8E%E5%85%A5%E9%97%A8%E5%88%B0%E7%B2%BE%E9%80%9A/" class="article-date">
+  <time class="dt-published" datetime="2026-08-03T15:30:00.000Z" itemprop="datePublished">2026-08-03</time>
+</a>
+    
+  <div class="article-category">
+    <a class="article-category-link" href="/categories/%E7%BC%96%E7%A8%8B%E8%AF%AD%E8%A8%80/">编程语言</a>
+  </div>
+
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 itemprop="name">
+      <a class="p-name article-title" href="/2026/08/03/perl%E4%BB%8E%E5%85%A5%E9%97%A8%E5%88%B0%E7%B2%BE%E9%80%9A/">Perl 从入门到精通</a>
+    </h1>
+  
+
+      </header>
+    
+    <div class="e-content article-entry" itemprop="articleBody">
+      
+        <h1 id="Perl-从入门到精通"><a href="#Perl-从入门到精通" class="headerlink" title="Perl 从入门到精通"></a>Perl 从入门到精通</h1><p>Perl（”Practical Extraction and Report Language”，实用摘录与报告语言）由 Larry Wall 于 1987 年开发，最初定位为 Unix 系统管理、文本处理和报告的脚本语言。凭借<strong>强大的正则表达式</strong>、<strong>极简的表达式语法</strong>和 <strong>CPAN（Comprehensive Perl Archive Network）海量模块库</strong>，Perl 在生物信息、系统运维、日志分析、CAN 解析等数据处理领域长盛不衰。本文以实际工具开发的视角，带你从基础语法走到成熟工程实践。</p>
+<h2 id="一、Hello-World-与环境准备"><a href="#一、Hello-World-与环境准备" class="headerlink" title="一、Hello World 与环境准备"></a>一、Hello World 与环境准备</h2><h3 id="1-1-安装与检查"><a href="#1-1-安装与检查" class="headerlink" title="1.1 安装与检查"></a>1.1 安装与检查</h3><p>Linux 绝大多数发行版自带 Perl，检验：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">perl -v</span><br><span class="line"><span class="built_in">which</span> perl</span><br><span class="line"><span class="comment"># Ubuntu/Debian 安装</span></span><br><span class="line"><span class="built_in">sudo</span> apt install perl</span><br><span class="line"><span class="comment"># 查看 CI/REPL 环境</span></span><br><span class="line">perl -de 0</span><br></pre></td></tr></table></figure>
+
+<h3 id="1-2-第一个程序"><a href="#1-2-第一个程序" class="headerlink" title="1.2 第一个程序"></a>1.2 第一个程序</h3><figure class="highlight perl"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">#!/usr/bin/perl</span></span><br><span class="line"><span class="keyword">use</span> strict;</span><br><span class="line"><span class="keyword">use</span> warnings;</span><br><span class="line"><span class="keyword">use</span> <span class="number">5.010</span>;               <span class="comment"># 启用 v5.10+ 语法（say、given 等）</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">say</span> <span class="string">&quot;Hello, Auto World!&quot;</span>;</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li><code>use strict</code>：强制变量声明，杜绝拼写错误引发的隐蔽 bug。</li>
+<li><code>use warnings</code>：开启警告，帮助尽早发现未定义变量、类型不匹配等问题。</li>
+<li><code>say</code> 是 <code>print</code> 的替代品，自动补换行，需 <code>use 5.010</code>。</li>
+</ul>
+<p><strong>永远让脚本以 <code>#!/usr/bin/perl</code> 开头</strong>，并赋执行权限：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">chmod</span> +x hello.pl</span><br><span class="line">./hello.pl</span><br></pre></td></tr></table></figure>
+
+<h3 id="1-3-运行方式"><a href="#1-3-运行方式" class="headerlink" title="1.3 运行方式"></a>1.3 运行方式</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">perl hello.pl            <span class="comment"># 运行脚本</span></span><br><span class="line">perl -c hello.pl         <span class="comment"># 仅语法检查</span></span><br><span class="line">perl -e <span class="string">&#x27;print &quot;hi\n&quot;&#x27;</span>   <span class="comment"># 单行命令</span></span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="二、基本语法与数据类型"><a href="#二、基本语法与数据类型" class="headerlink" title="二、基本语法与数据类型"></a>二、基本语法与数据类型</h2><p>Perl 有三种核心数据类型，各以不同符号前缀区分，这也是 Perl 调试初期最常困惑的地方：</p>
+<table>
+<thead>
+<tr>
+<th>符号</th>
+<th>类型</th>
+<th>示例</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>$</code></td>
+<td>标量（Scalar）</td>
+<td><code>$version</code> 数字或字符串</td>
+</tr>
+<tr>
+<td><code>@</code></td>
+<td>数组（Array）</td>
+<td><code>@nodes</code> 有序列表</td>
+</tr>
+<tr>
+<td><code>%</code></td>
+<td>哈希（Hash，关联数组）</td>
+<td><code>%signal</code> 键值对</td>
+</tr>
+</tbody></table>
+<h3 id="2-1-标量"><a href="#2-1-标量" class="headerlink" title="2.1 标量"></a>2.1 标量</h3><figure class="highlight perl"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">my</span> <span class="variable">$name</span>  = <span class="string">&quot;DAS_setSpeed&quot;</span>;</span><br><span class="line"><span class="keyword">my</span> <span class="variable">$speed</span> = <span class="number">5.3</span>;              <span class="comment"># 数字</span></span><br><span class="line"><span class="keyword">my</span> <span class="variable">$ok</span>    = <span class="number">1</span>;               <span class="comment"># 布尔（Perl 无独立布尔类型，0 为假）</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="2-2-数组"><a href="#2-2-数组" class="headerlink" title="2.2 数组"></a>2.2 数组</h3><figure class="highlight perl"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">my</span> <span class="variable">@nodes</span> = (<span class="string">&#x27;NEO&#x27;</span>, <span class="string">&#x27;GTW&#x27;</span>, <span class="string">&#x27;EPAS&#x27;</span>);</span><br><span class="line"><span class="keyword">say</span> <span class="variable">$nodes</span>[<span class="number">0</span>];                 <span class="comment"># NEO</span></span><br><span class="line"><span class="keyword">say</span> <span class="keyword">scalar</span> <span class="variable">@nodes</span>;             <span class="comment"># 数组元素个数 3</span></span><br><span class="line"><span class="keyword">push</span> <span class="variable">@nodes</span>, <span class="string">&#x27;DAS&#x27;</span>;            <span class="comment"># 末尾追加</span></span><br><span class="line"><span class="keyword">my</span> <span class="variable">$last</span>  = <span class="keyword">pop</span> <span class="variable">@nodes</span>;        <span class="comment"># 弹出末尾</span></span><br><span class="line"><span class="keyword">my</span> <span class="variable">$first</span> = <span class="keyword">shift</span> <span class="variable">@nodes</span>;      <span class="comment"># 弹出开头</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>上下文（Context）</strong> 是 Perl 核心概念：同一变量在不同上下文返回不同结果。</p>
+<figure class="highlight perl"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">my</span> <span class="variable">@arr</span> = (<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>);</span><br><span class="line"><span class="keyword">my</span> <span class="variable">$n</span> = <span class="variable">@arr</span>;        <span class="comment"># 标量上下文 -&gt; 返回元素个数 3</span></span><br><span class="line"><span class="keyword">my</span> <span class="variable">@b</span>  = <span class="variable">@arr</span>;       <span class="comment"># 列表上下文 -&gt; 拷贝整个列表</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="2-3-哈希"><a href="#2-3-哈希" class="headerlink" title="2.3 哈希"></a>2.3 哈希</h3><figure class="highlight perl"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">my</span> <span class="variable">%signal</span> = (</span><br><span class="line">    <span class="string">name   =&gt;</span> <span class="string">&#x27;DAS_setSpeed&#x27;</span>,</span><br><span class="line">    <span class="string">start  =&gt;</span> <span class="number">0</span>,</span><br><span class="line">    <span class="string">length =&gt;</span> <span class="number">12</span>,</span><br><span class="line">);</span><br><span class="line"><span class="keyword">say</span> <span class="variable">$signal</span><span class="string">&#123;name&#125;</span>;        <span class="comment"># DAS_setSpeed</span></span><br><span class="line"><span class="variable">$signal</span><span class="string">&#123;factor&#125;</span> = <span class="number">0</span>.<span class="number">1</span>;    <span class="comment"># 添加元素</span></span><br><span class="line"><span class="keyword">my</span> <span class="variable">@keys</span> = <span class="keyword">keys</span> <span class="variable">%signal</span>;  <span class="comment"># 键列表</span></span><br><span class="line"><span class="keyword">my</span> <span class="variable">@vals</span> = <span class="keyword">values</span> <span class="variable">%signal</span>;</span><br><span class="line"><span class="keyword">delete</span> <span class="variable">$signal</span><span class="string">&#123;start&#125;</span>;    <span class="comment"># 删除键</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 判断某 key 是否存在</span></span><br><span class="line"><span class="keyword">if</span> (<span class="keyword">exists</span> <span class="variable">$signal</span><span class="string">&#123;factor&#125;</span>) &#123; <span class="keyword">say</span> <span class="string">&#x27;存在&#x27;</span> &#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="2-4-复杂嵌套结构"><a href="#2-4-复杂嵌套结构" class="headerlink" title="2.4 复杂嵌套结构"></a>2.4 复杂嵌套结构</h3><p>Perl 没有原生二维数组，通过<strong>引用（Reference）</strong>嵌套实现——这也是面向对象的基础：</p>
+<figure class="highlight perl"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">my</span> <span class="variable">$config</span> = &#123;</span><br><span class="line">    <span class="string">nodes    =&gt;</span> [<span class="string">&#x27;DAS&#x27;</span>, <span class="string">&#x27;EPS&#x27;</span>],</span><br><span class="line">    <span class="string">messages =&gt;</span> &#123;</span><br><span class="line">        <span class="string">1160 =&gt;</span> &#123; <span class="string">name =&gt;</span> <span class="string">&#x27;DAS_steeringControl&#x27;</span>, <span class="string">dlc =&gt;</span> <span class="number">4</span> &#125;,</span><br><span class="line">        <span class="string">697  =&gt;</span> &#123; <span class="string">name =&gt;</span> <span class="string">&#x27;DAS_control&#x27;</span>, <span class="string">dlc =&gt;</span> <span class="number">8</span> &#125;,</span><br><span class="line">    &#125;,</span><br><span class="line">&#125;;</span><br><span class="line"><span class="comment"># 引用解引用语法</span></span><br><span class="line"><span class="keyword">say</span> <span class="variable">$config</span>-&gt;&#123;messages&#125;<span class="string">&#123;1160&#125;</span><span class="string">&#123;name&#125;</span>;</span><br><span class="line"><span class="keyword">my</span> <span class="variable">@nodes_ref</span> = @&#123; <span class="variable">$config</span>-&gt;&#123;nodes&#125; &#125;;</span><br><span class="line"><span class="keyword">say</span> <span class="keyword">join</span>(<span class="string">&quot;,&quot;</span>, <span class="variable">@nodes_ref</span>);</span><br></pre></td></tr></table></figure>
+
+<p><code>-&gt;</code> 是箭头解引用符，<code>&#123;...&#125;</code> 哈希引用、<code>[...]</code>数组引用、<code>\$scalar</code>标量引用。</p>
+<hr>
+<h2 id="三、运算符与控制结构"><a href="#三、运算符与控制结构" class="headerlink" title="三、运算符与控制结构"></a>三、运算符与控制结构</h2><h3 id="3-1-运算符"><a href="#3-1-运算符" class="headerlink" title="3.1 运算符"></a>3.1 运算符</h3><p>Perl 运算符与 C 接近，但有独特差异：</p>
+<figure class="highlight perl"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">my</span> <span class="variable">$sum</span>  = <span class="number">1</span> + <span class="number">2</span>;</span><br><span class="line"><span class="keyword">my</span> <span class="variable">$str</span>  = <span class="string">&quot;abc&quot;</span> . <span class="string">&quot;def&quot;</span>;   <span class="comment"># 字符串拼接用 &quot;.&quot;</span></span><br><span class="line"><span class="keyword">my</span> <span class="variable">$reps</span> = <span class="string">&quot;x&quot;</span> <span class="keyword">x</span> <span class="number">3</span>;           <span class="comment"># 字符串重复 =&gt; &quot;xxx&quot;</span></span><br><span class="line"><span class="keyword">my</span> <span class="variable">$n</span>    = <span class="number">7</span> % <span class="number">3</span>;            <span class="comment"># 取余 =&gt; 1</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>比较运算符</strong>务必注意：数值与字符串比较符号不同，混用是初学者最大坑。</p>
+<figure class="highlight perl"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 数值比较</span></span><br><span class="line"><span class="keyword">if</span>  (<span class="variable">$a</span> == <span class="variable">$b</span>) &#123;&#125;    <span class="comment"># 相等</span></span><br><span class="line"><span class="keyword">if</span>  (<span class="variable">$a</span> != <span class="variable">$b</span>) &#123;&#125;    <span class="comment"># 不等</span></span><br><span class="line"><span class="keyword">if</span>  (<span class="variable">$a</span> &gt;  <span class="variable">$b</span>) &#123;&#125;    <span class="comment"># 大于</span></span><br><span class="line"><span class="comment"># 字符串比较</span></span><br><span class="line"><span class="keyword">if</span>  (<span class="variable">$s</span> eq <span class="variable">$t</span>) &#123;&#125;    <span class="comment"># 相等</span></span><br><span class="line"><span class="keyword">if</span>  (<span class="variable">$s</span> <span class="keyword">ne</span> <span class="variable">$t</span>) &#123;&#125;    <span class="comment"># 不等</span></span><br><span class="line"><span class="keyword">if</span>  (<span class="variable">$s</span> <span class="keyword">gt</span> <span class="variable">$t</span>) &#123;&#125;    <span class="comment"># 字典序大于</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="3-2-条件与循环"><a href="#3-2-条件与循环" class="headerlink" title="3.2 条件与循环"></a>3.2 条件与循环</h3><figure class="highlight perl"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># if / elsif / else</span></span><br><span class="line"><span class="keyword">my</span> <span class="variable">$code</span>;</span><br><span class="line"><span class="keyword">if</span> ( <span class="variable">$val</span> &gt; <span class="number">100</span> ) &#123;</span><br><span class="line">    <span class="variable">$code</span> = <span class="string">&#x27;HI&#x27;</span>;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">elsif</span> (<span class="variable">$val</span> &gt; <span class="number">50</span>) &#123;</span><br><span class="line">    <span class="variable">$code</span> = <span class="string">&#x27;MID&#x27;</span>;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">else</span> &#123;</span><br><span class="line">    <span class="variable">$code</span> = <span class="string">&#x27;LOW&#x27;</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment"># unless：否定条件</span></span><br><span class="line"><span class="keyword">say</span> <span class="string">&#x27;完成&#x27;</span> <span class="keyword">unless</span> <span class="variable">$busy</span>;</span><br><span class="line"></span><br><span class="line"><span class="comment"># while 逐行读文件（处理 DBC 这类按行解析的场景非常契合）</span></span><br><span class="line"><span class="keyword">while</span> (<span class="keyword">my</span> <span class="variable">$line</span> = &lt;<span class="variable">$fh</span>&gt;) &#123;</span><br><span class="line">    <span class="keyword">chomp</span> <span class="variable">$line</span>;   <span class="comment"># 去掉尾部换行</span></span><br><span class="line">    <span class="keyword">next</span> <span class="keyword">if</span> <span class="variable">$line</span> =~ <span class="regexp">/^\s*$/</span>;       <span class="comment"># 跳过空行</span></span><br><span class="line">    <span class="keyword">last</span> <span class="keyword">if</span> <span class="variable">$line</span> =~ <span class="regexp">/^VAL_/</span>;      <span class="comment"># 提前终止</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment"># foreach 遍历</span></span><br><span class="line"><span class="keyword">foreach</span> <span class="keyword">my</span> <span class="variable">$sig</span> (<span class="keyword">keys</span> %&#123;<span class="variable">$msg</span>-&gt;&#123;signals&#125;&#125;) &#123;</span><br><span class="line">    <span class="keyword">say</span> <span class="string">&quot;<span class="variable">$msg</span>-&gt;&#123;name&#125;: <span class="variable">$sig</span>&quot;</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment"># for C 风格</span></span><br><span class="line"><span class="keyword">for</span> (<span class="keyword">my</span> <span class="variable">$i</span> = <span class="number">0</span>; <span class="variable">$i</span> &lt; <span class="number">10</span>; <span class="variable">$i</span>++) &#123; <span class="keyword">print</span> <span class="variable">$i</span> &#125;</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="四、正则表达式（Perl-的灵魂）"><a href="#四、正则表达式（Perl-的灵魂）" class="headerlink" title="四、正则表达式（Perl 的灵魂）"></a>四、正则表达式（Perl 的灵魂）</h2><p>正则表达式是 Perl 的<strong>看家本领</strong>，也是文本解析类工具（如 DBC&#x2F;LDF 解析器）的核心。</p>
+<h3 id="4-1-基本匹配"><a href="#4-1-基本匹配" class="headerlink" title="4.1 基本匹配"></a>4.1 基本匹配</h3><figure class="highlight perl"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">my</span> <span class="variable">$str</span> = <span class="string">&quot;BO_ 1160 DAS_steeringControl: 4 NEO&quot;</span>;</span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> (<span class="variable">$str</span> =~ <span class="regexp">/BO_/</span>) &#123;           <span class="comment"># 是否包含 BO_</span></span><br><span class="line">    <span class="keyword">say</span> <span class="string">&#x27;match&#x27;</span>;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">my</span> (<span class="variable">$id</span>) = <span class="variable">$str</span> =~ <span class="regexp">/BO_ (\d+)/</span>;     <span class="comment"># 捕获数字 -&gt; 1160</span></span><br><span class="line"><span class="keyword">my</span> (<span class="variable">$name</span>) = <span class="variable">$str</span> =~ <span class="regexp">/BO_ \d+ (\w+)/</span>;  <span class="comment"># 捕获名称 -&gt; DAS_steeringControl</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="4-2-替换与全局匹配"><a href="#4-2-替换与全局匹配" class="headerlink" title="4.2 替换与全局匹配"></a>4.2 替换与全局匹配</h3><figure class="highlight perl"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="variable">$str</span> =~ <span class="regexp">s/NEO/ECU/g</span>;       <span class="comment"># 替换所有 NEO -&gt; ECU</span></span><br><span class="line"><span class="keyword">my</span> <span class="variable">@all_ids</span> = <span class="variable">$str</span> =~ <span class="regexp">/BO_ (\d+)/g</span>;   <span class="comment"># 全局捕获所有 id</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="4-3-常用元字符与模式"><a href="#4-3-常用元字符与模式" class="headerlink" title="4.3 常用元字符与模式"></a>4.3 常用元字符与模式</h3><table>
+<thead>
+<tr>
+<th>模式</th>
+<th>含义</th>
+<th>示例</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>\d</code></td>
+<td>数字</td>
+<td><code>/\d+/</code> 匹配数字</td>
+</tr>
+<tr>
+<td><code>\w</code></td>
+<td>字母数字下划线</td>
+<td><code>/\w+/</code> 匹配单词</td>
+</tr>
+<tr>
+<td><code>\s</code></td>
+<td>空白</td>
+<td><code>/\s+/</code> 匹配空格</td>
+</tr>
+<tr>
+<td><code>.</code></td>
+<td>任意字符（除换行）</td>
+<td><code>/.*/</code></td>
+</tr>
+<tr>
+<td><code>^</code></td>
+<td>行首</td>
+<td><code>/^BO_/</code></td>
+</tr>
+<tr>
+<td><code>$</code></td>
+<td>行尾</td>
+<td><code>/NEO$/</code></td>
+</tr>
+<tr>
+<td><code>[...]</code></td>
+<td>字符集</td>
+<td><code>/[abc]/</code> 匹配 a&#x2F;b&#x2F;c</td>
+</tr>
+<tr>
+<td><code>\b</code></td>
+<td>单词边界</td>
+<td><code>/\bcan\b/</code></td>
+</tr>
+<tr>
+<td>&#96;</td>
+<td>&#96;</td>
+<td>或</td>
+</tr>
+</tbody></table>
+<p><strong>量词</strong>：<code>*</code> 零次或多次、<code>+</code> 一次或多次、<code>?</code> 零次或一次、<code>&#123;n, m&#125;</code> 指定数目。</p>
+<p><strong>延迟匹配（非贪婪）</strong>：默认贪婪，用 <code>?</code> 变懒惰。</p>
+<figure class="highlight perl"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">my</span> (<span class="variable">$factor</span>) = <span class="variable">$tail</span> =~ <span class="regexp">/\(\s*([^,\s]+)\s*,/</span>;   <span class="comment"># 提取 factor</span></span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p>实际解析 DBC 文件时单条 SG_ 行的正则就是一项综合练习，可对照项目中的 <code>Dbc.pm</code>。</p>
+</blockquote>
+<hr>
+<h2 id="五、子程序（函数）与作用域"><a href="#五、子程序（函数）与作用域" class="headerlink" title="五、子程序（函数）与作用域"></a>五、子程序（函数）与作用域</h2><h3 id="5-1-定义与参数"><a href="#5-1-定义与参数" class="headerlink" title="5.1 定义与参数"></a>5.1 定义与参数</h3><figure class="highlight perl"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">sub</span> <span class="title">add</span> </span>&#123;</span><br><span class="line">    <span class="keyword">my</span> (<span class="variable">$a</span>, <span class="variable">$b</span>) = <span class="variable">@_</span>;   <span class="comment"># @_ 是参数数组</span></span><br><span class="line">    <span class="keyword">return</span> <span class="variable">$a</span> + <span class="variable">$b</span>;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">my</span> <span class="variable">$r</span> = add(<span class="number">3</span>, <span class="number">5</span>);  <span class="comment"># 8</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="5-2-引用传递与文件句柄"><a href="#5-2-引用传递与文件句柄" class="headerlink" title="5.2 引用传递与文件句柄"></a>5.2 引用传递与文件句柄</h3><figure class="highlight perl"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">sub</span> <span class="title">process_line</span> </span>&#123;</span><br><span class="line">    <span class="keyword">my</span> (<span class="variable">$self</span>, <span class="variable">$line</span>, <span class="variable">$ref</span>) = <span class="variable">@_</span>;   <span class="comment"># 传对象、行、引用</span></span><br><span class="line">    <span class="comment"># $self-&gt;&#123;data&#125;&#123;$line&#125;=1;         # 修改哈希引用即修改外部数据</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>Perl 面向对象（经典 “bless”）的核心要点：</p>
+<figure class="highlight perl"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> Dbc;</span><br><span class="line"><span class="keyword">use</span> strict; <span class="keyword">use</span> warnings; <span class="keyword">use</span> <span class="number">5.010</span>;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">sub</span> <span class="title">new</span> </span>&#123;</span><br><span class="line">    <span class="keyword">my</span> (<span class="variable">$class</span>) = <span class="variable">@_</span>;</span><br><span class="line">    <span class="keyword">my</span> <span class="variable">$self</span> = &#123; <span class="string">nodes =&gt;</span> [], <span class="string">message =&gt;</span> &#123;&#125; &#125;;   <span class="comment"># 默认数据</span></span><br><span class="line">    <span class="keyword">bless</span> <span class="variable">$self</span>, <span class="variable">$class</span>;   <span class="comment"># 把哈希引用与包关联</span></span><br><span class="line">    <span class="keyword">return</span> <span class="variable">$self</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">sub</span> <span class="title">messages</span> </span>&#123;</span><br><span class="line">    <span class="keyword">my</span> (<span class="variable">$self</span>) = <span class="variable">@_</span>;</span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">values</span> %&#123; <span class="variable">$self</span>-&gt;&#123;message&#125; &#125;;   <span class="comment"># 解引用</span></span><br><span class="line">&#125;</span><br><span class="line"><span class="number">1</span>;</span><br></pre></td></tr></table></figure>
+
+<p>这与 LdfParser 的 <code>Ldf.pm</code> 风格一致：<code>use strict/warnings</code>、<code>new</code> 构造、方法通过 <code>$self</code> 访问哈希。</p>
+<hr>
+<h2 id="六、文件处理"><a href="#六、文件处理" class="headerlink" title="六、文件处理"></a>六、文件处理</h2><figure class="highlight perl"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 打开文件（推荐词法句柄，$! 为错误信息）</span></span><br><span class="line"><span class="keyword">open</span> <span class="keyword">my</span> <span class="variable">$fh</span>, <span class="string">&#x27;&lt;&#x27;</span>, <span class="string">&#x27;data.dbc&#x27;</span> <span class="keyword">or</span> <span class="keyword">die</span> <span class="string">&quot;无法打开: <span class="variable">$!</span>&quot;</span>;</span><br><span class="line"><span class="keyword">while</span> (<span class="keyword">my</span> <span class="variable">$line</span> = &lt;<span class="variable">$fh</span>&gt;) &#123;   <span class="comment"># 逐行读取</span></span><br><span class="line">    <span class="keyword">chomp</span> <span class="variable">$line</span>;</span><br><span class="line">    process(<span class="variable">$line</span>);</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">close</span> <span class="variable">$fh</span>;</span><br><span class="line"></span><br><span class="line"><span class="comment"># 一次读入整个文件</span></span><br><span class="line"><span class="keyword">my</span> <span class="variable">$content</span> = <span class="keyword">do</span> &#123; <span class="keyword">local</span> <span class="variable">$/</span>; &lt;<span class="variable">$fh</span>&gt; &#125;;</span><br><span class="line"></span><br><span class="line"><span class="comment"># 写文件</span></span><br><span class="line"><span class="keyword">open</span> <span class="keyword">my</span> <span class="variable">$out</span>, <span class="string">&#x27;&gt;&#x27;</span>, <span class="string">&#x27;report.txt&#x27;</span> <span class="keyword">or</span> <span class="keyword">die</span> <span class="string">&quot;无法写入 <span class="variable">$!</span>&quot;</span>;</span><br><span class="line"><span class="keyword">print</span> <span class="variable">$out</span> <span class="string">&quot;Line: <span class="variable">$_</span>\n&quot;</span>;</span><br><span class="line"><span class="keyword">close</span> <span class="variable">$out</span>;</span><br><span class="line"></span><br><span class="line"><span class="comment"># 判断文件已存在</span></span><br><span class="line"><span class="keyword">if</span> (-e <span class="variable">$file</span>) &#123; <span class="keyword">say</span> <span class="string">&quot;exists&quot;</span> &#125;</span><br><span class="line"><span class="keyword">if</span> (-f <span class="variable">$file</span>) &#123; <span class="keyword">say</span> <span class="string">&quot;是普通文件&quot;</span> &#125;</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="七、深入：引用、模块与-CPAN"><a href="#七、深入：引用、模块与-CPAN" class="headerlink" title="七、深入：引用、模块与 CPAN"></a>七、深入：引用、模块与 CPAN</h2><h3 id="7-1-模块与-use-require"><a href="#7-1-模块与-use-require" class="headerlink" title="7.1 模块与 use&#x2F;require"></a>7.1 模块与 <code>use</code>&#x2F;<code>require</code></h3><p>Perl 通过 <code>.pm</code> 文件组织模块，反射括号，最后一行 <code>1;</code> 表示加载成功：</p>
+<figure class="highlight perl"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># lib/MyTool.pm</span></span><br><span class="line"><span class="keyword">package</span> MyTool;</span><br><span class="line"><span class="keyword">use</span> strict; <span class="keyword">use</span> warnings; <span class="keyword">use</span> <span class="number">5.010</span>;</span><br><span class="line"></span><br><span class="line"><span class="keyword">use</span> Data::Dumper;       <span class="comment"># 调试输出数据结构</span></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">sub</span> <span class="title">new</span> </span>&#123;</span><br><span class="line">    <span class="keyword">my</span> (<span class="variable">$class</span>) = <span class="variable">@_</span>;</span><br><span class="line">    <span class="keyword">my</span> <span class="variable">$self</span>  = &#123; <span class="string">config =&gt;</span> &#123;&#125; &#125;;</span><br><span class="line">    <span class="keyword">bless</span> <span class="variable">$self</span>, <span class="variable">$class</span>;</span><br><span class="line">    <span class="keyword">return</span> <span class="variable">$self</span>;</span><br><span class="line">&#125;</span><br><span class="line"><span class="number">1</span>;</span><br><span class="line"></span><br><span class="line"><span class="comment"># 使用：use lib &#x27;lib&#x27;;  （或补齐模块搜索路径）</span></span><br><span class="line"><span class="keyword">use</span> lib <span class="string">&#x27;lib&#x27;</span>;</span><br><span class="line"><span class="keyword">use</span> MyTool;</span><br><span class="line"><span class="keyword">my</span> <span class="variable">$t</span> = MyTool-&gt;new;</span><br></pre></td></tr></table></figure>
+
+<h3 id="7-2-Data-Dumper-调试利器"><a href="#7-2-Data-Dumper-调试利器" class="headerlink" title="7.2 Data::Dumper 调试利器"></a>7.2 <code>Data::Dumper</code> 调试利器</h3><p>复杂结构难以直接打印，用 <code>Data::Dumper</code> 序列化：</p>
+<figure class="highlight perl"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">use</span> Data::Dumper;</span><br><span class="line"><span class="keyword">my</span> <span class="variable">$dumper</span> = Data::Dumper-&gt;new([<span class="variable">$self</span>], [<span class="string">&#x27;obj&#x27;</span>]);</span><br><span class="line"><span class="variable">$dumper</span>-&gt;Indent(<span class="number">1</span>)-&gt;Terse(<span class="number">0</span>)-&gt;Sortkeys(<span class="number">1</span>);</span><br><span class="line"><span class="keyword">print</span> <span class="variable">$dumper</span>-&gt;Dump;</span><br></pre></td></tr></table></figure>
+
+<p>或用单行：<code>print Dumper(\$msg);</code></p>
+<h3 id="7-3-CPAN-与模块安装"><a href="#7-3-CPAN-与模块安装" class="headerlink" title="7.3 CPAN 与模块安装"></a>7.3 CPAN 与模块安装</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">cpan install JSON</span><br><span class="line">cpanm install JSON        <span class="comment"># cpanm 更快</span></span><br><span class="line"><span class="comment"># Debian/Ubuntu 系统包</span></span><br><span class="line"><span class="built_in">sudo</span> apt install libjson-perl</span><br></pre></td></tr></table></figure>
+
+<p>常用模块：<code>JSON</code>（JSON 解析）、<code>Getopt::Long</code>（命令行参数）、<code>XML</code>（如 <code>XML::Simple</code>，Ldf.pm 用到）、<code>Data::Dumper</code>。</p>
+<hr>
+<h2 id="八、命令行参数与-Getopt"><a href="#八、命令行参数与-Getopt" class="headerlink" title="八、命令行参数与 Getopt"></a>八、命令行参数与 Getopt</h2><p>工程性脚本（如 <code>DbcParser.pl</code>）常使用命令行参数解析：</p>
+<figure class="highlight perl"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">use</span> Getopt::Long;</span><br><span class="line"></span><br><span class="line"><span class="keyword">my</span> (<span class="variable">$file</span>, <span class="variable">$list</span>, <span class="variable">$hex</span>);</span><br><span class="line">GetOptions(</span><br><span class="line">    <span class="string">&#x27;dbc=s&#x27;</span>   =&gt; \<span class="variable">$file</span>,   <span class="comment"># --dbc 文件名</span></span><br><span class="line">    <span class="string">&#x27;list&#x27;</span>    =&gt; \<span class="variable">$list</span>,   <span class="comment"># --list 布尔</span></span><br><span class="line">    <span class="string">&#x27;hex&#x27;</span>     =&gt; \<span class="variable">$hex</span>,    <span class="comment"># --hex</span></span><br><span class="line">) <span class="keyword">or</span> <span class="keyword">die</span> <span class="string">&quot;参数错误\n&quot;</span>;</span><br><span class="line"></span><br><span class="line"><span class="keyword">die</span> <span class="string">&quot;请指定 --dbc 文件\n&quot;</span> <span class="keyword">unless</span> <span class="keyword">defined</span> <span class="variable">$file</span>;</span><br><span class="line"><span class="keyword">printf</span> <span class="string">&quot;解析文件: <span class="variable">%s</span>\n&quot;</span>, <span class="variable">$file</span>;</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="九、性能与最佳实践"><a href="#九、性能与最佳实践" class="headerlink" title="九、性能与最佳实践"></a>九、性能与最佳实践</h2><table>
+<thead>
+<tr>
+<th>建议</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>尽量 <code>use strict; use warnings</code></td>
+<td>第一道防线，规避隐式变量名错误</td>
+</tr>
+<tr>
+<td>避免正则表达式灾难性回溯</td>
+<td>复杂嵌套 <code>(.*)*</code> 会卡死——用字符类 <code>[^,]</code> 替代</td>
+</tr>
+<tr>
+<td>善用 <code>my</code> 局部变量</td>
+<td>隔离作用域，防止影子变量</td>
+</tr>
+<tr>
+<td>重视引用拷贝与解引用</td>
+<td>大对象用引用避免复制开销</td>
+</tr>
+<tr>
+<td>大量文本处理用 <code>pack/unpack</code></td>
+<td>更高效，无需逐字符遍历</td>
+</tr>
+<tr>
+<td>使用 <code>Data::Dumper</code> 调试复杂结构</td>
+<td>快速定位解析错误</td>
+</tr>
+</tbody></table>
+<h3 id="正则灾难回溯避免实例"><a href="#正则灾难回溯避免实例" class="headerlink" title="正则灾难回溯避免实例"></a>正则灾难回溯避免实例</h3><figure class="highlight perl"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 危险： (.*)* 会灾难性回溯</span></span><br><span class="line"><span class="comment"># 安全： 用更具体的字符类</span></span><br><span class="line"><span class="keyword">my</span> (<span class="variable">$a</span>) = <span class="variable">$x</span> =~ <span class="regexp">/(\[ \&#123; [^&#123;&#125;]* \&#125;)\s*/</span>;  <span class="comment"># 明确字符集，避免回溯</span></span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="十、实战：CAN-DBC-解析器（Perl-实践）"><a href="#十、实战：CAN-DBC-解析器（Perl-实践）" class="headerlink" title="十、实战：CAN DBC 解析器（Perl 实践）"></a>十、实战：CAN DBC 解析器（Perl 实践）</h2><p>DBC（CAN Database）文件是汽车电子数据定义标准，包含消息、信号、节点、值表等。用 Perl 实现解析器是很好的综合练习，涵盖本文全部知识点。下面给出核心骨架：</p>
+<h3 id="10-1-解析消息（BO-）"><a href="#10-1-解析消息（BO-）" class="headerlink" title="10.1 解析消息（BO_）"></a>10.1 解析消息（BO_）</h3><figure class="highlight perl"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 文件: data.dbc</span></span><br><span class="line"><span class="comment"># BO_ 1160 DAS_steeringControl: 4 NEO</span></span><br><span class="line"><span class="keyword">open</span> <span class="keyword">my</span> <span class="variable">$fh</span>, <span class="string">&#x27;&lt;&#x27;</span>, <span class="variable">$file</span> <span class="keyword">or</span> <span class="keyword">die</span> <span class="string">&quot;无法打开 <span class="variable">$!</span>&quot;</span>;</span><br><span class="line"><span class="keyword">my</span> <span class="variable">%messages</span>;</span><br><span class="line"><span class="keyword">while</span> (<span class="keyword">my</span> <span class="variable">$line</span> = &lt;<span class="variable">$fh</span>&gt;) &#123;</span><br><span class="line">    <span class="keyword">chomp</span> <span class="variable">$line</span>;</span><br><span class="line">    <span class="keyword">if</span> (<span class="variable">$line</span> =~ <span class="regexp">/^BO_\s+(\d+)\s+(\w+)\s*:\s*(\d+)\s+(\w+)/</span>) &#123;</span><br><span class="line">        <span class="keyword">my</span> (<span class="variable">$id</span>, <span class="variable">$name</span>, <span class="variable">$dlc</span>, <span class="variable">$tx</span>) = (<span class="variable">$1</span>, <span class="variable">$2</span>, <span class="variable">$3</span>, <span class="variable">$4</span>);</span><br><span class="line">        <span class="variable">$messages</span>&#123;<span class="variable">$id</span>&#125; = &#123; <span class="string">id =&gt;</span> <span class="variable">$id</span>, <span class="string">name =&gt;</span> <span class="variable">$name</span>, <span class="string">dlc =&gt;</span> <span class="variable">$dlc</span>, <span class="string">tx =&gt;</span> <span class="variable">$tx</span> &#125;;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">close</span> <span class="variable">$fh</span>;</span><br></pre></td></tr></table></figure>
+
+<h3 id="10-2-信号解析（SG-）"><a href="#10-2-信号解析（SG-）" class="headerlink" title="10.2 信号解析（SG_）"></a>10.2 信号解析（SG_）</h3><figure class="highlight perl"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">if</span> (<span class="variable">$line</span> =~ <span class="regexp">/^\s+SG_\s+(\w+)\s*:\s*(\d+)\|(\d+)\@([01])([+-])\s*[^)].../</span>) &#123;</span><br><span class="line">    <span class="keyword">my</span> (<span class="variable">$name</span>, <span class="variable">$start</span>, <span class="variable">$len</span>, <span class="variable">$order</span>, <span class="variable">$sign</span>) = (<span class="variable">$1</span>, <span class="variable">$2</span>, <span class="variable">$3</span>, <span class="variable">$4</span>, <span class="variable">$5</span>);</span><br><span class="line">    <span class="comment"># order: 0=Intel 小端, 1=Motorola 大端</span></span><br><span class="line">    <span class="comment"># sign:  +/- 有无符号</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>完整项目即可复用系统笔记所述 <code>Dbc.pm</code>、<code>DbcParser.pl</code>、<code>DbcTest.pl</code> 的结构。</p>
+<hr>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>Perl 的三大优势：<strong>正则表达式强大</strong>、<strong>查询性能内核轻量</strong>、<strong>CPAN 插件丰富</strong>，尤其适合 <strong>文本解析、日志分析、自动化报告、汽车诊断数据解读</strong> 等场景。</p>
+<p>继续进阶方向：</p>
+<ol>
+<li>深入正则表达式（贪婪&#x2F;非贪婪、零宽断言、回溯优化）</li>
+<li>面向对象（Moose&#x2F; Moo 框架）与引用技巧</li>
+<li>模块化开发 + <code>Test::Simple</code> 单元测试</li>
+<li>引入 <code>JSON</code>、<code>XML</code>、数据库 DBI 等工程依赖</li>
+<li>参考真实项目：<code>LdfParser</code>（LDF 解析）、<code>dbc-parser</code>（DBC 解析）</li>
+</ol>
+<p>学会 Perl 后你会发现，很多文本处理、数据转换、批量报告的需求都能用几十行 Perl 优雅搞定。</p>
+
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="http://example.com/2026/08/03/perl%E4%BB%8E%E5%85%A5%E9%97%A8%E5%88%B0%E7%B2%BE%E9%80%9A/" data-id="cmsddp3g2000l0vlmf01ybkq7" data-title="Perl 从入门到精通" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      
+      
+      
+  <ul class="article-tag-list" itemprop="keywords"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Perl/" rel="tag">Perl</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/" rel="tag">学习笔记</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/%E6%95%B0%E6%8D%AE%E5%A4%84%E7%90%86/" rel="tag">数据处理</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/%E6%AD%A3%E5%88%99%E8%A1%A8%E8%BE%BE%E5%BC%8F/" rel="tag">正则表达式</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/%E8%84%9A%E6%9C%AC%E8%AF%AD%E8%A8%80/" rel="tag">脚本语言</a></li></ul>
+
+    </footer>
+  </div>
+  
+</article>
+
+
+
+  
     <article id="post-UDS诊断协议详解" class="h-entry article article-type-post" itemprop="blogPost" itemscope itemtype="https://schema.org/BlogPosting">
   <div class="article-meta">
     <a href="/2026/08/02/UDS%E8%AF%8A%E6%96%AD%E5%8D%8F%E8%AE%AE%E8%AF%A6%E8%A7%A3/" class="article-date">
   <time class="dt-published" datetime="2026-08-02T09:05:00.000Z" itemprop="datePublished">2026-08-02</time>
 </a>
     
+  <div class="article-category">
+    <a class="article-category-link" href="/categories/%E6%B1%BD%E8%BD%A6%E7%94%B5%E5%AD%90/">汽车电子</a>
+  </div>
+
   </div>
   <div class="article-inner">
     
@@ -891,7 +1150,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2026/08/02/UDS%E8%AF%8A%E6%96%AD%E5%8D%8F%E8%AE%AE%E8%AF%A6%E8%A7%A3/" data-id="cmsbl4w8u000bltlmfu8hav7u" data-title="UDS诊断协议详解" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2026/08/02/UDS%E8%AF%8A%E6%96%AD%E5%8D%8F%E8%AE%AE%E8%AF%A6%E8%A7%A3/" data-id="cmsddp3g2000k0vlm78n84e1p" data-title="UDS诊断协议详解" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
@@ -911,6 +1170,10 @@
   <time class="dt-published" datetime="2026-08-02T09:00:00.000Z" itemprop="datePublished">2026-08-02</time>
 </a>
     
+  <div class="article-category">
+    <a class="article-category-link" href="/categories/%E6%B1%BD%E8%BD%A6%E7%94%B5%E5%AD%90/">汽车电子</a>
+  </div>
+
   </div>
   <div class="article-inner">
     
@@ -1232,7 +1495,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2026/08/02/Bootloader%E4%B8%8EFOTA%E5%8D%87%E7%BA%A7%E8%AF%A6%E8%A7%A3/" data-id="cmsbl4w8i0001ltlm5po55jxq" data-title="Bootloader与FOTA升级详解" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2026/08/02/Bootloader%E4%B8%8EFOTA%E5%8D%87%E7%BA%A7%E8%AF%A6%E8%A7%A3/" data-id="cmsddp3fo00020vlm0n2qchgb" data-title="Bootloader与FOTA升级详解" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
@@ -1252,6 +1515,10 @@
   <time class="dt-published" datetime="2026-08-02T08:54:17.000Z" itemprop="datePublished">2026-08-02</time>
 </a>
     
+  <div class="article-category">
+    <a class="article-category-link" href="/categories/%E6%B1%BD%E8%BD%A6%E7%94%B5%E5%AD%90/">汽车电子</a>
+  </div>
+
   </div>
   <div class="article-inner">
     
@@ -1847,7 +2114,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2026/08/02/%E4%BF%A1%E6%81%AF%E5%AE%89%E5%85%A8%E5%9B%BA%E4%BB%B6%E5%BC%80%E5%8F%91%E8%AF%A6%E8%A7%A3/" data-id="cmsbl4w8x000gltlmfbzl2omx" data-title="信息安全固件开发详解" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2026/08/02/%E4%BF%A1%E6%81%AF%E5%AE%89%E5%85%A8%E5%9B%BA%E4%BB%B6%E5%BC%80%E5%8F%91%E8%AF%A6%E8%A7%A3/" data-id="cmsddp3g4000q0vlmfkczbjzg" data-title="信息安全固件开发详解" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
@@ -1867,6 +2134,10 @@
   <time class="dt-published" datetime="2026-08-02T08:50:58.000Z" itemprop="datePublished">2026-08-02</time>
 </a>
     
+  <div class="article-category">
+    <a class="article-category-link" href="/categories/%E6%B1%BD%E8%BD%A6%E7%94%B5%E5%AD%90/">汽车电子</a>
+  </div>
+
   </div>
   <div class="article-inner">
     
@@ -2454,7 +2725,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2026/08/02/AUTOSAR%E5%9F%BA%E7%A1%80%E8%BD%AF%E4%BB%B6%E5%BC%80%E5%8F%91%E8%AF%A6%E8%A7%A3/" data-id="cmsbl4w8a0000ltlmel1u7m87" data-title="AUTOSAR基础软件开发详解" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2026/08/02/AUTOSAR%E5%9F%BA%E7%A1%80%E8%BD%AF%E4%BB%B6%E5%BC%80%E5%8F%91%E8%AF%A6%E8%A7%A3/" data-id="cmsddp3fk00010vlm5lvcdp9d" data-title="AUTOSAR基础软件开发详解" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
@@ -2474,6 +2745,10 @@
   <time class="dt-published" datetime="2026-08-02T08:35:16.000Z" itemprop="datePublished">2026-08-02</time>
 </a>
     
+  <div class="article-category">
+    <a class="article-category-link" href="/categories/%E7%BC%96%E7%A8%8B%E5%9F%BA%E7%A1%80/">编程基础</a>
+  </div>
+
   </div>
   <div class="article-inner">
     
@@ -2801,7 +3076,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2026/08/02/C%E8%AF%AD%E8%A8%80%E5%B5%8C%E5%85%A5%E5%BC%8F%E6%B1%87%E7%BC%96%E8%AF%A6%E8%A7%A3/" data-id="cmsbl4w8p0005ltlm6xf4e6mw" data-title="C语言嵌入式汇编详解" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2026/08/02/C%E8%AF%AD%E8%A8%80%E5%B5%8C%E5%85%A5%E5%BC%8F%E6%B1%87%E7%BC%96%E8%AF%A6%E8%A7%A3/" data-id="cmsddp3fu00070vlmahub1i7g" data-title="C语言嵌入式汇编详解" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
@@ -2821,6 +3096,10 @@
   <time class="dt-published" datetime="2026-08-02T08:31:59.000Z" itemprop="datePublished">2026-08-02</time>
 </a>
     
+  <div class="article-category">
+    <a class="article-category-link" href="/categories/%E7%BC%96%E7%A8%8B%E5%9F%BA%E7%A1%80/">编程基础</a>
+  </div>
+
   </div>
   <div class="article-inner">
     
@@ -3159,7 +3438,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2026/08/02/C%E8%AF%AD%E8%A8%80%E5%9F%BA%E7%A1%80%E7%9F%A5%E8%AF%86%E7%82%B9%E8%AF%A6%E8%A7%A3/" data-id="cmsbl4w8o0004ltlmecx54ve1" data-title="C语言基础知识点详解" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2026/08/02/C%E8%AF%AD%E8%A8%80%E5%9F%BA%E7%A1%80%E7%9F%A5%E8%AF%86%E7%82%B9%E8%AF%A6%E8%A7%A3/" data-id="cmsddp3fu00060vlm8a6761zk" data-title="C语言基础知识点详解" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
@@ -3179,6 +3458,10 @@
   <time class="dt-published" datetime="2026-08-02T08:27:00.000Z" itemprop="datePublished">2026-08-02</time>
 </a>
     
+  <div class="article-category">
+    <a class="article-category-link" href="/categories/%E7%BC%96%E7%A8%8B%E5%9F%BA%E7%A1%80/">编程基础</a>
+  </div>
+
   </div>
   <div class="article-inner">
     
@@ -3732,7 +4015,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2026/08/02/C%E8%AF%AD%E8%A8%80%E8%BF%9B%E9%98%B6%E7%9F%A5%E8%AF%86%E7%82%B9%E8%AF%A6%E8%A7%A3/" data-id="cmsbl4w8q0007ltlm2xwh0ult" data-title="C语言进阶知识点详解" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2026/08/02/C%E8%AF%AD%E8%A8%80%E8%BF%9B%E9%98%B6%E7%9F%A5%E8%AF%86%E7%82%B9%E8%AF%A6%E8%A7%A3/" data-id="cmsddp3fx000a0vlmgrlp7fwz" data-title="C语言进阶知识点详解" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
@@ -3752,6 +4035,10 @@
   <time class="dt-published" datetime="2026-08-02T04:21:43.000Z" itemprop="datePublished">2026-08-02</time>
 </a>
     
+  <div class="article-category">
+    <a class="article-category-link" href="/categories/%E7%BC%96%E7%A8%8B%E5%9F%BA%E7%A1%80/">编程基础</a>
+  </div>
+
   </div>
   <div class="article-inner">
     
@@ -4215,7 +4502,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2026/08/02/%E6%B1%87%E7%BC%96%E8%AF%AD%E8%A8%80%E7%9F%A5%E8%AF%86%E7%82%B9%E8%AF%A6%E8%A7%A3/" data-id="cmsbl4w92000lltlm90ajhrkc" data-title="汇编语言知识点详解" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2026/08/02/%E6%B1%87%E7%BC%96%E8%AF%AD%E8%A8%80%E7%9F%A5%E8%AF%86%E7%82%B9%E8%AF%A6%E8%A7%A3/" data-id="cmsddp3g800120vlmfkb07p5t" data-title="汇编语言知识点详解" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
@@ -4235,6 +4522,10 @@
   <time class="dt-published" datetime="2026-08-02T02:30:00.000Z" itemprop="datePublished">2026-08-02</time>
 </a>
     
+  <div class="article-category">
+    <a class="article-category-link" href="/categories/%E5%B5%8C%E5%85%A5%E5%BC%8F/">嵌入式</a>
+  </div>
+
   </div>
   <div class="article-inner">
     
@@ -4875,7 +5166,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2026/08/02/%E5%B5%8C%E5%85%A5%E5%BC%8F%E5%9B%BA%E4%BB%B6%E5%9C%B0%E5%9D%80%E4%B8%89%E4%BB%B6%E5%A5%97-LMA-VMA-XIP%E4%B8%8EPIC/" data-id="cmsbl4w90000iltlm1m1t7xgz" data-title="嵌入式固件地址三件套：加载地址、运行时地址、XIP 与 PIC" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2026/08/02/%E5%B5%8C%E5%85%A5%E5%BC%8F%E5%9B%BA%E4%BB%B6%E5%9C%B0%E5%9D%80%E4%B8%89%E4%BB%B6%E5%A5%97-LMA-VMA-XIP%E4%B8%8EPIC/" data-id="cmsddp3g6000w0vlm787s2jlw" data-title="嵌入式固件地址三件套：加载地址、运行时地址、XIP 与 PIC" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
@@ -4889,57 +5180,11 @@
 
 
   
-    <article id="post-嵌入式链接脚本详解：从零理解Linker-Script" class="h-entry article article-type-post" itemprop="blogPost" itemscope itemtype="https://schema.org/BlogPosting">
-  <div class="article-meta">
-    <a href="/2026/08/01/%E5%B5%8C%E5%85%A5%E5%BC%8F%E9%93%BE%E6%8E%A5%E8%84%9A%E6%9C%AC%E8%AF%A6%E8%A7%A3%EF%BC%9A%E4%BB%8E%E9%9B%B6%E7%90%86%E8%A7%A3Linker-Script/" class="article-date">
-  <time class="dt-published" datetime="2026-08-01T07:17:43.000Z" itemprop="datePublished">2026-08-01</time>
-</a>
-    
-  </div>
-  <div class="article-inner">
-    
-    
-      <header class="article-header">
-        
-  
-    <h1 itemprop="name">
-      <a class="p-name article-title" href="/2026/08/01/%E5%B5%8C%E5%85%A5%E5%BC%8F%E9%93%BE%E6%8E%A5%E8%84%9A%E6%9C%AC%E8%AF%A6%E8%A7%A3%EF%BC%9A%E4%BB%8E%E9%9B%B6%E7%90%86%E8%A7%A3Linker-Script/">嵌入式链接脚本详解：以英飞凌TC375为例</a>
-    </h1>
-  
-
-      </header>
-    
-    <div class="e-content article-entry" itemprop="articleBody">
-      
-        <p>在嵌入式开发中，我们编译完 C&#x2F;汇编代码后，得到的 <code>.o</code> 目标文件并不能直接烧录到芯片里。把它们”拼装”成最终可执行文件、并决定每一段代码和数据放在芯片哪个地址的任务，就由<strong>链接器</strong>（Linker）完成，而它的”施工图纸”就是<strong>链接脚本</strong>（Linker Script）。</p>
-<p>很多初学者把链接脚本当成一个”复制粘贴即可”的黑盒，一旦出现 <code>section .text will not fit in region pfls0</code> 之类的报错就束手无策。本文以英飞凌 <strong>TC375</strong>（AURIX TC3xx 系列，三核 TriCore 1.6.2P 架构，300MHz）为具体例子，从零开始，把链接脚本的语法、概念、多核内存布局、实战与调试技巧一次讲透。</p>
-        
-          <p class="article-more-link">
-            <a href="/2026/08/01/%E5%B5%8C%E5%85%A5%E5%BC%8F%E9%93%BE%E6%8E%A5%E8%84%9A%E6%9C%AC%E8%AF%A6%E8%A7%A3%EF%BC%9A%E4%BB%8E%E9%9B%B6%E7%90%86%E8%A7%A3Linker-Script/#more">Read More</a>
-          </p>
-        
-      
-    </div>
-    <footer class="article-footer">
-      <a data-url="http://example.com/2026/08/01/%E5%B5%8C%E5%85%A5%E5%BC%8F%E9%93%BE%E6%8E%A5%E8%84%9A%E6%9C%AC%E8%AF%A6%E8%A7%A3%EF%BC%9A%E4%BB%8E%E9%9B%B6%E7%90%86%E8%A7%A3Linker-Script/" data-id="cmsbl4w91000kltlmd4gjc9r3" data-title="嵌入式链接脚本详解：以英飞凌TC375为例" class="article-share-link"><span class="fa fa-share">Share</span></a>
-      
-      
-      
-  <ul class="article-tag-list" itemprop="keywords"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/AURIX/" rel="tag">AURIX</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/GCC/" rel="tag">GCC</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Linker-Script/" rel="tag">Linker Script</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/TC375/" rel="tag">TC375</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/TriCore/" rel="tag">TriCore</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/%E5%B5%8C%E5%85%A5%E5%BC%8F/" rel="tag">嵌入式</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/%E6%B1%87%E7%BC%96/" rel="tag">汇编</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/%E8%8B%B1%E9%A3%9E%E5%87%8C/" rel="tag">英飞凌</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/%E9%93%BE%E6%8E%A5%E8%84%9A%E6%9C%AC/" rel="tag">链接脚本</a></li></ul>
-
-    </footer>
-  </div>
-  
-</article>
-
-
-
-  
 
 
   <nav id="page-nav">
     
-    <span class="page-number current">1</span><a class="page-number" href="/page/2/">2</a><a class="extend next" rel="next" href="/page/2/">Next &raquo;</a>
+    <span class="page-number current">1</span><a class="page-number" href="/page/2/">2</a><a class="page-number" href="/page/3/">3</a><a class="extend next" rel="next" href="/page/2/">Next &raquo;</a>
   </nav>
 
 </section>
@@ -4947,13 +5192,20 @@
           <aside id="sidebar">
   
     
+  <div class="widget-wrap">
+    <h3 class="widget-title">Categories</h3>
+    <div class="widget">
+      <ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/Linux%E5%86%85%E6%A0%B8/">Linux内核</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/%E5%85%B6%E4%BB%96/">其他</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/%E5%B5%8C%E5%85%A5%E5%BC%8F/">嵌入式</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/%E6%B1%BD%E8%BD%A6%E7%94%B5%E5%AD%90/">汽车电子</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/%E7%94%B5%E6%9C%BA%E6%8E%A7%E5%88%B6/">电机控制</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/%E7%BC%96%E7%A8%8B%E5%9F%BA%E7%A1%80/">编程基础</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/%E7%BC%96%E7%A8%8B%E8%AF%AD%E8%A8%80/">编程语言</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/%E8%A3%85%E6%9C%BA%E5%B7%A5%E5%85%B7/">装机工具</a></li></ul>
+    </div>
+  </div>
+
 
   
     
   <div class="widget-wrap">
     <h3 class="widget-title">Tags</h3>
     <div class="widget">
-      <ul class="tag-list" itemprop="keywords"><li class="tag-list-item"><a class="tag-list-link" href="/tags/AI-Agent/" rel="tag">AI Agent</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/ARM/" rel="tag">ARM</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/AURIX/" rel="tag">AURIX</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/AUTOSAR/" rel="tag">AUTOSAR</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/BSW/" rel="tag">BSW</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Bootloader/" rel="tag">Bootloader</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/CAN/" rel="tag">CAN</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/CANoe/" rel="tag">CANoe</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/CAPL/" rel="tag">CAPL</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/C%E8%AF%AD%E8%A8%80/" rel="tag">C语言</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/DTC/" rel="tag">DTC</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/FOC/" rel="tag">FOC</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/FOTA/" rel="tag">FOTA</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Flash/" rel="tag">Flash</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/GCC/" rel="tag">GCC</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/HSM/" rel="tag">HSM</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/ISO14229/" rel="tag">ISO14229</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/LMA/" rel="tag">LMA</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Linker-Script/" rel="tag">Linker Script</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Linux/" rel="tag">Linux</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/MCAL/" rel="tag">MCAL</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/OTA/" rel="tag">OTA</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/PIC/" rel="tag">PIC</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/RISC-V/" rel="tag">RISC-V</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/RT-Thread/" rel="tag">RT-Thread</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/RTE/" rel="tag">RTE</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/SOTA/" rel="tag">SOTA</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/SecOC/" rel="tag">SecOC</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/TC375/" rel="tag">TC375</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/TriCore/" rel="tag">TriCore</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/UDS/" rel="tag">UDS</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/U%E7%9B%98%E5%90%AF%E5%8A%A8%E7%9B%98/" rel="tag">U盘启动盘</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/VMA/" rel="tag">VMA</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Ventoy/" rel="tag">Ventoy</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/XIP/" rel="tag">XIP</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/opencode/" rel="tag">opencode</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/x86/" rel="tag">x86</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E4%BF%A1%E6%81%AF%E5%AE%89%E5%85%A8/" rel="tag">信息安全</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%85%A5%E9%97%A8/" rel="tag">入门</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86/" rel="tag">内存管理</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%86%85%E6%A0%B8/" rel="tag">内核</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%86%85%E8%81%94%E6%B1%87%E7%BC%96/" rel="tag">内联汇编</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%90%AF%E5%8A%A8%E8%BF%87%E7%A8%8B/" rel="tag">启动过程</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%9B%BA%E4%BB%B6%E5%BC%80%E5%8F%91/" rel="tag">固件开发</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%9F%BA%E7%A1%80/" rel="tag">基础</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%9F%BA%E7%A1%80%E8%BD%AF%E4%BB%B6/" rel="tag">基础软件</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/" rel="tag">学习笔记</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%AE%89%E5%85%A8%E5%90%AF%E5%8A%A8/" rel="tag">安全启动</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%B5%8C%E5%85%A5%E5%BC%8F/" rel="tag">嵌入式</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%B5%8C%E5%85%A5%E5%BC%8F%E6%B1%87%E7%BC%96/" rel="tag">嵌入式汇编</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%BA%95%E5%B1%82%E5%8E%9F%E7%90%86/" rel="tag">底层原理</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%BC%80%E5%8F%91/" rel="tag">开发</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%BC%95%E5%AF%BC/" rel="tag">引导</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E6%8C%87%E9%92%88/" rel="tag">指针</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E6%95%88%E7%8E%87%E5%B7%A5%E5%85%B7/" rel="tag">效率工具</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E6%B1%87%E7%BC%96/" rel="tag">汇编</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E6%B1%87%E7%BC%96%E8%AF%AD%E8%A8%80/" rel="tag">汇编语言</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E6%B1%BD%E8%BD%A6%E7%94%B5%E5%AD%90/" rel="tag">汽车电子</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E6%B5%8B%E8%AF%95/" rel="tag">测试</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E7%94%B5%E5%8A%9B%E7%94%B5%E5%AD%90/" rel="tag">电力电子</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E7%94%B5%E6%9C%BA%E6%8E%A7%E5%88%B6/" rel="tag">电机控制</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E7%B3%BB%E7%BB%9F%E5%AE%89%E8%A3%85/" rel="tag">系统安装</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E7%BC%96%E8%AF%91%E9%93%BE%E6%8E%A5/" rel="tag">编译链接</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E8%8B%B1%E9%A3%9E%E5%87%8C/" rel="tag">英飞凌</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E8%A3%85%E6%9C%BA%E5%B7%A5%E5%85%B7/" rel="tag">装机工具</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E8%AF%8A%E6%96%AD%E5%8D%8F%E8%AE%AE/" rel="tag">诊断协议</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E8%AF%AD%E6%B3%95/" rel="tag">语法</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E8%BF%9B%E9%98%B6/" rel="tag">进阶</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E9%83%A8%E7%BD%B2/" rel="tag">部署</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E9%93%BE%E6%8E%A5%E8%84%9A%E6%9C%AC/" rel="tag">链接脚本</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E9%A3%9E%E4%B9%A6/" rel="tag">飞书</a></li></ul>
+      <ul class="tag-list" itemprop="keywords"><li class="tag-list-item"><a class="tag-list-link" href="/tags/AI-Agent/" rel="tag">AI Agent</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/ARM/" rel="tag">ARM</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/AURIX/" rel="tag">AURIX</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/AUTOSAR/" rel="tag">AUTOSAR</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/BSW/" rel="tag">BSW</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Bootloader/" rel="tag">Bootloader</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/CAN/" rel="tag">CAN</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/CANoe/" rel="tag">CANoe</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/CAPL/" rel="tag">CAPL</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/C%E8%AF%AD%E8%A8%80/" rel="tag">C语言</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/DTC/" rel="tag">DTC</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/FOC/" rel="tag">FOC</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/FOTA/" rel="tag">FOTA</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Flash/" rel="tag">Flash</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/GCC/" rel="tag">GCC</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/HSM/" rel="tag">HSM</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/ISO14229/" rel="tag">ISO14229</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/LMA/" rel="tag">LMA</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Linker-Script/" rel="tag">Linker Script</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Linux/" rel="tag">Linux</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/MCAL/" rel="tag">MCAL</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/OTA/" rel="tag">OTA</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/PIC/" rel="tag">PIC</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Perl/" rel="tag">Perl</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/RISC-V/" rel="tag">RISC-V</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/RT-Thread/" rel="tag">RT-Thread</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/RTE/" rel="tag">RTE</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/SOTA/" rel="tag">SOTA</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/SecOC/" rel="tag">SecOC</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/TC375/" rel="tag">TC375</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/TriCore/" rel="tag">TriCore</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/UDS/" rel="tag">UDS</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/U%E7%9B%98%E5%90%AF%E5%8A%A8%E7%9B%98/" rel="tag">U盘启动盘</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/VMA/" rel="tag">VMA</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Ventoy/" rel="tag">Ventoy</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/XIP/" rel="tag">XIP</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/opencode/" rel="tag">opencode</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/x86/" rel="tag">x86</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E4%BF%A1%E6%81%AF%E5%AE%89%E5%85%A8/" rel="tag">信息安全</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%85%A5%E9%97%A8/" rel="tag">入门</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86/" rel="tag">内存管理</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%86%85%E6%A0%B8/" rel="tag">内核</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%86%85%E8%81%94%E6%B1%87%E7%BC%96/" rel="tag">内联汇编</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%90%AF%E5%8A%A8%E8%BF%87%E7%A8%8B/" rel="tag">启动过程</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%9B%BA%E4%BB%B6%E5%BC%80%E5%8F%91/" rel="tag">固件开发</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%9F%BA%E7%A1%80/" rel="tag">基础</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%9F%BA%E7%A1%80%E8%BD%AF%E4%BB%B6/" rel="tag">基础软件</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/" rel="tag">学习笔记</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%AE%89%E5%85%A8%E5%90%AF%E5%8A%A8/" rel="tag">安全启动</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%B5%8C%E5%85%A5%E5%BC%8F/" rel="tag">嵌入式</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%B5%8C%E5%85%A5%E5%BC%8F%E6%B1%87%E7%BC%96/" rel="tag">嵌入式汇编</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%BA%95%E5%B1%82%E5%8E%9F%E7%90%86/" rel="tag">底层原理</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%BC%80%E5%8F%91/" rel="tag">开发</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E5%BC%95%E5%AF%BC/" rel="tag">引导</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E6%8C%87%E9%92%88/" rel="tag">指针</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E6%95%88%E7%8E%87%E5%B7%A5%E5%85%B7/" rel="tag">效率工具</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E6%95%B0%E6%8D%AE%E5%A4%84%E7%90%86/" rel="tag">数据处理</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E6%AD%A3%E5%88%99%E8%A1%A8%E8%BE%BE%E5%BC%8F/" rel="tag">正则表达式</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E6%B1%87%E7%BC%96/" rel="tag">汇编</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E6%B1%87%E7%BC%96%E8%AF%AD%E8%A8%80/" rel="tag">汇编语言</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E6%B1%BD%E8%BD%A6%E7%94%B5%E5%AD%90/" rel="tag">汽车电子</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E6%B5%8B%E8%AF%95/" rel="tag">测试</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E7%94%B5%E5%8A%9B%E7%94%B5%E5%AD%90/" rel="tag">电力电子</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E7%94%B5%E6%9C%BA%E6%8E%A7%E5%88%B6/" rel="tag">电机控制</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E7%B3%BB%E7%BB%9F%E5%AE%89%E8%A3%85/" rel="tag">系统安装</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E7%BC%96%E8%AF%91%E9%93%BE%E6%8E%A5/" rel="tag">编译链接</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E8%84%9A%E6%9C%AC%E8%AF%AD%E8%A8%80/" rel="tag">脚本语言</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E8%8B%B1%E9%A3%9E%E5%87%8C/" rel="tag">英飞凌</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E8%A3%85%E6%9C%BA%E5%B7%A5%E5%85%B7/" rel="tag">装机工具</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E8%AF%8A%E6%96%AD%E5%8D%8F%E8%AE%AE/" rel="tag">诊断协议</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E8%AF%AD%E6%B3%95/" rel="tag">语法</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E8%BF%9B%E9%98%B6/" rel="tag">进阶</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E9%83%A8%E7%BD%B2/" rel="tag">部署</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E9%93%BE%E6%8E%A5%E8%84%9A%E6%9C%AC/" rel="tag">链接脚本</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E9%A3%9E%E4%B9%A6/" rel="tag">飞书</a></li></ul>
     </div>
   </div>
 
@@ -4963,7 +5215,7 @@
   <div class="widget-wrap">
     <h3 class="widget-title">Tag Cloud</h3>
     <div class="widget tagcloud">
-      <a href="/tags/AI-Agent/" style="font-size: 12px;">AI Agent</a> <a href="/tags/ARM/" style="font-size: 12px;">ARM</a> <a href="/tags/AURIX/" style="font-size: 12px;">AURIX</a> <a href="/tags/AUTOSAR/" style="font-size: 16px;">AUTOSAR</a> <a href="/tags/BSW/" style="font-size: 10px;">BSW</a> <a href="/tags/Bootloader/" style="font-size: 10px;">Bootloader</a> <a href="/tags/CAN/" style="font-size: 10px;">CAN</a> <a href="/tags/CANoe/" style="font-size: 10px;">CANoe</a> <a href="/tags/CAPL/" style="font-size: 10px;">CAPL</a> <a href="/tags/C%E8%AF%AD%E8%A8%80/" style="font-size: 14px;">C语言</a> <a href="/tags/DTC/" style="font-size: 10px;">DTC</a> <a href="/tags/FOC/" style="font-size: 10px;">FOC</a> <a href="/tags/FOTA/" style="font-size: 10px;">FOTA</a> <a href="/tags/Flash/" style="font-size: 10px;">Flash</a> <a href="/tags/GCC/" style="font-size: 12px;">GCC</a> <a href="/tags/HSM/" style="font-size: 10px;">HSM</a> <a href="/tags/ISO14229/" style="font-size: 10px;">ISO14229</a> <a href="/tags/LMA/" style="font-size: 10px;">LMA</a> <a href="/tags/Linker-Script/" style="font-size: 12px;">Linker Script</a> <a href="/tags/Linux/" style="font-size: 14px;">Linux</a> <a href="/tags/MCAL/" style="font-size: 10px;">MCAL</a> <a href="/tags/OTA/" style="font-size: 10px;">OTA</a> <a href="/tags/PIC/" style="font-size: 10px;">PIC</a> <a href="/tags/RISC-V/" style="font-size: 10px;">RISC-V</a> <a href="/tags/RT-Thread/" style="font-size: 10px;">RT-Thread</a> <a href="/tags/RTE/" style="font-size: 10px;">RTE</a> <a href="/tags/SOTA/" style="font-size: 10px;">SOTA</a> <a href="/tags/SecOC/" style="font-size: 10px;">SecOC</a> <a href="/tags/TC375/" style="font-size: 12px;">TC375</a> <a href="/tags/TriCore/" style="font-size: 12px;">TriCore</a> <a href="/tags/UDS/" style="font-size: 10px;">UDS</a> <a href="/tags/U%E7%9B%98%E5%90%AF%E5%8A%A8%E7%9B%98/" style="font-size: 10px;">U盘启动盘</a> <a href="/tags/VMA/" style="font-size: 10px;">VMA</a> <a href="/tags/Ventoy/" style="font-size: 10px;">Ventoy</a> <a href="/tags/XIP/" style="font-size: 10px;">XIP</a> <a href="/tags/opencode/" style="font-size: 12px;">opencode</a> <a href="/tags/x86/" style="font-size: 10px;">x86</a> <a href="/tags/%E4%BF%A1%E6%81%AF%E5%AE%89%E5%85%A8/" style="font-size: 10px;">信息安全</a> <a href="/tags/%E5%85%A5%E9%97%A8/" style="font-size: 10px;">入门</a> <a href="/tags/%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86/" style="font-size: 12px;">内存管理</a> <a href="/tags/%E5%86%85%E6%A0%B8/" style="font-size: 12px;">内核</a> <a href="/tags/%E5%86%85%E8%81%94%E6%B1%87%E7%BC%96/" style="font-size: 10px;">内联汇编</a> <a href="/tags/%E5%90%AF%E5%8A%A8%E8%BF%87%E7%A8%8B/" style="font-size: 10px;">启动过程</a> <a href="/tags/%E5%9B%BA%E4%BB%B6%E5%BC%80%E5%8F%91/" style="font-size: 10px;">固件开发</a> <a href="/tags/%E5%9F%BA%E7%A1%80/" style="font-size: 10px;">基础</a> <a href="/tags/%E5%9F%BA%E7%A1%80%E8%BD%AF%E4%BB%B6/" style="font-size: 10px;">基础软件</a> <a href="/tags/%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/" style="font-size: 12px;">学习笔记</a> <a href="/tags/%E5%AE%89%E5%85%A8%E5%90%AF%E5%8A%A8/" style="font-size: 10px;">安全启动</a> <a href="/tags/%E5%B5%8C%E5%85%A5%E5%BC%8F/" style="font-size: 20px;">嵌入式</a> <a href="/tags/%E5%B5%8C%E5%85%A5%E5%BC%8F%E6%B1%87%E7%BC%96/" style="font-size: 10px;">嵌入式汇编</a> <a href="/tags/%E5%BA%95%E5%B1%82%E5%8E%9F%E7%90%86/" style="font-size: 20px;">底层原理</a> <a href="/tags/%E5%BC%80%E5%8F%91/" style="font-size: 10px;">开发</a> <a href="/tags/%E5%BC%95%E5%AF%BC/" style="font-size: 10px;">引导</a> <a href="/tags/%E6%8C%87%E9%92%88/" style="font-size: 10px;">指针</a> <a href="/tags/%E6%95%88%E7%8E%87%E5%B7%A5%E5%85%B7/" style="font-size: 12px;">效率工具</a> <a href="/tags/%E6%B1%87%E7%BC%96/" style="font-size: 12px;">汇编</a> <a href="/tags/%E6%B1%87%E7%BC%96%E8%AF%AD%E8%A8%80/" style="font-size: 12px;">汇编语言</a> <a href="/tags/%E6%B1%BD%E8%BD%A6%E7%94%B5%E5%AD%90/" style="font-size: 18px;">汽车电子</a> <a href="/tags/%E6%B5%8B%E8%AF%95/" style="font-size: 12px;">测试</a> <a href="/tags/%E7%94%B5%E5%8A%9B%E7%94%B5%E5%AD%90/" style="font-size: 10px;">电力电子</a> <a href="/tags/%E7%94%B5%E6%9C%BA%E6%8E%A7%E5%88%B6/" style="font-size: 10px;">电机控制</a> <a href="/tags/%E7%B3%BB%E7%BB%9F%E5%AE%89%E8%A3%85/" style="font-size: 10px;">系统安装</a> <a href="/tags/%E7%BC%96%E8%AF%91%E9%93%BE%E6%8E%A5/" style="font-size: 10px;">编译链接</a> <a href="/tags/%E8%8B%B1%E9%A3%9E%E5%87%8C/" style="font-size: 12px;">英飞凌</a> <a href="/tags/%E8%A3%85%E6%9C%BA%E5%B7%A5%E5%85%B7/" style="font-size: 10px;">装机工具</a> <a href="/tags/%E8%AF%8A%E6%96%AD%E5%8D%8F%E8%AE%AE/" style="font-size: 10px;">诊断协议</a> <a href="/tags/%E8%AF%AD%E6%B3%95/" style="font-size: 10px;">语法</a> <a href="/tags/%E8%BF%9B%E9%98%B6/" style="font-size: 10px;">进阶</a> <a href="/tags/%E9%83%A8%E7%BD%B2/" style="font-size: 10px;">部署</a> <a href="/tags/%E9%93%BE%E6%8E%A5%E8%84%9A%E6%9C%AC/" style="font-size: 12px;">链接脚本</a> <a href="/tags/%E9%A3%9E%E4%B9%A6/" style="font-size: 10px;">飞书</a>
+      <a href="/tags/AI-Agent/" style="font-size: 12px;">AI Agent</a> <a href="/tags/ARM/" style="font-size: 12px;">ARM</a> <a href="/tags/AURIX/" style="font-size: 12px;">AURIX</a> <a href="/tags/AUTOSAR/" style="font-size: 16px;">AUTOSAR</a> <a href="/tags/BSW/" style="font-size: 10px;">BSW</a> <a href="/tags/Bootloader/" style="font-size: 10px;">Bootloader</a> <a href="/tags/CAN/" style="font-size: 10px;">CAN</a> <a href="/tags/CANoe/" style="font-size: 10px;">CANoe</a> <a href="/tags/CAPL/" style="font-size: 10px;">CAPL</a> <a href="/tags/C%E8%AF%AD%E8%A8%80/" style="font-size: 14px;">C语言</a> <a href="/tags/DTC/" style="font-size: 10px;">DTC</a> <a href="/tags/FOC/" style="font-size: 10px;">FOC</a> <a href="/tags/FOTA/" style="font-size: 10px;">FOTA</a> <a href="/tags/Flash/" style="font-size: 10px;">Flash</a> <a href="/tags/GCC/" style="font-size: 12px;">GCC</a> <a href="/tags/HSM/" style="font-size: 10px;">HSM</a> <a href="/tags/ISO14229/" style="font-size: 10px;">ISO14229</a> <a href="/tags/LMA/" style="font-size: 10px;">LMA</a> <a href="/tags/Linker-Script/" style="font-size: 12px;">Linker Script</a> <a href="/tags/Linux/" style="font-size: 14px;">Linux</a> <a href="/tags/MCAL/" style="font-size: 10px;">MCAL</a> <a href="/tags/OTA/" style="font-size: 10px;">OTA</a> <a href="/tags/PIC/" style="font-size: 10px;">PIC</a> <a href="/tags/Perl/" style="font-size: 10px;">Perl</a> <a href="/tags/RISC-V/" style="font-size: 10px;">RISC-V</a> <a href="/tags/RT-Thread/" style="font-size: 10px;">RT-Thread</a> <a href="/tags/RTE/" style="font-size: 10px;">RTE</a> <a href="/tags/SOTA/" style="font-size: 10px;">SOTA</a> <a href="/tags/SecOC/" style="font-size: 10px;">SecOC</a> <a href="/tags/TC375/" style="font-size: 12px;">TC375</a> <a href="/tags/TriCore/" style="font-size: 12px;">TriCore</a> <a href="/tags/UDS/" style="font-size: 10px;">UDS</a> <a href="/tags/U%E7%9B%98%E5%90%AF%E5%8A%A8%E7%9B%98/" style="font-size: 10px;">U盘启动盘</a> <a href="/tags/VMA/" style="font-size: 10px;">VMA</a> <a href="/tags/Ventoy/" style="font-size: 10px;">Ventoy</a> <a href="/tags/XIP/" style="font-size: 10px;">XIP</a> <a href="/tags/opencode/" style="font-size: 12px;">opencode</a> <a href="/tags/x86/" style="font-size: 10px;">x86</a> <a href="/tags/%E4%BF%A1%E6%81%AF%E5%AE%89%E5%85%A8/" style="font-size: 10px;">信息安全</a> <a href="/tags/%E5%85%A5%E9%97%A8/" style="font-size: 10px;">入门</a> <a href="/tags/%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86/" style="font-size: 12px;">内存管理</a> <a href="/tags/%E5%86%85%E6%A0%B8/" style="font-size: 12px;">内核</a> <a href="/tags/%E5%86%85%E8%81%94%E6%B1%87%E7%BC%96/" style="font-size: 10px;">内联汇编</a> <a href="/tags/%E5%90%AF%E5%8A%A8%E8%BF%87%E7%A8%8B/" style="font-size: 10px;">启动过程</a> <a href="/tags/%E5%9B%BA%E4%BB%B6%E5%BC%80%E5%8F%91/" style="font-size: 10px;">固件开发</a> <a href="/tags/%E5%9F%BA%E7%A1%80/" style="font-size: 10px;">基础</a> <a href="/tags/%E5%9F%BA%E7%A1%80%E8%BD%AF%E4%BB%B6/" style="font-size: 10px;">基础软件</a> <a href="/tags/%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/" style="font-size: 14px;">学习笔记</a> <a href="/tags/%E5%AE%89%E5%85%A8%E5%90%AF%E5%8A%A8/" style="font-size: 10px;">安全启动</a> <a href="/tags/%E5%B5%8C%E5%85%A5%E5%BC%8F/" style="font-size: 20px;">嵌入式</a> <a href="/tags/%E5%B5%8C%E5%85%A5%E5%BC%8F%E6%B1%87%E7%BC%96/" style="font-size: 10px;">嵌入式汇编</a> <a href="/tags/%E5%BA%95%E5%B1%82%E5%8E%9F%E7%90%86/" style="font-size: 20px;">底层原理</a> <a href="/tags/%E5%BC%80%E5%8F%91/" style="font-size: 10px;">开发</a> <a href="/tags/%E5%BC%95%E5%AF%BC/" style="font-size: 10px;">引导</a> <a href="/tags/%E6%8C%87%E9%92%88/" style="font-size: 10px;">指针</a> <a href="/tags/%E6%95%88%E7%8E%87%E5%B7%A5%E5%85%B7/" style="font-size: 12px;">效率工具</a> <a href="/tags/%E6%95%B0%E6%8D%AE%E5%A4%84%E7%90%86/" style="font-size: 10px;">数据处理</a> <a href="/tags/%E6%AD%A3%E5%88%99%E8%A1%A8%E8%BE%BE%E5%BC%8F/" style="font-size: 10px;">正则表达式</a> <a href="/tags/%E6%B1%87%E7%BC%96/" style="font-size: 12px;">汇编</a> <a href="/tags/%E6%B1%87%E7%BC%96%E8%AF%AD%E8%A8%80/" style="font-size: 12px;">汇编语言</a> <a href="/tags/%E6%B1%BD%E8%BD%A6%E7%94%B5%E5%AD%90/" style="font-size: 18px;">汽车电子</a> <a href="/tags/%E6%B5%8B%E8%AF%95/" style="font-size: 12px;">测试</a> <a href="/tags/%E7%94%B5%E5%8A%9B%E7%94%B5%E5%AD%90/" style="font-size: 10px;">电力电子</a> <a href="/tags/%E7%94%B5%E6%9C%BA%E6%8E%A7%E5%88%B6/" style="font-size: 10px;">电机控制</a> <a href="/tags/%E7%B3%BB%E7%BB%9F%E5%AE%89%E8%A3%85/" style="font-size: 10px;">系统安装</a> <a href="/tags/%E7%BC%96%E8%AF%91%E9%93%BE%E6%8E%A5/" style="font-size: 10px;">编译链接</a> <a href="/tags/%E8%84%9A%E6%9C%AC%E8%AF%AD%E8%A8%80/" style="font-size: 10px;">脚本语言</a> <a href="/tags/%E8%8B%B1%E9%A3%9E%E5%87%8C/" style="font-size: 12px;">英飞凌</a> <a href="/tags/%E8%A3%85%E6%9C%BA%E5%B7%A5%E5%85%B7/" style="font-size: 10px;">装机工具</a> <a href="/tags/%E8%AF%8A%E6%96%AD%E5%8D%8F%E8%AE%AE/" style="font-size: 10px;">诊断协议</a> <a href="/tags/%E8%AF%AD%E6%B3%95/" style="font-size: 10px;">语法</a> <a href="/tags/%E8%BF%9B%E9%98%B6/" style="font-size: 10px;">进阶</a> <a href="/tags/%E9%83%A8%E7%BD%B2/" style="font-size: 10px;">部署</a> <a href="/tags/%E9%93%BE%E6%8E%A5%E8%84%9A%E6%9C%AC/" style="font-size: 12px;">链接脚本</a> <a href="/tags/%E9%A3%9E%E4%B9%A6/" style="font-size: 10px;">飞书</a>
     </div>
   </div>
 
@@ -4985,6 +5237,10 @@
       <ul>
         
           <li>
+            <a href="/2026/08/03/perl%E4%BB%8E%E5%85%A5%E9%97%A8%E5%88%B0%E7%B2%BE%E9%80%9A/">Perl 从入门到精通</a>
+          </li>
+        
+          <li>
             <a href="/2026/08/02/UDS%E8%AF%8A%E6%96%AD%E5%8D%8F%E8%AE%AE%E8%AF%A6%E8%A7%A3/">UDS诊断协议详解</a>
           </li>
         
@@ -4998,10 +5254,6 @@
         
           <li>
             <a href="/2026/08/02/AUTOSAR%E5%9F%BA%E7%A1%80%E8%BD%AF%E4%BB%B6%E5%BC%80%E5%8F%91%E8%AF%A6%E8%A7%A3/">AUTOSAR基础软件开发详解</a>
-          </li>
-        
-          <li>
-            <a href="/2026/08/02/C%E8%AF%AD%E8%A8%80%E5%B5%8C%E5%85%A5%E5%BC%8F%E6%B1%87%E7%BC%96%E8%AF%A6%E8%A7%A3/">C语言嵌入式汇编详解</a>
           </li>
         
       </ul>
